@@ -10,7 +10,8 @@ const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
-        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
     }),

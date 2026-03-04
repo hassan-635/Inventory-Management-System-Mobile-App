@@ -69,7 +69,7 @@ export default function ProductsScreen() {
 
             <FlatList
                 data={products}
-                keyExtractor={(item) => item.product_id.toString()}
+                keyExtractor={(item, index) => (item.id || index).toString()}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent.primary} />}
                 contentContainerStyle={styles.listContainer}
                 renderItem={({ item }) => (

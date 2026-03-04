@@ -41,10 +41,10 @@ export default function BuyersScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.headerTitle}>Buyers Directory</Text>
-      
+
       <FlatList
         data={buyers}
-        keyExtractor={(item) => item.buyer_id.toString()}
+        keyExtractor={(item, index) => (item.id || index).toString()}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent.primary} />}
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
