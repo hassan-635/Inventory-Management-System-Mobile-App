@@ -1,14 +1,19 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// In development with physical device, use your computer's local IP address instead of localhost.
-// Replace with your actual IP, e.g., 'http://192.168.1.X:5000/api'
-const API_URL = 'http://192.168.X.X:5000/api';
+// Fetching URL securely from Environment variables
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
+if (!API_URL) {
+    console.warn("⚠️ EXPO_PUBLIC_API_URL is missing in .env file! App network requests will fail.");
+}
 
 const api = axios.create({
     baseURL: API_URL,
     headers: {
         'Content-Type': 'application/json',
+        'X-Content-Type-Options': 'nosniff',
+        'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     },
 });
 
@@ -21,6 +26,21 @@ api.interceptors.request.use(
         return config;
     },
     (error) => {
+        return Promise.reject(error);
+    }
+);
+
+// Global Error Handler for Security
+import { useAuthStore } from '../store/authStore';
+
+api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        if (error.response && error.response.status === 401) {
+            console.warn("Unauthorized request detected (401). Forcing logout.");
+            await AsyncStorage.removeItem('token');
+            useAuthStore.getState().logout();
+        }
         return Promise.reject(error);
     }
 );

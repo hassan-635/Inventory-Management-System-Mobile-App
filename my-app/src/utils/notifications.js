@@ -5,8 +5,8 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 
-// Replace with your actual IP
-const SOCKET_URL = 'http://192.168.X.X:5000';
+// Load Socket server address from environment variable
+const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
