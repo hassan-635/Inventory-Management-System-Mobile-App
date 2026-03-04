@@ -16,6 +16,7 @@ import BuyersScreen from '../screens/BuyersScreen';
 import SuppliersScreen from '../screens/SuppliersScreen';
 import SalesScreen from '../screens/SalesScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import BillingScreen from '../screens/BillingScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -45,12 +46,14 @@ const TabNavigator = () => {
                     else if (route.name === 'Buyers') iconName = focused ? 'people' : 'people-outline';
                     else if (route.name === 'Suppliers') iconName = focused ? 'business' : 'business-outline';
                     else if (route.name === 'Sales') iconName = focused ? 'receipt' : 'receipt-outline';
+                    else if (route.name === 'Billing') iconName = focused ? 'document-text' : 'document-text-outline';
                     else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
                     return <Icon name={iconName} size={size} color={color} />;
                 },
             })}
         >
             <Tab.Screen name="Products" component={ProductsScreen} />
+            <Tab.Screen name="Billing" component={BillingScreen} />
             <Tab.Screen name="Buyers" component={BuyersScreen} />
             <Tab.Screen name="Suppliers" component={SuppliersScreen} />
             <Tab.Screen name="Sales" component={SalesScreen} />
