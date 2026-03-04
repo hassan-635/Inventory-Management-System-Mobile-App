@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
 import { salesService } from '../api/sales';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
@@ -50,50 +50,47 @@ export default function SalesScreen() {
     useEffect(() => { fetchSales(); }, []);
     const onRefresh = () => { setRefreshing(true); fetchSales(); };
 
-    const threshold = getDateThreshold(activeFilter);
-
-    const filteredSales = useMemo(() => sales.filter(s => {
-        const saleDate = new Date(s.purchase_date);
-        const withinDate = saleDate >= threshold;
-        const matchSearch =
-            (s.products?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-            (s.buyers?.name || '').toLowerCase().includes(search.toLowerCase());
-        return withinDate && matchSearch;
-    }), [sales, activeFilter, search]);
+    const filteredSales = useMemo(() => {
+        const threshold = getDateThreshold(activeFilter);
+        return sales.filter(s => {
+            const saleDate = new Date(s.purchase_date);
+            const withinDate = saleDate >= threshold;
+            const matchSearch =
+                (s.products?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+                (s.buyers?.name || '').toLowerCase().includes(search.toLowerCase());
+            return withinDate && matchSearch;
+        });
+    }, [sales, activeFilter, search]);
 
     const totalRevenue = filteredSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
 
-    if (loading && !refreshing) {
-        return (
-            <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color={COLORS.accent.primary} />
-            </View>
-        );
-    }
-
-    return (
-        <View style={styles.container}>
-            <Text style={styles.headerTitle}>Recent Sales</Text>
-
+    const ListHeader = () => (
+        <View>
             {/* Summary Card */}
             <View style={styles.summaryCard}>
-                <Text style={styles.summaryLabel}>Total Revenue</Text>
+                <Text style={styles.summaryLabel}>Total Revenue ({activeFilter.toUpperCase()})</Text>
                 <Text style={styles.summaryValue}>Rs. {totalRevenue.toLocaleString()}</Text>
                 <Text style={styles.summaryCount}>{filteredSales.length} transaction(s)</Text>
             </View>
 
-            {/* Time Filter Tabs */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterScroll} contentContainerStyle={styles.filterRow}>
-                {TIME_FILTERS.map(f => (
-                    <TouchableOpacity
-                        key={f.key}
-                        style={[styles.filterBtn, activeFilter === f.key && styles.filterBtnActive]}
-                        onPress={() => setActiveFilter(f.key)}
-                    >
-                        <Text style={[styles.filterBtnText, activeFilter === f.key && styles.filterBtnTextActive]}>{f.label}</Text>
-                    </TouchableOpacity>
-                ))}
-            </ScrollView>
+            {/* Time Filter Tabs — horizontal scroll in a fixed-height row */}
+            <View style={styles.filterWrapper}>
+                <FlatList
+                    data={TIME_FILTERS}
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyExtractor={f => f.key}
+                    contentContainerStyle={styles.filterRow}
+                    renderItem={({ item: f }) => (
+                        <TouchableOpacity
+                            style={[styles.filterBtn, activeFilter === f.key && styles.filterBtnActive]}
+                            onPress={() => setActiveFilter(f.key)}
+                        >
+                            <Text style={[styles.filterBtnText, activeFilter === f.key && styles.filterBtnTextActive]}>{f.label}</Text>
+                        </TouchableOpacity>
+                    )}
+                />
+            </View>
 
             {/* Search */}
             <View style={styles.searchRow}>
@@ -106,12 +103,26 @@ export default function SalesScreen() {
                     onChangeText={setSearch}
                 />
             </View>
+        </View>
+    );
 
+    if (loading && !refreshing) {
+        return (
+            <View style={styles.centerContainer}>
+                <ActivityIndicator size="large" color={COLORS.accent.primary} />
+            </View>
+        );
+    }
+
+    return (
+        <View style={styles.container}>
+            <Text style={styles.headerTitle}>Recent Sales</Text>
             <FlatList
                 data={filteredSales}
                 keyExtractor={(item, index) => (item.id || index).toString()}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent.primary} />}
                 contentContainerStyle={styles.listContainer}
+                ListHeaderComponent={<ListHeader />}
                 renderItem={({ item }) => {
                     const remaining = Number(item.total_amount || 0) - Number(item.paid_amount || 0);
                     return (
@@ -154,10 +165,10 @@ const styles = StyleSheet.create({
     summaryLabel: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 12 },
     summaryValue: { color: COLORS.accent.primary, fontFamily: FONTS.bold, fontSize: 22, marginVertical: 2 },
     summaryCount: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 12 },
-    filterScroll: { flexGrow: 0, marginBottom: 8 },
-    filterRow: { paddingHorizontal: 16, gap: 8 },
+    filterWrapper: { height: 44, marginBottom: 10 },
+    filterRow: { paddingHorizontal: 16, alignItems: 'center', gap: 8 },
     filterBtn: {
-        paddingHorizontal: 16, paddingVertical: 6,
+        paddingHorizontal: 16, paddingVertical: 7,
         borderRadius: 20, borderWidth: 1, borderColor: COLORS.border.color,
         backgroundColor: COLORS.background.secondary,
     },
@@ -172,6 +183,6 @@ const styles = StyleSheet.create({
         borderWidth: 1, borderColor: COLORS.border.color,
     },
     searchInput: { flex: 1, color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
-    listContainer: { padding: 16, paddingBottom: 40 },
+    listContainer: { paddingHorizontal: 16, paddingBottom: 40 },
     emptyText: { color: COLORS.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
 });

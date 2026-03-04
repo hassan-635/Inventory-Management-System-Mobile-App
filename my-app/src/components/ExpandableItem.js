@@ -23,9 +23,9 @@ const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'c
                     <View style={styles.iconContainer}>
                         <Icon name={iconName} size={20} color={COLORS.accent.primary} />
                     </View>
-                    <View>
-                        <Text style={styles.title}>{title}</Text>
-                        {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.title} numberOfLines={1} ellipsizeMode="tail">{title}</Text>
+                        {subtitle && <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="tail">{subtitle}</Text>}
                     </View>
                 </View>
                 <View style={styles.headerRight}>
