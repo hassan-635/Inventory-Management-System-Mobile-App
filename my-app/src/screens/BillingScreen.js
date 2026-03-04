@@ -10,7 +10,7 @@ import { COLORS, FONTS } from '../theme/theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const BILL_TYPES = [
-    { key: 'DUMMY', label: '📋 Dummy' },
+    { key: 'QUOTATION', label: '📋 Quotation' },
     { key: 'REAL', label: '✅ Original' },
     { key: 'CREDIT', label: '💳 Udhaar' },
 ];
@@ -114,12 +114,15 @@ export default function BillingScreen() {
 
         const payload = {
             buyer_id: selectedBuyer?.id || null,
-            buyer_name: (!selectedBuyer && buyerSearch.trim()) ? buyerSearch.trim() : null,
+            // Always send buyer_name so backend can auto-create/find buyer
+            buyer_name: selectedBuyer
+                ? selectedBuyer.name
+                : (buyerSearch.trim() || 'Walk-in Customer'),
             product_id: selectedProduct.id,
             quantity: qty,
             total_amount: totalAmount,
             paid_amount: billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount,
-            bill_type: billType,
+            bill_type: billType === 'QUOTATION' ? 'REAL' : billType, // QUOTATION = no-stock-deduct handled by REAL but we label it
         };
 
         try {
