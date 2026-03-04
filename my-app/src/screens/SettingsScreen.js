@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { COLORS, FONTS } from '../theme/theme';
 import { useAuthStore } from '../store/authStore';
 
@@ -26,7 +27,7 @@ export default function SettingsScreen() {
     };
 
     const handleLogout = async () => {
-        await AsyncStorage.removeItem('token');
+        await SecureStore.deleteItemAsync('token');
         logout();
     };
 

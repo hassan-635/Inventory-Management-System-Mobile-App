@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../api/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { COLORS, FONTS } from '../theme/theme';
 
 export default function LoginScreen() {
@@ -20,7 +20,8 @@ export default function LoginScreen() {
         try {
             setLoading(true);
             const data = await authService.login(username, password);
-            await AsyncStorage.setItem('token', data.token);
+            // Save token securely (encrypted) instead of plain-text AsyncStorage
+            await SecureStore.setItemAsync('token', data.token);
             setAuth(data.user, data.token);
         } catch (error) {
             const msg = error.response?.data?.message || 'Login failed. Please check credentials.';

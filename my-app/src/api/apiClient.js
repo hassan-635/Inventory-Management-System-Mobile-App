@@ -1,5 +1,5 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 
 // Fetching URL securely from Environment variables
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -19,7 +19,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
     async (config) => {
-        const token = await AsyncStorage.getItem('token');
+        const token = await SecureStore.getItemAsync('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -38,7 +38,7 @@ api.interceptors.response.use(
     async (error) => {
         if (error.response && error.response.status === 401) {
             console.warn("Unauthorized request detected (401). Forcing logout.");
-            await AsyncStorage.removeItem('token');
+            await SecureStore.deleteItemAsync('token');
             useAuthStore.getState().logout();
         }
         return Promise.reject(error);
