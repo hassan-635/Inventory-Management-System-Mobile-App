@@ -1,0 +1,136 @@
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useAuthStore } from '../store/authStore';
+import { authService } from '../api/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { COLORS, FONTS } from '../theme/theme';
+
+export default function LoginScreen() {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const setAuth = useAuthStore((state) => state.setAuth);
+
+    const handleLogin = async () => {
+        if (!username || !password) {
+            Alert.alert('Error', 'Please fill in all fields');
+            return;
+        }
+
+        try {
+            setLoading(true);
+            const data = await authService.login(username, password);
+            await AsyncStorage.setItem('token', data.token);
+            setAuth(data.user, data.token);
+        } catch (error) {
+            const msg = error.response?.data?.message || 'Login failed. Please check credentials.';
+            Alert.alert('Login Failed', msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <SafeAreaView style={styles.container}>
+            <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+                <View style={styles.formContainer}>
+                    <Text style={styles.title}>Inventory Pro</Text>
+                    <Text style={styles.subtitle}>Welcome back, login to your account</Text>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Username</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter your username"
+                            placeholderTextColor={COLORS.text.muted}
+                            value={username}
+                            onChangeText={setUsername}
+                            autoCapitalize="none"
+                        />
+                    </View>
+
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Password</Text>
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Enter your password"
+                            placeholderTextColor={COLORS.text.muted}
+                            value={password}
+                            onChangeText={setPassword}
+                            secureTextEntry
+                        />
+                    </View>
+
+                    <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+                        {loading ? (
+                            <ActivityIndicator color="#fff" />
+                        ) : (
+                            <Text style={styles.loginButtonText}>Sign In</Text>
+                        )}
+                    </TouchableOpacity>
+                </View>
+            </KeyboardAvoidingView>
+        </SafeAreaView>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: COLORS.background.primary,
+    },
+    keyboardView: {
+        flex: 1,
+        justifyContent: 'center',
+    },
+    formContainer: {
+        padding: 24,
+        backgroundColor: COLORS.glass.bg,
+        marginHorizontal: 20,
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: COLORS.glass.border,
+    },
+    title: {
+        color: '#fff',
+        fontSize: 28,
+        fontWeight: 'bold',
+        marginBottom: 8,
+        textAlign: 'center',
+    },
+    subtitle: {
+        color: COLORS.text.secondary,
+        fontSize: 14,
+        marginBottom: 32,
+        textAlign: 'center',
+    },
+    inputGroup: {
+        marginBottom: 20,
+    },
+    label: {
+        color: COLORS.text.secondary,
+        marginBottom: 8,
+        fontSize: 14,
+    },
+    input: {
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: COLORS.border.color,
+        borderRadius: 8,
+        color: '#fff',
+        padding: 14,
+        fontSize: 16,
+    },
+    loginButton: {
+        backgroundColor: COLORS.accent.primary,
+        padding: 16,
+        borderRadius: 8,
+        alignItems: 'center',
+        marginTop: 10,
+    },
+    loginButtonText: {
+        color: '#fff',
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+});
