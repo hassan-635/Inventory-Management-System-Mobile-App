@@ -6,20 +6,20 @@ import * as SecureStore from 'expo-secure-store';
 import { COLORS, FONTS } from '../theme/theme';
 
 export default function LoginScreen() {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const setAuth = useAuthStore((state) => state.setAuth);
 
     const handleLogin = async () => {
-        if (!username || !password) {
+        if (!email || !password) {
             Alert.alert('Error', 'Please fill in all fields');
             return;
         }
 
         try {
             setLoading(true);
-            const data = await authService.login(username, password);
+            const data = await authService.login(email, password);
             // Save token securely (encrypted) instead of plain-text AsyncStorage
             await SecureStore.setItemAsync('token', data.token);
             setAuth(data.user, data.token);
@@ -39,14 +39,15 @@ export default function LoginScreen() {
                     <Text style={styles.subtitle}>Welcome back, login to your account</Text>
 
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Username</Text>
+                        <Text style={styles.label}>Email Address</Text>
                         <TextInput
                             style={styles.input}
-                            placeholder="Enter your username"
+                            placeholder="Enter your email"
                             placeholderTextColor={COLORS.text.muted}
-                            value={username}
-                            onChangeText={setUsername}
+                            value={email}
+                            onChangeText={setEmail}
                             autoCapitalize="none"
+                            keyboardType="email-address"
                         />
                     </View>
 
