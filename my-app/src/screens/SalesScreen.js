@@ -49,16 +49,17 @@ export default function SalesScreen() {
                 contentContainerStyle={styles.listContainer}
                 renderItem={({ item }) => (
                     <ExpandableItem
-                        title={`Invoice #${item.invoice_no}`}
-                        subtitle={item.buyer_name || 'Walk-in Customer'}
+                        title={`Txn #${item.id} — ${item.products?.name || 'Unknown Product'}`}
+                        subtitle={item.buyers?.name || 'Walk-in Customer'}
                         rightText={`Rs. ${item.total_amount}`}
                         iconName="receipt-outline"
                         detailsData={{
-                            'Products Details': item.products_details,
-                            'Bill Type': item.bill_type,
-                            'Discount': `Rs. ${item.total_discount}`,
+                            'Product': item.products?.name || '-',
+                            'Buyer': item.buyers?.name || 'Walk-in',
+                            'Quantity': item.quantity,
                             'Paid Amount': `Rs. ${item.paid_amount || 0}`,
-                            'Date': new Date(item.created_at).toLocaleString()
+                            'Remaining': `Rs. ${Number(item.total_amount || 0) - Number(item.paid_amount || 0)}`,
+                            'Date': new Date(item.purchase_date).toLocaleDateString()
                         }}
                     />
                 )}

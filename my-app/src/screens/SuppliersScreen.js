@@ -49,15 +49,15 @@ export default function SuppliersScreen() {
                 contentContainerStyle={styles.listContainer}
                 renderItem={({ item }) => (
                     <ExpandableItem
-                        title={item.supplier_name}
-                        subtitle={item.supplier_phone}
-                        rightText={`Due: Rs. ${item.total_due || 0}`}
+                        title={item.name}
+                        subtitle={item.phone || 'No phone'}
+                        rightText={`Due: Rs. ${item.supplier_transactions?.reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0) || 0}`}
                         iconName="business-outline"
                         detailsData={{
-                            'Supplier ID': item.supplier_id,
-                            'Address': item.supplier_address || 'N/A',
-                            'Total Paid': `Rs. ${item.total_paid || 0}`,
-                            'Remaining Due': `Rs. ${item.total_due || 0}`,
+                            'Supplier ID': item.id,
+                            'Company': item.company_name || 'N/A',
+                            'Total Paid': `Rs. ${item.supplier_transactions?.reduce((acc, t) => acc + Number(t.paid_amount || 0), 0) || 0}`,
+                            'Remaining Due': `Rs. ${item.supplier_transactions?.reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0) || 0}`,
                             'Register Date': new Date(item.created_at).toLocaleDateString()
                         }}
                     />

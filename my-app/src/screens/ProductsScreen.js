@@ -74,12 +74,12 @@ export default function ProductsScreen() {
                 contentContainerStyle={styles.listContainer}
                 renderItem={({ item }) => (
                     <ExpandableItem
-                        title={item.product_name}
-                        subtitle={`Supplier: ${item.supplier_name || 'N/A'}`}
-                        rightText={`Rs. ${item.selling_price}`}
+                        title={item.name}
+                        subtitle={`Supplier: ${item.purchased_from || 'N/A'}`}
+                        rightText={`Rs. ${item.price}`}
                         iconName="cube-outline"
                         detailsData={{
-                            'Product ID': item.product_id,
+                            'Product ID': item.id,
                             'Purchase Price': `Rs. ${item.purchase_rate || '-'}`,
                             'Max Discount': `${item.max_discount || 0}%`,
                             'Total Qty': item.total_quantity,

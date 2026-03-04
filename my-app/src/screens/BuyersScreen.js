@@ -49,15 +49,15 @@ export default function BuyersScreen() {
         contentContainerStyle={styles.listContainer}
         renderItem={({ item }) => (
           <ExpandableItem
-            title={item.buyer_name}
-            subtitle={item.buyer_phone}
-            rightText={`Rs. ${item.total_due || 0}`}
+            title={item.name}
+            subtitle={item.phone || 'No phone'}
+            rightText={`Due: Rs. ${item.buyer_transactions?.reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0) || 0}`}
             iconName="person-outline"
             detailsData={{
-              'Buyer ID': item.buyer_id,
-              'Address': item.buyer_address || 'N/A',
-              'Total Paid': `Rs. ${item.total_paid || 0}`,
-              'Remaining Due': `Rs. ${item.total_due || 0}`,
+              'Buyer ID': item.id,
+              'Address': item.address || 'N/A',
+              'Total Paid': `Rs. ${item.buyer_transactions?.reduce((acc, t) => acc + Number(t.paid_amount || 0), 0) || 0}`,
+              'Remaining Due': `Rs. ${item.buyer_transactions?.reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0) || 0}`,
               'Register Date': new Date(item.created_at).toLocaleDateString()
             }}
           />
