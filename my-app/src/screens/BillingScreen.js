@@ -112,17 +112,18 @@ export default function BillingScreen() {
             return;
         }
 
+        // Only attach buyer info for Udhaar/Credit bills
+        const isCreditBill = billType === 'CREDIT';
         const payload = {
-            buyer_id: selectedBuyer?.id || null,
-            // Always send buyer_name so backend can auto-create/find buyer
-            buyer_name: selectedBuyer
-                ? selectedBuyer.name
-                : (buyerSearch.trim() || 'Walk-in Customer'),
+            buyer_id: isCreditBill ? (selectedBuyer?.id || null) : null,
+            buyer_name: isCreditBill
+                ? (selectedBuyer?.name || buyerSearch.trim() || 'Walk-in Customer')
+                : null,
             product_id: selectedProduct.id,
             quantity: qty,
             total_amount: totalAmount,
-            paid_amount: billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount,
-            bill_type: billType === 'QUOTATION' ? 'REAL' : billType, // QUOTATION = no-stock-deduct handled by REAL but we label it
+            paid_amount: isCreditBill ? Number(paidAmount || 0) : totalAmount,
+            bill_type: billType === 'QUOTATION' ? 'REAL' : billType,
         };
 
         try {
@@ -196,7 +197,7 @@ export default function BillingScreen() {
 
             {/* Buyer search (free text allowed — auto-creates) */}
             <View style={styles.section}>
-                <Text style={styles.sectionLabel}>Buyer {billType === 'DUMMY' ? '(Optional)' : ''}</Text>
+                <Text style={styles.sectionLabel}>Buyer {billType === 'QUOTATION' ? '(Optional)' : ''}</Text>
                 <TextInput
                     style={styles.input}
                     placeholder="Search or type buyer name..."
