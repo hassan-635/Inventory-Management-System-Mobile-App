@@ -115,7 +115,9 @@ export default function ProductsScreen() {
                             detailsData={{
                                 'Product ID': item.id,
                                 'Supplier': item.purchased_from || 'N/A',
+                                'Sale Price': `Rs. ${item.price}`,
                                 'Purchase Price': `Rs. ${item.purchase_rate || '-'}`,
+                                'Unit': item.quantity_unit || 'Per Unit',
                                 'Max Discount': `${item.max_discount || 0}%`,
                                 'Total Qty': item.total_quantity,
                                 'Remaining Qty': `${item.remaining_quantity}${isLow ? ' ⚠️' : ''}`,

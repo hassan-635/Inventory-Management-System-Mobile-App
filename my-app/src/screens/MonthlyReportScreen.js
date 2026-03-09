@@ -4,7 +4,8 @@ import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { COLORS, FONTS } from '../theme/theme';
-import { API_URL } from '../config/config';
+
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function MonthlyReportScreen() {
     const { token } = useAuthStore();
