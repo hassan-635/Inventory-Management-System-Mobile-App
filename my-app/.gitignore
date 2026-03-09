@@ -9,8 +9,15 @@ dist/
 web-build/
 expo-env.d.ts
 
-my-app/.env
-my-app/.env.local
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.*
 
 # Native
 .kotlin/
