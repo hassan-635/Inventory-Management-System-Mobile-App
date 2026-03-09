@@ -33,7 +33,8 @@ export default function BuyersScreen() {
     (txns || []).reduce((acc, t) => acc + Number(t.paid_amount || 0), 0);
 
   const filteredBuyers = buyers.filter(b =>
-    b.name?.toLowerCase().includes(search.toLowerCase())
+    b.name?.toLowerCase().includes(search.toLowerCase()) ||
+    b.company_name?.toLowerCase().includes(search.toLowerCase())
   );
 
   if (loading && !refreshing) {
@@ -46,13 +47,13 @@ export default function BuyersScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.headerTitle}>Buyers Directory</Text>
+      <Text style={styles.headerTitle}>Customers Directory</Text>
 
       <View style={styles.searchRow}>
         <Icon name="search-outline" size={18} color={COLORS.text.secondary} style={{ marginRight: 8 }} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search buyers..."
+          placeholder="Search by name or company..."
           placeholderTextColor={COLORS.text.muted}
           value={search}
           onChangeText={setSearch}
@@ -70,11 +71,12 @@ export default function BuyersScreen() {
           return (
             <ExpandableItem
               title={item.name}
-              subtitle={null}
+              subtitle={item.company_name ? `🏢 ${item.company_name}` : null}
               rightText={`Due: Rs. ${due}`}
               iconName="person-outline"
               detailsData={{
-                'Buyer ID': item.id,
+                'Customer ID': item.id,
+                'Company': item.company_name || 'N/A',
                 'Phone': item.phone || 'N/A',
                 'Address': item.address || 'N/A',
                 'Total Paid': `Rs. ${paid}`,
@@ -85,7 +87,7 @@ export default function BuyersScreen() {
             />
           );
         }}
-        ListEmptyComponent={<Text style={styles.emptyText}>No buyers found.</Text>}
+        ListEmptyComponent={<Text style={styles.emptyText}>No customers found.</Text>}
       />
     </View>
   );
