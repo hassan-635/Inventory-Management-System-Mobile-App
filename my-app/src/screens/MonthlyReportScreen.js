@@ -7,13 +7,14 @@ import { COLORS, FONTS } from '../theme/theme';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
+const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 export default function MonthlyReportScreen() {
     const { token } = useAuthStore();
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
 
-    // Initial Date State
     const currentYear = new Date().getFullYear();
     const currentMonth = new Date().getMonth() + 1;
 
@@ -48,15 +49,8 @@ export default function MonthlyReportScreen() {
     const changeMonth = (increment) => {
         let newMonth = selectedMonth + increment;
         let newYear = selectedYear;
-
-        if (newMonth > 12) {
-            newMonth = 1;
-            newYear += 1;
-        } else if (newMonth < 1) {
-            newMonth = 12;
-            newYear -= 1;
-        }
-
+        if (newMonth > 12) { newMonth = 1; newYear += 1; }
+        else if (newMonth < 1) { newMonth = 12; newYear -= 1; }
         setSelectedMonth(newMonth);
         setSelectedYear(newYear);
     };
@@ -77,9 +71,11 @@ export default function MonthlyReportScreen() {
         );
     }
 
-    const { summary, expense_breakdown, activity_lists } = reportData;
-
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const { summary, expense_breakdown, activity_lists, company_wise_summary } = reportData;
+    const cashSalesList = activity_lists?.cash_sales_by_salesman || [];
+    const udhaarList = activity_lists?.udhaar_payments_received || [];
+    const supplierPayments = activity_lists?.payments_made_to_suppliers || [];
+    const companySummary = company_wise_summary || [];
 
     return (
         <View style={styles.container}>
@@ -107,7 +103,7 @@ export default function MonthlyReportScreen() {
                 {/* Key Metrics */}
                 <View style={styles.statsGrid}>
                     <View style={[styles.statCard, { borderLeftColor: summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444', borderLeftWidth: 4 }]}>
-                        <Icon name={summary.cash_flow_profit >= 0 ? "trending-up" : "trending-down"} size={24} color={summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444'} style={styles.statIcon} />
+                        <Icon name={summary.cash_flow_profit >= 0 ? "trending-up" : "trending-down"} size={22} color={summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444'} style={styles.statIcon} />
                         <Text style={styles.statTitle}>Cash Flow Profit</Text>
                         <Text style={[styles.statValue, { color: summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444' }]}>
                             Rs. {summary.cash_flow_profit.toLocaleString()}
@@ -115,13 +111,13 @@ export default function MonthlyReportScreen() {
                     </View>
 
                     <View style={[styles.statCard, { borderLeftColor: '#f97316', borderLeftWidth: 4 }]}>
-                        <Icon name="wallet" size={24} color="#f97316" style={styles.statIcon} />
+                        <Icon name="wallet" size={22} color="#f97316" style={styles.statIcon} />
                         <Text style={styles.statTitle}>Total Expenses</Text>
                         <Text style={[styles.statValue, { color: '#f97316' }]}>Rs. {summary.total_expenses.toLocaleString()}</Text>
                     </View>
                 </View>
 
-                {/* Ledger In/Out Cards */}
+                {/* Ledger Cards */}
                 <View style={styles.ledgerSection}>
                     {/* INFLOW */}
                     <View style={[styles.ledgerCard, { borderColor: 'rgba(34, 197, 94, 0.3)' }]}>
@@ -130,15 +126,19 @@ export default function MonthlyReportScreen() {
                             <Text style={[styles.ledgerTitle, { color: '#22c55e' }]}>Income (In)</Text>
                         </View>
                         <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>Sales Raised</Text>
+                            <Text style={styles.ledgerText}>Sales Invoices Made</Text>
                             <Text style={styles.ledgerAmt}>Rs. {summary.total_sales_created_value.toLocaleString()}</Text>
                         </View>
                         <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>Cash Collected</Text>
-                            <Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {summary.total_sales_collected_this_month.toLocaleString()}</Text>
+                            <Text style={styles.ledgerText}>Cash Sales (Fully Paid)</Text>
+                            <Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(summary.total_cash_sales_this_month || 0).toLocaleString()}</Text>
                         </View>
                         <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>Credit Given</Text>
+                            <Text style={styles.ledgerText}>Udhaar Installments Received</Text>
+                            <Text style={[styles.ledgerAmt, { color: '#a78bfa' }]}>Rs. {summary.total_sales_collected_this_month.toLocaleString()}</Text>
+                        </View>
+                        <View style={[styles.ledgerRow, styles.ledgerRowBorder]}>
+                            <Text style={styles.ledgerText}>New Credit Given</Text>
                             <Text style={[styles.ledgerAmt, { color: '#eab308' }]}>Rs. {summary.total_credit_given_this_month.toLocaleString()}</Text>
                         </View>
                     </View>
@@ -150,14 +150,14 @@ export default function MonthlyReportScreen() {
                             <Text style={[styles.ledgerTitle, { color: '#ef4444' }]}>Payables (Out)</Text>
                         </View>
                         <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>Purchases Raised</Text>
+                            <Text style={styles.ledgerText}>Purchase Invoices Made</Text>
                             <Text style={styles.ledgerAmt}>Rs. {summary.total_purchases_created_value.toLocaleString()}</Text>
                         </View>
                         <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>Cash Paid</Text>
+                            <Text style={styles.ledgerText}>Cash Paid to Suppliers</Text>
                             <Text style={[styles.ledgerAmt, { color: '#ef4444' }]}>Rs. {summary.total_purchases_paid_this_month.toLocaleString()}</Text>
                         </View>
-                        <View style={styles.ledgerRow}>
+                        <View style={[styles.ledgerRow, styles.ledgerRowBorder]}>
                             <Text style={styles.ledgerText}>Credit Taken</Text>
                             <Text style={[styles.ledgerAmt, { color: '#8b5cf6' }]}>Rs. {summary.total_credit_taken_this_month.toLocaleString()}</Text>
                         </View>
@@ -173,6 +173,87 @@ export default function MonthlyReportScreen() {
                     </View>
                 </View>
 
+                {/* Cash Sales by Salesman */}
+                {cashSalesList.length > 0 && (
+                    <View style={styles.whiteCard}>
+                        <View style={styles.cardHeaderRow}>
+                            <Icon name="cash" size={18} color="#22c55e" />
+                            <Text style={[styles.cardHeader, { color: '#22c55e' }]}>Cash Collected (by Salesman)</Text>
+                        </View>
+                        {/* Table Header */}
+                        <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Salesman</Text>
+                            <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Bills</Text>
+                            <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Collected</Text>
+                        </View>
+                        {cashSalesList.map((s) => (
+                            <View key={s.id} style={styles.tableRow}>
+                                <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{s.salesman_name}</Text>
+                                <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text.muted }]}>{s.num_cash_bills}</Text>
+                                <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: '#22c55e', fontFamily: FONTS.bold }]}>
+                                    Rs. {s.total_cash_collected.toLocaleString()}
+                                </Text>
+                            </View>
+                        ))}
+                        {/* Total row */}
+                        <View style={[styles.tableRow, styles.totalRow]}>
+                            <Text style={[styles.totalText, { flex: 2 }]}>Total</Text>
+                            <Text style={[styles.totalText, { flex: 1, textAlign: 'center' }]}>
+                                {cashSalesList.reduce((s, r) => s + r.num_cash_bills, 0)}
+                            </Text>
+                            <Text style={[styles.totalText, { flex: 2, textAlign: 'right', color: '#22c55e' }]}>
+                                Rs. {(summary.total_cash_sales_this_month || 0).toLocaleString()}
+                            </Text>
+                        </View>
+                    </View>
+                )}
+
+                {/* Udhaar Installments Received */}
+                {udhaarList.length > 0 && (
+                    <View style={styles.whiteCard}>
+                        <View style={styles.cardHeaderRow}>
+                            <Icon name="people" size={18} color="#a78bfa" />
+                            <Text style={[styles.cardHeader, { color: '#a78bfa' }]}>Udhaar Installments Received</Text>
+                        </View>
+                        <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Name</Text>
+                            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Phone</Text>
+                            <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Received</Text>
+                        </View>
+                        {udhaarList.map((b) => (
+                            <View key={b.id} style={styles.tableRow}>
+                                <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{b.name}</Text>
+                                <Text style={[styles.tableCell, { flex: 2, color: COLORS.text.muted }]} numberOfLines={1}>{b.phone}</Text>
+                                <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: '#a78bfa', fontFamily: FONTS.bold }]}>
+                                    Rs. {b.amount_paid_this_month.toLocaleString()}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
+                {/* Supplier Payments */}
+                {supplierPayments.length > 0 && (
+                    <View style={styles.whiteCard}>
+                        <View style={styles.cardHeaderRow}>
+                            <Icon name="cube" size={18} color="#ef4444" />
+                            <Text style={[styles.cardHeader, { color: '#ef4444' }]}>Payments to Suppliers</Text>
+                        </View>
+                        <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Supplier</Text>
+                            <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Paid</Text>
+                        </View>
+                        {supplierPayments.map((s) => (
+                            <View key={s.id} style={styles.tableRow}>
+                                <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{s.name}</Text>
+                                <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: '#ef4444', fontFamily: FONTS.bold }]}>
+                                    Rs. {s.amount_paid_this_month.toLocaleString()}
+                                </Text>
+                            </View>
+                        ))}
+                    </View>
+                )}
+
                 {/* Expense Breakdown */}
                 {Object.keys(expense_breakdown).length > 0 && (
                     <View style={styles.whiteCard}>
@@ -185,6 +266,45 @@ export default function MonthlyReportScreen() {
                         ))}
                     </View>
                 )}
+
+                {/* Company-Wise Summary */}
+                {companySummary.length > 0 && (
+                    <View style={styles.whiteCard}>
+                        <View style={styles.cardHeaderRow}>
+                            <Icon name="business" size={18} color="#38bdf8" />
+                            <Text style={[styles.cardHeader, { color: '#38bdf8' }]}>Company-Wise Summary</Text>
+                        </View>
+                        <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                            <Text style={[styles.tableHeaderText, { flex: 2 }]}>Company</Text>
+                            <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Sales</Text>
+                            <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Pending</Text>
+                        </View>
+                        {companySummary.map((c, idx) => (
+                            <View key={idx} style={styles.tableRow}>
+                                <Text style={[styles.tableCell, { flex: 2, fontFamily: FONTS.medium }]} numberOfLines={1}>
+                                    {c.company_name === 'Walk-in / No Company' ? 'Walk-in' : c.company_name}
+                                </Text>
+                                <Text style={[styles.tableCell, { flex: 2, textAlign: 'right' }]}>
+                                    Rs. {c.total_sales.toLocaleString()}
+                                </Text>
+                                <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: c.total_outstanding > 0 ? '#ef4444' : '#22c55e', fontFamily: FONTS.bold }]}>
+                                    {c.total_outstanding > 0 ? `Rs. ${c.total_outstanding.toLocaleString()}` : '✓ Clear'}
+                                </Text>
+                            </View>
+                        ))}
+                        {/* Grand Total */}
+                        <View style={[styles.tableRow, styles.totalRow]}>
+                            <Text style={[styles.totalText, { flex: 2 }]}>Total</Text>
+                            <Text style={[styles.totalText, { flex: 2, textAlign: 'right' }]}>
+                                Rs. {companySummary.reduce((s, c) => s + c.total_sales, 0).toLocaleString()}
+                            </Text>
+                            <Text style={[styles.totalText, { flex: 2, textAlign: 'right', color: '#ef4444' }]}>
+                                Rs. {companySummary.reduce((s, c) => s + c.total_outstanding, 0).toLocaleString()}
+                            </Text>
+                        </View>
+                    </View>
+                )}
+
             </ScrollView>
         </View>
     );
@@ -213,6 +333,7 @@ const styles = StyleSheet.create({
     ledgerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, gap: 8 },
     ledgerTitle: { fontSize: 16, fontFamily: FONTS.bold },
     ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    ledgerRowBorder: { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border?.color || 'rgba(255,255,255,0.1)' },
     ledgerText: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 14 },
     ledgerAmt: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
 
@@ -222,7 +343,17 @@ const styles = StyleSheet.create({
     alertSub: { color: '#ca8a04', fontFamily: FONTS.medium, fontSize: 14 },
 
     whiteCard: { backgroundColor: COLORS.background.secondary, padding: 16, borderRadius: 12, marginBottom: 20 },
-    cardHeader: { color: COLORS.text.primary, fontSize: 16, fontFamily: FONTS.bold, marginBottom: 15, borderBottomColor: COLORS.border.color, borderBottomWidth: 1, paddingBottom: 10 },
+    cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, borderBottomColor: COLORS.border?.color || 'rgba(255,255,255,0.1)', borderBottomWidth: 1, paddingBottom: 10 },
+    cardHeader: { color: COLORS.text.primary, fontSize: 15, fontFamily: FONTS.bold },
+
+    tableHeaderRow: { marginBottom: 6 },
+    tableHeaderText: { color: COLORS.text.muted || COLORS.text.secondary, fontSize: 11, fontFamily: FONTS.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
+    tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
+    tableCell: { color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 13 },
+
+    totalRow: { marginTop: 4, borderTopWidth: 2, borderTopColor: 'rgba(255,255,255,0.15)', borderBottomWidth: 0, paddingTop: 8 },
+    totalText: { color: COLORS.text.primary, fontFamily: FONTS.bold, fontSize: 13 },
+
     breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
     breakdownCat: { color: COLORS.text.secondary, fontFamily: FONTS.regular },
     breakdownAmt: { color: COLORS.text.primary, fontFamily: FONTS.medium },
