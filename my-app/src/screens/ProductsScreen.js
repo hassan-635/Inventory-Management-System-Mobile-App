@@ -17,7 +17,7 @@ const FILTERS = [
     { key: 'low', label: '⚠️ Low Stock' },
 ];
 
-const UNIT_OPTIONS = ['Kg', 'Liter', 'Piece', 'Box', 'Dozen', 'Packet', 'Gram', 'Meter', 'Roll', 'Per Unit'];
+const UNIT_OPTIONS = ['Per Unit', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
 const CATEGORY_OPTIONS = ['Paint', 'Hardware', 'Electricity', 'Plumbing', 'Tools', 'Uncategorized'];
 
 // A searchable modal picker for Dropdowns
@@ -90,7 +90,7 @@ export default function ProductsScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [formItem, setFormItem] = useState({ 
-        id: null, name: '', category: 'Uncategorized', price: '', 
+        id: null, name: '', category: 'Hardware', price: '', 
         purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
         max_discount: '0', total_quantity: '0' 
     });
@@ -134,7 +134,7 @@ export default function ProductsScreen() {
             setFormItem({
                 id: product.id,
                 name: product.name || '',
-                category: product.category || 'Uncategorized',
+                category: product.category || 'Hardware',
                 price: product.price?.toString() || '',
                 purchase_rate: product.purchase_rate?.toString() || '',
                 purchased_from: product.purchased_from || '',
@@ -144,7 +144,7 @@ export default function ProductsScreen() {
             });
         } else {
             setFormItem({ 
-                id: null, name: '', category: 'Uncategorized', price: '', 
+                id: null, name: '', category: 'Hardware', price: '', 
                 purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
                 max_discount: '0', total_quantity: '0' 
             });
@@ -285,7 +285,7 @@ export default function ProductsScreen() {
                                 'Sale Price': `Rs. ${item.price}`,
                                 'Purchase Price': `Rs. ${item.purchase_rate || '-'}`,
                                 'Unit': item.quantity_unit || 'Per Unit',
-                                'Max Discount': `${item.max_discount || 0}%`,
+                                'Max Discount': `Rs. ${item.max_discount || 0}`,
                                 'Total Qty': item.total_quantity,
                                 'Remaining Qty': `${remaining}${isZero ? ' ❌ (Out of Stock)' : isLow ? ' ⚠️' : ''}`,
                                 'Purchase Date': item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : '-',
@@ -347,7 +347,7 @@ export default function ProductsScreen() {
                                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                                     <Text style={styles.inputLabel}>Unit</Text>
                                     <TouchableOpacity style={styles.input} onPress={() => setShowUnitPicker(true)}>
-                                        <Text style={[!formItem.quantity_unit && {color: COLORS.text.muted}]} numberOfLines={1}>
+                                        <Text style={[{color: COLORS.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.quantity_unit && {color: COLORS.text.muted}]} numberOfLines={1}>
                                             {formItem.quantity_unit || 'Select Unit...'}
                                         </Text>
                                         <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
@@ -357,7 +357,7 @@ export default function ProductsScreen() {
 
                             <Text style={styles.inputLabel}>Category</Text>
                             <TouchableOpacity style={styles.input} onPress={() => setShowCategoryPicker(true)}>
-                                <Text style={[!formItem.category && {color: COLORS.text.muted}]} numberOfLines={1}>
+                                <Text style={[{color: COLORS.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.category && {color: COLORS.text.muted}]} numberOfLines={1}>
                                     {formItem.category || 'Select Category...'}
                                 </Text>
                                 <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
@@ -365,13 +365,13 @@ export default function ProductsScreen() {
 
                             <Text style={styles.inputLabel}>Supplier (Purchased From)</Text>
                             <TouchableOpacity style={styles.input} onPress={() => setShowSupplierPicker(true)}>
-                                <Text style={[!formItem.purchased_from && {color: COLORS.text.muted}]} numberOfLines={1}>
+                                <Text style={[{color: COLORS.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.purchased_from && {color: COLORS.text.muted}]} numberOfLines={1}>
                                     {formItem.purchased_from || 'Select or type supplier...'}
                                 </Text>
                                 <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
                             </TouchableOpacity>
 
-                            <Text style={styles.inputLabel}>Max Discount (%)</Text>
+                            <Text style={styles.inputLabel}>Max Discount (Rs)</Text>
                             <TextInput style={styles.input} value={formItem.max_discount} onChangeText={t => setFormItem({...formItem, max_discount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={COLORS.text.muted} />
                             
                             <View style={{ height: 20 }} />
