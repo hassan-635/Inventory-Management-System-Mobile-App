@@ -18,6 +18,15 @@ Notifications.setNotificationHandler({
     }),
 });
 
+// Register notification categories
+Notifications.setNotificationCategoryAsync('LOW_STOCK_ZERO', [
+    {
+        identifier: 'DELETE_ITEM',
+        buttonTitle: '🗑️ Delete Item',
+        options: { isDestructive: true },
+    },
+]);
+
 export const useSocketNotifications = () => {
     const token = useAuthStore(state => state.token);
 
@@ -39,6 +48,24 @@ export const useSocketNotifications = () => {
         if (Platform.OS !== 'web') {
             requestPermissions();
         }
+
+        // --- Notification Response Listener for Actions --- //
+        const responseListener = Notifications.addNotificationResponseReceivedListener(async response => {
+            const actionIdentifier = response.actionIdentifier;
+            const data = response.notification.request.content.data;
+            
+            if (actionIdentifier === 'DELETE_ITEM' && data?.product_id) {
+                console.log("Delete action triggered for product:", data.product_id);
+                try {
+                    await productsService.delete(data.product_id);
+                    // Dismiss the notification since we handled it
+                    await Notifications.dismissNotificationAsync(response.notification.request.identifier);
+                    console.log(`Product ${data.product_id} deleted successfully from notification`);
+                } catch (err) {
+                    console.error("Failed to delete product from notification", err);
+                }
+            }
+        });
 
         if (!token) return;
 
@@ -66,6 +93,7 @@ export const useSocketNotifications = () => {
 
         return () => {
             socket.disconnect();
+            Notifications.removeNotificationSubscription(responseListener);
         };
     }, [token]);
 };
@@ -100,28 +128,40 @@ export const scheduleAllLowStockNotifications = async (timesArray = null) => {
         
         const lowStockItems = products.filter(p => parseInt(p.remaining_quantity, 10) <= limit);
         
-        // If no low stock items, no need to schedule Daily Alarms right now.
-        // But what if they drop tomorrow? Expo background fetch is better for that.
-        // For local scheduling, we assume the user checks daily.
-        // Setting daily triggers anyway:
+        if (lowStockItems.length === 0) return;
         
+        // Loop through configured times
         for (const timeStr of timesToSchedule) {
             const [hours, minutes] = timeStr.split(':').map(Number);
             
-            await Notifications.scheduleNotificationAsync({
-                content: {
-                    title: "⚠️ Inventory Check Reminder",
-                    body: `It's time to check your stock! Tap to view Low Stock items.`,
-                    sound: true,
-                    priority: Notifications.AndroidNotificationPriority.HIGH,
-                },
-                trigger: {
-                    type: Notifications.SchedulableTriggerInputTypes.DAILY,
-                    hour: hours,
-                    minute: minutes,
-                },
-            });
-            console.log(`Scheduled daily stock alert for ${hours}:${minutes}`);
+            // Loop through each low stock item to create individual notifications
+            for (let i = 0; i < lowStockItems.length; i++) {
+                const item = lowStockItems[i];
+                const qty = parseInt(item.remaining_quantity, 10);
+                const isZero = qty === 0;
+                
+                // Add a small delay/offset to prevent Notification engine spamming failure
+                // We space them out by a few seconds per item if there are many.
+                // However, Daily triggers require hour/minute. We can't easily offset by seconds in expo daily triggers
+                // Instead, they will group up in the notification tray.
+
+                await Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: isZero ? "❌ Out of Stock Alert" : "⚠️ Low Stock Alert",
+                        body: `${item.name}: ${qty} remaining.`,
+                        sound: true,
+                        priority: Notifications.AndroidNotificationPriority.HIGH,
+                        categoryIdentifier: isZero ? 'LOW_STOCK_ZERO' : null,
+                        data: { product_id: item.id },
+                    },
+                    trigger: {
+                        type: Notifications.SchedulableTriggerInputTypes.DAILY,
+                        hour: hours,
+                        minute: minutes,
+                    },
+                });
+            }
+            console.log(`Scheduled ${lowStockItems.length} individual daily stock alerts for ${hours}:${minutes}`);
         }
 
     } catch (err) {
