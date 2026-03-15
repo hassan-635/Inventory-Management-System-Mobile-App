@@ -113,11 +113,12 @@ export const scheduleAllLowStockNotifications = async (timesArray = null) => {
                     title: "⚠️ Inventory Check Reminder",
                     body: `It's time to check your stock! Tap to view Low Stock items.`,
                     sound: true,
+                    priority: Notifications.AndroidNotificationPriority.HIGH,
                 },
                 trigger: {
+                    type: Notifications.SchedulableTriggerInputTypes.DAILY,
                     hour: hours,
                     minute: minutes,
-                    repeats: true, // Daily repeat
                 },
             });
             console.log(`Scheduled daily stock alert for ${hours}:${minutes}`);
