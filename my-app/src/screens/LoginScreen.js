@@ -22,9 +22,11 @@ export default function LoginScreen() {
             const data = await authService.login(email, password);
             // Save token securely (encrypted) instead of plain-text AsyncStorage
             await SecureStore.setItemAsync('token', data.token);
-            setAuth(data.user, data.token);
+            // Backend returns flat object: { _id, name, email, role, token }
+            const user = { id: data._id, name: data.name, email: data.email, role: data.role };
+            setAuth(user, data.token);
         } catch (error) {
-            const msg = error.response?.data?.message || 'Login failed. Please check credentials.';
+            const msg = error.response?.data?.error || error.response?.data?.message || 'Login failed. Please check credentials.';
             Alert.alert('Login Failed', msg);
         } finally {
             setLoading(false);
