@@ -42,7 +42,7 @@ export default function CompaniesScreen() {
     const handlePay = async () => {
         const amount = parseFloat(payAmount);
         if (!amount || amount <= 0) {
-            Alert.alert('Galat Amount', 'Sahi amount daalain');
+            Alert.alert('Invalid Amount', 'Please enter a valid amount');
             return;
         }
         const company = payModal.company;
@@ -73,12 +73,12 @@ export default function CompaniesScreen() {
                     await api.put(`/sales/${unpaid[0].id}`, { add_payment: buyerPayment });
                 }
             }
-            Alert.alert('Payment Ho Gayi!', `Rs. ${amount} company ko credit kar diya gaya`);
+            Alert.alert('Payment Successful!', `Rs. ${amount} credited to company account`);
             setPayModal({ visible: false, company: null });
             setPayAmount('');
             fetchCompanies();
         } catch (err) {
-            Alert.alert('Error', 'Payment fail ho gayi. Dobara try karein.');
+            Alert.alert('Error', 'Payment failed. Please try again.');
             console.error(err);
         } finally {
             setPaying(false);
@@ -172,7 +172,7 @@ export default function CompaniesScreen() {
                                 onPress={() => setPayModal({ visible: true, company: item })}
                             >
                                 <Icon name="cash-outline" size={16} color="#fff" />
-                                <Text style={styles.payBtnText}>Payment Karein</Text>
+                                <Text style={styles.payBtnText}>Make Payment</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -190,7 +190,7 @@ export default function CompaniesScreen() {
                 <Icon name="search-outline" size={18} color={COLORS.text.secondary} style={{ marginRight: 8 }} />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Company name dhoondhain..."
+                    placeholder="Search company name..."
                     placeholderTextColor={COLORS.text.muted || COLORS.text.secondary}
                     value={search}
                     onChangeText={setSearch}
@@ -216,7 +216,7 @@ export default function CompaniesScreen() {
                 ListEmptyComponent={
                     <View style={styles.emptyWrap}>
                         <Icon name="business-outline" size={48} color={COLORS.text.secondary} />
-                        <Text style={styles.emptyText}>Koi company nahi mili</Text>
+                        <Text style={styles.emptyText}>No companies found</Text>
                     </View>
                 }
             />
@@ -227,11 +227,11 @@ export default function CompaniesScreen() {
                     <View style={styles.modalBox}>
                         <Text style={styles.modalTitle}>Payment — {payModal.company?.company_name}</Text>
                         <Text style={styles.modalSub}>
-                            Baqi: Rs. {payModal.company?.total_remaining?.toLocaleString()}
+                            Remaining: Rs. {payModal.company?.total_remaining?.toLocaleString()}
                         </Text>
                         <TextInput
                             style={styles.modalInput}
-                            placeholder="Amount daalain"
+                            placeholder="Enter amount"
                             placeholderTextColor={COLORS.text.muted || COLORS.text.secondary}
                             keyboardType="numeric"
                             value={payAmount}
