@@ -93,7 +93,9 @@ export const useSocketNotifications = () => {
 
         return () => {
             socket.disconnect();
-            Notifications.removeNotificationSubscription(responseListener);
+            if (responseListener) {
+                responseListener.remove();
+            }
         };
     }, [token]);
 };

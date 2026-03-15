@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
 import { buyersService } from '../api/buyers';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
@@ -10,6 +10,11 @@ export default function BuyersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [search, setSearch] = useState('');
+
+  // CRUD State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', address: '' });
 
   const fetchBuyers = async () => {
     try {
@@ -25,6 +30,62 @@ export default function BuyersScreen() {
 
   useEffect(() => { fetchBuyers(); }, []);
   const onRefresh = () => { setRefreshing(true); fetchBuyers(); };
+
+  // CRUD Functions
+  const openModal = (buyer = null) => {
+    if (buyer) {
+      setFormItem({
+        id: buyer.id,
+        name: buyer.name || '',
+        phone: buyer.phone || '',
+        company_name: buyer.company_name || '',
+        address: buyer.address || ''
+      });
+    } else {
+      setFormItem({ id: null, name: '', phone: '', company_name: '', address: '' });
+    }
+    setModalVisible(true);
+  };
+
+  const handleSave = async () => {
+    if (!formItem.name) {
+      Alert.alert("Error", "Customer name is required.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      if (formItem.id) {
+        await buyersService.update(formItem.id, formItem);
+      } else {
+        await buyersService.create(formItem);
+      }
+      setModalVisible(false);
+      fetchBuyers();
+    } catch (error) {
+      console.error("Save buyer error", error);
+      Alert.alert("Error", error.response?.data?.error || "Could not save customer.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const confirmDelete = (id) => {
+    Alert.alert("Delete Customer", "Are you sure you want to delete this customer?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await buyersService.delete(id);
+            fetchBuyers();
+          } catch (err) {
+            Alert.alert("Error", err.response?.data?.error || "Could not delete customer. Make sure they have no linked transactions.");
+          }
+        }
+      }
+    ]);
+  };
 
   const computeDue = (txns) =>
     (txns || []).reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0);
@@ -84,11 +145,66 @@ export default function BuyersScreen() {
                 'Transactions': item.buyer_transactions?.length || 0,
                 'Register Date': new Date(item.created_at).toLocaleDateString()
               }}
+              renderActions={() => (
+                <>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => openModal(item)}>
+                        <Icon name="create-outline" size={18} color={COLORS.text.primary} />
+                        <Text style={styles.actionBtnTxt}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={() => confirmDelete(item.id)}>
+                        <Icon name="trash-outline" size={18} color={COLORS.danger || '#ef4444'} />
+                        <Text style={[styles.actionBtnTxt, { color: COLORS.danger || '#ef4444' }]}>Delete</Text>
+                    </TouchableOpacity>
+                </>
+              )}
             />
           );
         }}
         ListEmptyComponent={<Text style={styles.emptyText}>No customers found.</Text>}
       />
+
+      {/* Floating Action Button */}
+      <TouchableOpacity style={styles.fab} onPress={() => openModal()}>
+          <Icon name="add" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      {/* Add / Edit Modal */}
+      <Modal visible={modalVisible} transparent animationType="slide">
+          <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>{formItem.id ? 'Edit Customer' : 'Add Customer'}</Text>
+                      <TouchableOpacity onPress={() => setModalVisible(false)}>
+                          <Icon name="close" size={24} color={COLORS.text.secondary} />
+                      </TouchableOpacity>
+                  </View>
+                  <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+                      <Text style={styles.inputLabel}>Customer Name *</Text>
+                      <TextInput style={styles.input} value={formItem.name} onChangeText={t => setFormItem({...formItem, name: t})} placeholder="Enter name" placeholderTextColor={COLORS.text.muted} />
+
+                      <Text style={styles.inputLabel}>Phone Number</Text>
+                      <TextInput style={styles.input} value={formItem.phone} onChangeText={t => setFormItem({...formItem, phone: t})} keyboardType="phone-pad" placeholder="Enter phone (optional)" placeholderTextColor={COLORS.text.muted} />
+
+                      <Text style={styles.inputLabel}>Company Name</Text>
+                      <TextInput style={styles.input} value={formItem.company_name} onChangeText={t => setFormItem({...formItem, company_name: t})} placeholder="Company Name (optional)" placeholderTextColor={COLORS.text.muted} />
+
+                      <Text style={styles.inputLabel}>Address</Text>
+                      <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} value={formItem.address} onChangeText={t => setFormItem({...formItem, address: t})} multiline placeholder="Full Address (optional)" placeholderTextColor={COLORS.text.muted} />
+                      
+                      <View style={{ height: 20 }} />
+                  </ScrollView>
+                  <View style={styles.modalFooter}>
+                      <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)} disabled={isSaving}>
+                          <Text style={styles.cancelBtnText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isSaving}>
+                          {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                      </TouchableOpacity>
+                  </View>
+              </View>
+          </View>
+      </Modal>
+
     </View>
   );
 }
@@ -108,6 +224,26 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: COLORS.border.color,
   },
   searchInput: { flex: 1, color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
-  listContainer: { padding: 16, paddingBottom: 40 },
+  listContainer: { padding: 16, paddingBottom: 100 },
   emptyText: { color: COLORS.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
+
+  actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background.tertiary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, gap: 6 },
+  actionBtnDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+  actionBtnTxt: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
+  
+  fab: { position: 'absolute', bottom: 24, right: 24, width: 60, height: 60, borderRadius: 30, backgroundColor: COLORS.accent.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
+  
+  modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
+  modalContent: { backgroundColor: COLORS.background.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 20, color: COLORS.text.primary, fontFamily: FONTS.bold },
+  modalBody: { marginBottom: 20 },
+  inputLabel: { color: COLORS.text.secondary, fontSize: 13, marginBottom: 6, fontFamily: FONTS.medium },
+  input: { backgroundColor: COLORS.background.primary, color: COLORS.text.primary, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border.color, fontFamily: FONTS.regular },
+  
+  modalFooter: { flexDirection: 'row', gap: 15, paddingTop: 10, borderTopWidth: 1, borderTopColor: COLORS.border.color },
+  cancelBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: COLORS.background.primary, alignItems: 'center' },
+  cancelBtnText: { color: COLORS.text.secondary, fontFamily: FONTS.bold, fontSize: 16 },
+  saveBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: COLORS.accent.primary, alignItems: 'center' },
+  saveBtnText: { color: '#fff', fontFamily: FONTS.bold, fontSize: 16 },
 });

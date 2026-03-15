@@ -8,7 +8,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'cube-outline', containerStyle }) => {
+const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'cube-outline', containerStyle, renderActions }) => {
     const [expanded, setExpanded] = useState(false);
 
     const toggleExpand = () => {
@@ -42,6 +42,11 @@ const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'c
                             <Text style={styles.detailValue}>{value || '-'}</Text>
                         </View>
                     ))}
+                    {renderActions && (
+                        <View style={styles.actionsContainer}>
+                            {renderActions()}
+                        </View>
+                    )}
                 </View>
             )}
         </View>
@@ -123,6 +128,15 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.regular,
         flex: 2,
         textAlign: 'right',
+    },
+    actionsContainer: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 12,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+        gap: 12,
     },
 });
 
