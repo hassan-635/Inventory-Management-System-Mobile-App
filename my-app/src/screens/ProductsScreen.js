@@ -12,13 +12,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 const FILTERS = [
     { key: 'all', label: 'All' },
     { key: 'Paint', label: 'Paint' },
+    { key: 'Electric', label: 'Electric' },
     { key: 'Hardware', label: 'Hardware' },
-    { key: 'Electricity', label: 'Electricity' },
     { key: 'low', label: '⚠️ Low Stock' },
+    { key: 'out', label: '❌ Out of Stock' },
 ];
 
 const UNIT_OPTIONS = ['Per Unit', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
-const CATEGORY_OPTIONS = ['Paint', 'Hardware', 'Electricity', 'Plumbing', 'Tools', 'Uncategorized'];
+const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware', 'Plumbing', 'Tools', 'Uncategorized'];
 
 // A searchable modal picker for Dropdowns
 const PickerModal = ({ visible, onClose, items, onSelect, title, allowCustom = false, customValue = '', onCustomChange = null }) => {
@@ -204,9 +205,13 @@ export default function ProductsScreen() {
         // Search filter
         if (search && !p.name?.toLowerCase().includes(search.toLowerCase())) return false;
         
+        const remaining = Number(p.remaining_quantity || 0);
+
         // Category filter
         if (activeFilter === 'low') {
-            return Number(p.remaining_quantity || 0) <= lowStockLimit;
+            return remaining > 0 && remaining <= lowStockLimit;
+        } else if (activeFilter === 'out') {
+            return remaining === 0;
         } else if (activeFilter !== 'all') {
             // Check if the product name contains the category name (as a simple way to categorize if real categories aren't in DB)
             // Or if backend has a category field, we use p.category === activeFilter
@@ -242,15 +247,38 @@ export default function ProductsScreen() {
             {/* Filter Tabs */}
             <View style={styles.filterWrapper}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-                    {FILTERS.map(f => (
-                        <TouchableOpacity
-                            key={f.key}
-                            style={[styles.filterBtn, activeFilter === f.key && styles.filterBtnActive, f.key === 'low' && activeFilter !== 'low' && { borderColor: '#eab308' }]}
-                            onPress={() => setActiveFilter(f.key)}
-                        >
-                            <Text style={[styles.filterBtnText, activeFilter === f.key && styles.filterBtnTextActive, f.key === 'low' && activeFilter !== 'low' && { color: '#eab308' }]}>{f.label}</Text>
-                        </TouchableOpacity>
-                    ))}
+                    {FILTERS.map(f => {
+                        const isLow = f.key === 'low';
+                        const isOut = f.key === 'out';
+                        const isActive = activeFilter === f.key;
+                        
+                        let customBorder = {};
+                        let customText = {};
+                        
+                        if (!isActive && isLow) {
+                            customBorder = { borderColor: '#eab308' };
+                            customText = { color: '#eab308' };
+                        } else if (!isActive && isOut) {
+                            customBorder = { borderColor: '#ef4444' };
+                            customText = { color: '#ef4444' };
+                        } else if (isActive && isLow) {
+                            customBorder = { borderColor: '#eab308', backgroundColor: '#eab308' };
+                            customText = { color: '#fff' };
+                        } else if (isActive && isOut) {
+                            customBorder = { borderColor: '#ef4444', backgroundColor: '#ef4444' };
+                            customText = { color: '#fff' };
+                        }
+
+                        return (
+                            <TouchableOpacity
+                                key={f.key}
+                                style={[styles.filterBtn, isActive && styles.filterBtnActive, customBorder]}
+                                onPress={() => setActiveFilter(f.key)}
+                            >
+                                <Text style={[styles.filterBtnText, isActive && styles.filterBtnTextActive, customText]}>{f.label}</Text>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </ScrollView>
             </View>
 
