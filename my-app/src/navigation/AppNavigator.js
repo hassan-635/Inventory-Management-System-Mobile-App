@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
 import * as SecureStore from 'expo-secure-store';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, Dimensions } from 'react-native';
 
 import { useAuthStore } from '../store/authStore';
 import { COLORS, FONTS } from '../theme/theme';
@@ -19,11 +19,29 @@ import SettingsScreen from '../screens/SettingsScreen';
 import BillingScreen from '../screens/BillingScreen';
 import ExpensesScreen from '../screens/ExpensesScreen';
 import MonthlyReportScreen from '../screens/MonthlyReportScreen';
+import CompaniesScreen from '../screens/CompaniesScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 import { useSocketNotifications } from '../utils/notifications';
+
+// Responsive tab icon size
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TAB_ICON_SIZE = Math.min(22, SCREEN_WIDTH * 0.058);
+const TAB_LABEL_SIZE = Math.min(10, SCREEN_WIDTH * 0.026);
+
+const ICON_MAP = {
+    Billing: { focused: 'document-text', outline: 'document-text-outline' },
+    Products: { focused: 'cube', outline: 'cube-outline' },
+    Buyers: { focused: 'people', outline: 'people-outline' },
+    Suppliers: { focused: 'business', outline: 'business-outline' },
+    Sales: { focused: 'receipt', outline: 'receipt-outline' },
+    Companies: { focused: 'briefcase', outline: 'briefcase-outline' },
+    Expenses: { focused: 'cash', outline: 'cash-outline' },
+    Report: { focused: 'pie-chart', outline: 'pie-chart-outline' },
+    Settings: { focused: 'settings', outline: 'settings-outline' },
+};
 
 const TabNavigator = () => {
     useSocketNotifications(); // Initialize Real-time Sales Alerts
@@ -37,30 +55,30 @@ const TabNavigator = () => {
                 tabBarStyle: {
                     backgroundColor: COLORS.background.secondary,
                     borderTopColor: COLORS.border.color,
-                    paddingBottom: 5,
-                    paddingTop: 5,
+                    paddingBottom: 6,
+                    paddingTop: 6,
+                    height: Math.max(58, SCREEN_WIDTH * 0.14),
                 },
                 tabBarActiveTintColor: COLORS.accent.primary,
                 tabBarInactiveTintColor: COLORS.text.secondary,
-                tabBarIcon: ({ focused, color, size }) => {
-                    let iconName;
-                    if (route.name === 'Products') iconName = focused ? 'cube' : 'cube-outline';
-                    else if (route.name === 'Buyers') iconName = focused ? 'people' : 'people-outline';
-                    else if (route.name === 'Suppliers') iconName = focused ? 'business' : 'business-outline';
-                    else if (route.name === 'Sales') iconName = focused ? 'receipt' : 'receipt-outline';
-                    else if (route.name === 'Billing') iconName = focused ? 'document-text' : 'document-text-outline';
-                    else if (route.name === 'Report') iconName = focused ? 'pie-chart' : 'pie-chart-outline';
-                    else if (route.name === 'Expenses') iconName = focused ? 'cash' : 'cash-outline';
-                    else if (route.name === 'Settings') iconName = focused ? 'settings' : 'settings-outline';
-                    return <Icon name={iconName} size={size} color={color} />;
+                tabBarLabelStyle: {
+                    fontFamily: FONTS.medium,
+                    fontSize: TAB_LABEL_SIZE,
+                },
+                tabBarIcon: ({ focused, color }) => {
+                    const icons = ICON_MAP[route.name];
+                    const iconName = icons ? (focused ? icons.focused : icons.outline) : 'apps-outline';
+                    return <Icon name={iconName} size={TAB_ICON_SIZE} color={color} />;
                 },
             })}
         >
-            <Tab.Screen name="Products" component={ProductsScreen} />
+            {/* Tab order: Billing > Products > Buyers > Suppliers > Sales > Companies > Expenses > Report > Settings */}
             <Tab.Screen name="Billing" component={BillingScreen} />
+            <Tab.Screen name="Products" component={ProductsScreen} />
             <Tab.Screen name="Buyers" component={BuyersScreen} />
             <Tab.Screen name="Suppliers" component={SuppliersScreen} />
             <Tab.Screen name="Sales" component={SalesScreen} />
+            <Tab.Screen name="Companies" component={CompaniesScreen} />
             <Tab.Screen name="Expenses" component={ExpensesScreen} />
             <Tab.Screen name="Report" component={MonthlyReportScreen} />
             <Tab.Screen name="Settings" component={SettingsScreen} />
@@ -76,7 +94,6 @@ export default function AppNavigator() {
             try {
                 const storedToken = await SecureStore.getItemAsync('token');
                 if (storedToken) {
-                    // You ideally want to validate the token/get user here
                     setAuth(null, storedToken);
                 } else {
                     setLoading(false);
