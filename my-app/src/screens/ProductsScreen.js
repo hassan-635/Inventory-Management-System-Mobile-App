@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, ScrollView, Modal, Alert } from 'react-native';
 import { productsService } from '../api/products';
 import { suppliersService } from '../api/suppliers';
+import { purchasesService } from '../api/purchases';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -19,7 +20,7 @@ const FILTERS = [
 ];
 
 const UNIT_OPTIONS = ['Per Unit', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
-const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware', 'Plumbing', 'Tools', 'Uncategorized'];
+const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware'];
 
 // A searchable modal picker for Dropdowns
 const PickerModal = ({ visible, onClose, items, onSelect, title, allowCustom = false, customValue = '', onCustomChange = null }) => {
@@ -93,8 +94,10 @@ export default function ProductsScreen() {
     const [formItem, setFormItem] = useState({ 
         id: null, name: '', category: 'Hardware', price: '', 
         purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
-        max_discount: '0', total_quantity: '0' 
+        max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0'
     });
+    const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
+    const [addPaymentAmount, setAddPaymentAmount] = useState('');
 
     const fetchProductsAndSuppliers = async () => {
         try {
@@ -130,7 +133,9 @@ export default function ProductsScreen() {
     }, [suppliers]);
 
     // CRUD Functions
-    const openModal = (product = null) => {
+    const openModal = async (product = null) => {
+        setAddPaymentAmount('');
+        setSupplierTxnInfo(null);
         if (product) {
             setFormItem({
                 id: product.id,
@@ -141,13 +146,27 @@ export default function ProductsScreen() {
                 purchased_from: product.purchased_from || '',
                 quantity_unit: product.quantity_unit || 'Per Unit',
                 max_discount: product.max_discount?.toString() || '0',
-                total_quantity: product.total_quantity?.toString() || '0'
+                total_quantity: product.total_quantity?.toString() || '0',
+                purchase_date: product.purchase_date ? new Date(product.purchase_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+                paid_amount: '0'
             });
+
+            // Fetch supplier transactions for this product
+            try {
+                const allTxns = await purchasesService.getAll();
+                const prodTxns = allTxns.filter(t => t.product_id === product.id);
+                if (prodTxns.length > 0) {
+                    const totalOwed = prodTxns.reduce((s, t) => s + Number(t.total_amount || 0), 0);
+                    const totalPaid = prodTxns.reduce((s, t) => s + Number(t.paid_amount || 0), 0);
+                    const latestTxn = prodTxns.sort((a, b) => b.id - a.id)[0];
+                    setSupplierTxnInfo({ txn_id: latestTxn.id, total_amount: totalOwed, paid_amount: totalPaid, remaining: totalOwed - totalPaid });
+                }
+            } catch (_) {}
         } else {
             setFormItem({ 
                 id: null, name: '', category: 'Hardware', price: '', 
                 purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
-                max_discount: '0', total_quantity: '0' 
+                max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0'
             });
         }
         setModalVisible(true);
@@ -165,11 +184,22 @@ export default function ProductsScreen() {
                 price: Number(formItem.price),
                 purchase_rate: Number(formItem.purchase_rate),
                 max_discount: Number(formItem.max_discount),
-                total_quantity: Number(formItem.total_quantity)
+                total_quantity: Number(formItem.total_quantity),
+                purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
+                paid_amount: Number(formItem.paid_amount || 0)
             };
 
             if (formItem.id) {
                 await productsService.update(formItem.id, payload);
+                // Submit payment if entered
+                if (addPaymentAmount && Number(addPaymentAmount) > 0 && supplierTxnInfo?.txn_id) {
+                    const payAmt = Number(addPaymentAmount);
+                    if (payAmt > supplierTxnInfo.remaining) {
+                        Alert.alert('Error', `Payment cannot exceed remaining amount: Rs. ${supplierTxnInfo.remaining}`);
+                        return;
+                    }
+                    await purchasesService.updatePayment(supplierTxnInfo.txn_id, payAmt);
+                }
             } else {
                 await productsService.create(payload);
             }
@@ -402,6 +432,42 @@ export default function ProductsScreen() {
                             <Text style={styles.inputLabel}>Max Discount (Rs)</Text>
                             <TextInput style={styles.input} value={formItem.max_discount} onChangeText={t => setFormItem({...formItem, max_discount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={COLORS.text.muted} />
                             
+                            {/* Show Paid Amount only for NEW products */}
+                            {!formItem.id && (
+                                <>
+                                    <Text style={styles.inputLabel}>Paid Amount (Rs) <Text style={{color: COLORS.text.muted, fontSize: 12}}>(0 = udhaar / credit)</Text></Text>
+                                    <TextInput style={styles.input} value={formItem.paid_amount} onChangeText={t => setFormItem({...formItem, paid_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={COLORS.text.muted} />
+                                </>
+                            )}
+
+                            {/* Supplier Payment Ledger — Edit mode only */}
+                            {!!formItem.id && supplierTxnInfo && (
+                                <>
+                                    <View style={{ height: 1, backgroundColor: COLORS.background.card, marginVertical: 16 }} />
+                                    <Text style={[styles.inputLabel, { fontSize: 14, color: COLORS.text.primary, fontFamily: FONTS.bold }]}>💰 Supplier Payment Ledger</Text>
+                                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.inputLabel}>Total Owed (Rs)</Text>
+                                            <View style={[styles.input, { backgroundColor: COLORS.background.secondary }]}>
+                                                <Text style={{ color: COLORS.text.muted }}>Rs. {supplierTxnInfo.total_amount.toLocaleString()}</Text>
+                                            </View>
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={styles.inputLabel}>Total Paid (Rs)</Text>
+                                            <View style={[styles.input, { backgroundColor: COLORS.background.secondary }]}>
+                                                <Text style={{ color: '#4ade80' }}>Rs. {supplierTxnInfo.paid_amount.toLocaleString()}</Text>
+                                            </View>
+                                        </View>
+                                    </View>
+                                    <Text style={styles.inputLabel}>Remaining / Udhaar (Rs)</Text>
+                                    <View style={[styles.input, { backgroundColor: COLORS.background.secondary }]}>
+                                        <Text style={{ color: supplierTxnInfo.remaining > 0 ? '#f87171' : '#4ade80', fontFamily: FONTS.bold }}>Rs. {supplierTxnInfo.remaining.toLocaleString()}</Text>
+                                    </View>
+                                    <Text style={styles.inputLabel}>Add New Payment (Rs) <Text style={{color: COLORS.text.muted, fontSize: 12}}>(max: {supplierTxnInfo.remaining})</Text></Text>
+                                    <TextInput style={styles.input} value={addPaymentAmount} onChangeText={setAddPaymentAmount} keyboardType="numeric" placeholder="Amount to pay now..." placeholderTextColor={COLORS.text.muted} />
+                                </>
+                            )}
+
                             <View style={{ height: 20 }} />
                         </ScrollView>
                         <View style={styles.modalFooter}>
