@@ -130,18 +130,56 @@ export default function SuppliersScreen() {
                     return (
                         <ExpandableItem
                             title={item.name}
-                            subtitle={null}
-                            rightText={`Due: Rs. ${due}`}
+                            subtitle={item.company_name || item.phone || null}
+                            rightText={due > 0 ? `Due: Rs. ${due.toLocaleString()}` : '✓ Cleared'}
                             iconName="business-outline"
                             detailsData={{
-                                'Supplier ID': item.id,
                                 'Phone': item.phone || 'N/A',
                                 'Company': item.company_name || 'N/A',
-                                'Total Paid': `Rs. ${paid}`,
-                                'Remaining Due': `Rs. ${due}`,
-                                'Transactions': item.supplier_transactions?.length || 0,
-                                'Register Date': new Date(item.created_at).toLocaleDateString()
+                                'Total Paid': `Rs. ${paid.toLocaleString()}`,
+                                'Remaining Due': `Rs. ${due.toLocaleString()}`,
                             }}
+                            renderExtra={() => (
+                                <>
+                                    {(item.supplier_transactions || []).length > 0 && (
+                                        <View style={{ marginTop: 10 }}>
+                                            <Text style={[styles.inputLabel, { marginBottom: 6, fontSize: 12, letterSpacing: 0.5 }]}>📦 PURCHASE HISTORY</Text>
+                                            {item.supplier_transactions.map((txn, idx) => {
+                                                const purchaseRate = txn.quantity > 0 ? Math.round(Number(txn.total_amount) / Number(txn.quantity)) : 0;
+                                                const remaining = Number(txn.total_amount || 0) - Number(txn.paid_amount || 0);
+                                                return (
+                                                    <View key={txn.id || idx} style={styles.txnCard}>
+                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                                                            <Text style={styles.txnProduct}>{txn.products?.name || `Product #${txn.product_id}`}</Text>
+                                                            <Text style={[styles.txnRemaining, { color: remaining > 0 ? '#f87171' : '#4ade80' }]}>
+                                                                {remaining > 0 ? `Due: Rs. ${remaining.toLocaleString()}` : '✓ Paid'}
+                                                            </Text>
+                                                        </View>
+                                                        <View style={styles.txnRow}>
+                                                            <View style={styles.txnCell}>
+                                                                <Text style={styles.txnLabel}>Qty</Text>
+                                                                <Text style={styles.txnValue}>{txn.quantity}</Text>
+                                                            </View>
+                                                            <View style={styles.txnCell}>
+                                                                <Text style={styles.txnLabel}>Rate/Unit</Text>
+                                                                <Text style={styles.txnValue}>Rs. {purchaseRate.toLocaleString()}</Text>
+                                                            </View>
+                                                            <View style={styles.txnCell}>
+                                                                <Text style={styles.txnLabel}>Total</Text>
+                                                                <Text style={styles.txnValue}>Rs. {Number(txn.total_amount).toLocaleString()}</Text>
+                                                            </View>
+                                                            <View style={styles.txnCell}>
+                                                                <Text style={styles.txnLabel}>Paid</Text>
+                                                                <Text style={[styles.txnValue, { color: '#4ade80' }]}>Rs. {Number(txn.paid_amount).toLocaleString()}</Text>
+                                                            </View>
+                                                        </View>
+                                                    </View>
+                                                );
+                                            })}
+                                        </View>
+                                    )}
+                                </>
+                            )}
                             renderActions={() => (
                                 <>
                                     <TouchableOpacity style={styles.actionBtn} onPress={() => openModal(item)}>
@@ -239,4 +277,19 @@ const styles = StyleSheet.create({
     cancelBtnText: { color: COLORS.text.secondary, fontFamily: FONTS.bold, fontSize: 16 },
     saveBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: COLORS.accent.primary, alignItems: 'center' },
     saveBtnText: { color: '#fff', fontFamily: FONTS.bold, fontSize: 16 },
+
+    txnCard: {
+        backgroundColor: COLORS.background.primary,
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: COLORS.border.color,
+    },
+    txnProduct: { color: COLORS.text.primary, fontFamily: FONTS.semibold, fontSize: 13 },
+    txnRemaining: { fontSize: 12, fontFamily: FONTS.medium },
+    txnRow: { flexDirection: 'row', marginTop: 4, gap: 4 },
+    txnCell: { flex: 1, alignItems: 'center', backgroundColor: COLORS.background.secondary, borderRadius: 6, padding: 6 },
+    txnLabel: { color: COLORS.text.muted, fontSize: 10, fontFamily: FONTS.regular, marginBottom: 2 },
+    txnValue: { color: COLORS.text.primary, fontSize: 12, fontFamily: FONTS.medium },
 });

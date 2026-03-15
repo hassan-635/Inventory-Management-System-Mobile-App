@@ -413,6 +413,22 @@ export default function ProductsScreen() {
                                 </View>
                             </View>
 
+                            {/* Auto-calculated total to pay supplier - only for new products */}
+                            {!formItem.id && (() => {
+                                const rate = Number(formItem.purchase_rate);
+                                const qty = Number(formItem.total_quantity);
+                                if (rate > 0 && qty > 0) {
+                                    const total = rate * qty;
+                                    return (
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: 'rgba(56,189,248,0.08)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.25)', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 8 }}>
+                                            <Text style={{ color: COLORS.text.secondary, fontSize: 13 }}>💳 Total to Pay Supplier</Text>
+                                            <Text style={{ color: '#38bdf8', fontFamily: FONTS.bold, fontSize: 15 }}>Rs. {total.toLocaleString()}</Text>
+                                        </View>
+                                    );
+                                }
+                                return null;
+                            })()}
+
                             <Text style={styles.inputLabel}>Category</Text>
                             <TouchableOpacity style={styles.input} onPress={() => setShowCategoryPicker(true)}>
                                 <Text style={[{color: COLORS.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.category && {color: COLORS.text.muted}]} numberOfLines={1}>
