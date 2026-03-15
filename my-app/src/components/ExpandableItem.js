@@ -8,7 +8,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'cube-outline' }) => {
+const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'cube-outline', containerStyle }) => {
     const [expanded, setExpanded] = useState(false);
 
     const toggleExpand = () => {
@@ -17,7 +17,7 @@ const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'c
     };
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, containerStyle]}>
             <TouchableOpacity style={styles.header} onPress={toggleExpand} activeOpacity={0.8}>
                 <View style={styles.headerLeft}>
                     <View style={styles.iconContainer}>
