@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
-import { suppliersService } from '../api/suppliers';
+import api from '../api/apiClient';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
+import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function SuppliersScreen() {
@@ -51,7 +52,7 @@ export default function SuppliersScreen() {
 
     const handleSave = async () => {
         if (!formItem.name) {
-            Alert.alert("Error", "Supplier name is required.");
+            useToastStore.getState().showToast("Error", "Supplier name is required.", "error");
             return;
         }
         
@@ -59,11 +60,11 @@ export default function SuppliersScreen() {
         if (formItem.id && formItem.payment_amount) {
             const payAmt = Number(formItem.payment_amount);
             if (payAmt > formItem.txn_due) {
-                Alert.alert('Error', `Payment cannot exceed remaining amount: Rs. ${formItem.txn_due}`);
+                useToastStore.getState().showToast('Error', `Payment cannot exceed remaining amount: Rs. ${formItem.txn_due}`, 'error');
                 return;
             }
             if (payAmt < 0) {
-                Alert.alert('Error', 'Payment amount cannot be negative.');
+                useToastStore.getState().showToast('Error', 'Payment amount cannot be negative.', 'error');
                 return;
             }
             payload.payment_amount = payAmt;
@@ -77,10 +78,11 @@ export default function SuppliersScreen() {
                 await suppliersService.create(payload);
             }
             setModalVisible(false);
+            useToastStore.getState().showToast('Saved', 'Supplier saved successfully!', 'success');
             fetchSuppliers();
         } catch (error) {
             console.error("Save supplier error", error);
-            Alert.alert("Error", error.response?.data?.error || "Could not save supplier.");
+            useToastStore.getState().showToast("Error", error.response?.data?.error || "Could not save supplier.", "error");
         } finally {
             setIsSaving(false);
         }
@@ -95,9 +97,10 @@ export default function SuppliersScreen() {
                 onPress: async () => {
                     try {
                         await suppliersService.delete(id);
+                        useToastStore.getState().showToast('Deleted', 'Supplier deleted successfully!', 'success');
                         fetchSuppliers();
                     } catch (err) {
-                        Alert.alert("Error", err.response?.data?.error || "Could not delete supplier. Make sure they have no linked transactions.");
+                        useToastStore.getState().showToast("Error", err.response?.data?.error || "Could not delete supplier. Make sure they have no linked transactions.", "error");
                     }
                 }
             }

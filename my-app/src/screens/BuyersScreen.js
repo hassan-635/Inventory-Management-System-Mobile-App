@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, Te
 import { buyersService } from '../api/buyers';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
+import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function BuyersScreen() {
@@ -49,7 +50,7 @@ export default function BuyersScreen() {
 
   const handleSave = async () => {
     if (!formItem.name) {
-      Alert.alert("Error", "Customer name is required.");
+      useToastStore.getState().showToast("Error", "Customer name is required.", "error");
       return;
     }
     setIsSaving(true);
@@ -60,10 +61,11 @@ export default function BuyersScreen() {
         await buyersService.create(formItem);
       }
       setModalVisible(false);
+      useToastStore.getState().showToast('Saved', 'Customer saved successfully!', 'success');
       fetchBuyers();
     } catch (error) {
       console.error("Save buyer error", error);
-      Alert.alert("Error", error.response?.data?.error || "Could not save customer.");
+      useToastStore.getState().showToast("Error", error.response?.data?.error || "Could not save customer.", "error");
     } finally {
       setIsSaving(false);
     }
@@ -78,9 +80,10 @@ export default function BuyersScreen() {
         onPress: async () => {
           try {
             await buyersService.delete(id);
+            useToastStore.getState().showToast('Deleted', 'Customer deleted successfully!', 'success');
             fetchBuyers();
           } catch (err) {
-            Alert.alert("Error", err.response?.data?.error || "Could not delete customer. Make sure they have no linked transactions.");
+            useToastStore.getState().showToast("Error", err.response?.data?.error || "Could not delete customer. Make sure they have no linked transactions.", "error");
           }
         }
       }

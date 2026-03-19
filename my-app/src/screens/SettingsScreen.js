@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenStorage } from '../utils/tokenStorage';
 import { COLORS, FONTS } from '../theme/theme';
 import { useAuthStore } from '../store/authStore';
+import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { scheduleAllLowStockNotifications } from '../utils/notifications';
@@ -35,7 +36,7 @@ export default function SettingsScreen() {
 
     const saveSettings = async () => {
         if (isNaN(stockLimit) || Number(stockLimit) < 0) {
-            Alert.alert('Invalid Input', 'Please enter a valid positive number for stock limit');
+            useToastStore.getState().showToast('Invalid Input', 'Please enter a valid positive number for stock limit', 'error');
             return;
         }
 
@@ -46,9 +47,9 @@ export default function SettingsScreen() {
             // Reschedule notifications based on new times
             await scheduleAllLowStockNotifications(notificationTimes);
             
-            Alert.alert('Success', 'Settings saved successfully');
+            useToastStore.getState().showToast('Success', 'Settings saved successfully', 'success');
         } catch (err) {
-            Alert.alert('Error', 'Failed to save settings');
+            useToastStore.getState().showToast('Error', 'Failed to save settings', 'error');
         }
     };
 

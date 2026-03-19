@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, 
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 import { COLORS, FONTS } from '../theme/theme';
+import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -33,7 +34,7 @@ export default function ExpensesScreen() {
             setExpenses(res.data);
         } catch (error) {
             console.error('Fetch expenses error:', error);
-            Alert.alert("Error", "Could not fetch expenses.");
+            useToastStore.getState().showToast("Error", "Could not fetch expenses.", "error");
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -52,7 +53,7 @@ export default function ExpensesScreen() {
 
     const handleSave = async () => {
         if (!formItem.category || !formItem.amount) {
-            Alert.alert("Error", "Category and amount are required.");
+            useToastStore.getState().showToast("Error", "Category and amount are required.", "error");
             return;
         }
 
@@ -68,10 +69,11 @@ export default function ExpensesScreen() {
                 });
             }
             setModalVisible(false);
+            useToastStore.getState().showToast('Saved', 'Expense saved successfully!', 'success');
             fetchExpenses();
         } catch (error) {
             console.error('Save expense error:', error);
-            Alert.alert("Error", "Could not save expense.");
+            useToastStore.getState().showToast("Error", "Could not save expense.", "error");
         } finally {
             setIsSaving(false);
         }
@@ -88,9 +90,10 @@ export default function ExpensesScreen() {
                         await axios.delete(`${API_URL}/expenses/${id}`, {
                             headers: { Authorization: `Bearer ${token}` }
                         });
+                        useToastStore.getState().showToast('Deleted', 'Expense deleted successfully!', 'success');
                         fetchExpenses();
                     } catch (err) {
-                        Alert.alert("Error", "Could not delete expense");
+                        useToastStore.getState().showToast("Error", "Could not delete expense", "error");
                     }
                 }
             }

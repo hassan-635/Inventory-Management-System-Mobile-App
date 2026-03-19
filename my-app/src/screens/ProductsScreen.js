@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, ScrollView, Modal, Alert } from 'react-native';
 import { productsService } from '../api/products';
-import { suppliersService } from '../api/suppliers';
 import { purchasesService } from '../api/purchases';
 import { COLORS, FONTS } from '../theme/theme';
+import { useToastStore } from '../store/toastStore';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useMemo } from 'react';
@@ -178,7 +178,7 @@ export default function ProductsScreen() {
 
     const handleSave = async () => {
         if (!formItem.name || !formItem.price) {
-            Alert.alert("Error", "Name and Sale Price are required.");
+            useToastStore.getState().showToast("Error", "Name and Sale Price are required.", "error");
             return;
         }
         setIsSaving(true);
@@ -199,7 +199,7 @@ export default function ProductsScreen() {
                 if (addPaymentAmount && Number(addPaymentAmount) > 0 && supplierTxnInfo?.txn_id) {
                     const payAmt = Number(addPaymentAmount);
                     if (payAmt > supplierTxnInfo.remaining) {
-                        Alert.alert('Error', `Payment cannot exceed remaining amount: Rs. ${supplierTxnInfo.remaining}`);
+                        useToastStore.getState().showToast('Error', `Payment cannot exceed remaining amount: Rs. ${supplierTxnInfo.remaining}`, 'error');
                         return;
                     }
                     await purchasesService.updatePayment(supplierTxnInfo.txn_id, payAmt);
@@ -208,10 +208,11 @@ export default function ProductsScreen() {
                 await productsService.create(payload);
             }
             setModalVisible(false);
+            useToastStore.getState().showToast('Saved', 'Product saved successfully!', 'success');
             fetchProductsAndSuppliers();
         } catch (error) {
             console.error("Save product error", error);
-            Alert.alert("Error", error.response?.data?.error || "Could not save product.");
+            useToastStore.getState().showToast("Error", error.response?.data?.error || "Could not save product.", "error");
         } finally {
             setIsSaving(false);
         }
@@ -226,9 +227,10 @@ export default function ProductsScreen() {
                 onPress: async () => {
                     try {
                         await productsService.delete(id);
+                        useToastStore.getState().showToast('Deleted', 'Product deleted successfully!', 'success');
                         fetchProductsAndSuppliers();
                     } catch (err) {
-                        Alert.alert("Error", err.response?.data?.error || "Could not delete product");
+                        useToastStore.getState().showToast("Error", err.response?.data?.error || "Could not delete product", "error");
                     }
                 }
             }

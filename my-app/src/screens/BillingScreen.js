@@ -7,6 +7,7 @@ import { productsService } from '../api/products';
 import { buyersService } from '../api/buyers';
 import { salesService } from '../api/sales';
 import { COLORS, FONTS } from '../theme/theme';
+import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const BILL_TYPES = [
@@ -128,13 +129,13 @@ export default function BillingScreen() {
         
         const qtyToAdd = parseInt(quantity, 10);
         if (isNaN(qtyToAdd) || qtyToAdd <= 0) {
-            Alert.alert("Error", "Quantity must be at least 1");
+            useToastStore.getState().showToast("Error", "Quantity must be at least 1", "error");
             return;
         }
 
         // Validate stock for real/credit bills
         if (billType !== 'QUOTATION' && selectedProduct.remaining_quantity < qtyToAdd) {
-            Alert.alert("Stock Error", `Cannot add ${qtyToAdd} items. Only ${selectedProduct.remaining_quantity} in stock.`);
+            useToastStore.getState().showToast("Stock Error", `Cannot add ${qtyToAdd} items. Only ${selectedProduct.remaining_quantity} in stock.`, "error");
             return;
         }
 
@@ -173,13 +174,13 @@ export default function BillingScreen() {
 
     const handleSubmit = async () => {
         if (cart.length === 0) {
-            Alert.alert('Error', 'Please add at least one item to the cart.');
+            useToastStore.getState().showToast('Error', 'Please add at least one item to the cart.', 'error');
             return;
         }
 
         // QUOTATION LOGIC
         if (billType === 'QUOTATION') {
-            Alert.alert('Quotation Generated', 'This is a quotation invoice and will not modify database records.');
+            useToastStore.getState().showToast('Quotation Generated', 'This is a quotation invoice.', 'info');
             // In a real app, this would trigger PDF generation or printing.
             resetForm();
             return;
@@ -239,12 +240,12 @@ export default function BillingScreen() {
                 await salesService.create(payload);
             }
 
-            Alert.alert('✅ Success', `${isCreditBill ? 'Udhaar' : 'Original'} Bill saved successfully!`);
+            useToastStore.getState().showToast('Success', `${isCreditBill ? 'Udhaar' : 'Original'} Bill saved successfully!`, 'success');
             resetForm();
             loadData(); // Refresh stock
 
         } catch (e) {
-            Alert.alert('Error', e.response?.data?.error || e.message || 'Failed to create bill.');
+            useToastStore.getState().showToast('Error', e.response?.data?.error || e.message || 'Failed to create bill.', 'error');
         } finally {
             setSubmitting(false);
         }

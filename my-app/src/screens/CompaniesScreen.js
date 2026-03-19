@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import api from '../api/apiClient';
 import { COLORS, FONTS } from '../theme/theme';
+import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -42,7 +43,7 @@ export default function CompaniesScreen() {
     const handlePay = async () => {
         const amount = parseFloat(payAmount);
         if (!amount || amount <= 0) {
-            Alert.alert('Invalid Amount', 'Please enter a valid amount');
+            useToastStore.getState().showToast('Invalid Amount', 'Please enter a valid amount', 'error');
             return;
         }
         const company = payModal.company;
@@ -73,12 +74,12 @@ export default function CompaniesScreen() {
                     await api.put(`/sales/${unpaid[0].id}`, { add_payment: buyerPayment });
                 }
             }
-            Alert.alert('Payment Successful!', `Rs. ${amount} credited to company account`);
+            useToastStore.getState().showToast('Payment Successful!', `Rs. ${amount} credited to company account`, 'success');
             setPayModal({ visible: false, company: null });
             setPayAmount('');
             fetchCompanies();
         } catch (err) {
-            Alert.alert('Error', 'Payment failed. Please try again.');
+            useToastStore.getState().showToast('Error', 'Payment failed. Please try again.', 'error');
             console.error(err);
         } finally {
             setPaying(false);
