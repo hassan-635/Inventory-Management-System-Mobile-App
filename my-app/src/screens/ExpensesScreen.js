@@ -116,30 +116,47 @@ export default function ExpensesScreen() {
         );
     }
 
-    const renderExpenseItem = ({ item }) => (
-        <View style={styles.card}>
-            <View style={styles.cardHeader}>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{item.category}</Text>
+    const getCategoryStyles = (category) => {
+        switch(category) {
+            case 'Petrol': return { bg: 'rgba(249, 115, 22, 0.15)', text: '#f97316', icon: 'water' };
+            case 'Electric Bill': return { bg: 'rgba(234, 179, 8, 0.15)', text: '#eab308', icon: 'flash' };
+            case 'Food': return { bg: 'rgba(34, 197, 94, 0.15)', text: '#22c55e', icon: 'restaurant' };
+            case 'Rent': return { bg: 'rgba(59, 130, 246, 0.15)', text: '#3b82f6', icon: 'home' };
+            case 'Maintenance': return { bg: 'rgba(168, 85, 247, 0.15)', text: '#a855f7', icon: 'build' };
+            default: return { bg: 'rgba(148, 163, 184, 0.15)', text: '#94a3b8', icon: 'ellipsis-horizontal' };
+        }
+    }
+
+    const renderExpenseItem = ({ item }) => {
+        const catStyle = getCategoryStyles(item.category);
+        return (
+            <View style={styles.card}>
+                <View style={styles.cardLeft}>
+                    <View style={[styles.catIconContainer, { backgroundColor: catStyle.bg }]}>
+                        <Icon name={catStyle.icon} size={22} color={catStyle.text} />
+                    </View>
+                    <View style={styles.cardDetails}>
+                        <Text style={styles.cardTitle}>{item.category}</Text>
+                        <Text style={styles.cardDesc} numberOfLines={1}>
+                            {item.description || 'No description'}
+                        </Text>
+                        <Text style={styles.cardDate}>{new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                    </View>
                 </View>
-                <Text style={styles.cardDate}>{new Date(item.date).toLocaleDateString()}</Text>
+                <View style={styles.cardRight}>
+                    <Text style={styles.cardAmount}>Rs. {Number(item.amount).toLocaleString()}</Text>
+                    <View style={styles.cardActions}>
+                        <TouchableOpacity onPress={() => openModal(item)} style={styles.editBtn}>
+                            <Icon name="create-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => confirmDelete(item.id)} style={styles.deleteBtn}>
+                            <Icon name="trash-outline" size={18} color="#fff" />
+                        </TouchableOpacity>
+                    </View>
+                </View>
             </View>
-            <View style={styles.cardBody}>
-                <Text style={styles.cardDesc} numberOfLines={2}>
-                    {item.description || 'No description provided.'}
-                </Text>
-                <Text style={styles.cardAmount}>Rs. {Number(item.amount).toLocaleString()}</Text>
-            </View>
-            <View style={styles.cardActions}>
-                <TouchableOpacity onPress={() => openModal(item)} style={styles.iconBtn}>
-                    <Icon name="create-outline" size={20} color={COLORS.text.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => confirmDelete(item.id)} style={styles.iconBtn}>
-                    <Icon name="trash-outline" size={20} color={COLORS.danger} />
-                </TouchableOpacity>
-            </View>
-        </View>
-    );
+        );
+    };
 
     return (
         <View style={styles.container}>
@@ -275,16 +292,34 @@ const styles = StyleSheet.create({
     listContainer: { padding: 16, paddingBottom: 40 },
     emptyText: { color: COLORS.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
 
-    card: { backgroundColor: COLORS.background.secondary, borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: COLORS.border.color },
-    cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-    badge: { backgroundColor: 'rgba(56, 189, 248, 0.15)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-    badgeText: { color: '#38bdf8', fontSize: 12, fontFamily: FONTS.medium },
-    cardDate: { color: COLORS.text.muted, fontSize: 12, fontFamily: FONTS.regular },
-    cardBody: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-    cardDesc: { color: COLORS.text.secondary, fontSize: 14, fontFamily: FONTS.regular, flex: 1, marginRight: 10 },
-    cardAmount: { color: COLORS.text.primary, fontSize: 18, fontFamily: FONTS.bold },
-    cardActions: { flexDirection: 'row', justifyContent: 'flex-end', borderTopWidth: 1, borderTopColor: COLORS.border.color, paddingTop: 10, gap: 15 },
-    iconBtn: { padding: 5 },
+    card: { 
+        backgroundColor: COLORS.background.secondary, 
+        borderRadius: 16, 
+        padding: 16, 
+        marginBottom: 14, 
+        flexDirection: 'row', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 6,
+        elevation: 3,
+        borderWidth: 1, 
+        borderColor: COLORS.border.color 
+    },
+    cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+    catIconContainer: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
+    cardDetails: { flex: 1, justifyContent: 'center' },
+    cardTitle: { color: COLORS.text.primary, fontSize: 16, fontFamily: FONTS.bold, marginBottom: 2 },
+    cardDesc: { color: COLORS.text.secondary, fontSize: 13, fontFamily: FONTS.regular, marginBottom: 4 },
+    cardDate: { color: COLORS.text.muted, fontSize: 11, fontFamily: FONTS.medium },
+    
+    cardRight: { alignItems: 'flex-end', justifyContent: 'center' },
+    cardAmount: { color: COLORS.text.primary, fontSize: 17, fontFamily: FONTS.bold, marginBottom: 12 },
+    cardActions: { flexDirection: 'row', gap: 10 },
+    editBtn: { backgroundColor: COLORS.accent.primary, padding: 8, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+    deleteBtn: { backgroundColor: '#ef4444', padding: 8, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
 
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
     modalContent: { backgroundColor: COLORS.background.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
