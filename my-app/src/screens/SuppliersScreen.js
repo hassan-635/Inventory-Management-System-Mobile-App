@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
-import api from '../api/apiClient';
+import { suppliersService } from '../api/suppliers';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
 import { useToastStore } from '../store/toastStore';
@@ -60,7 +60,7 @@ export default function SuppliersScreen() {
         if (formItem.id && formItem.payment_amount) {
             const payAmt = Number(formItem.payment_amount);
             if (payAmt > formItem.txn_due) {
-                useToastStore.getState().showToast('Error', `Payment cannot exceed remaining amount: Rs. ${formItem.txn_due}`, 'error');
+                useToastStore.getState().showToast('Error', 'Payment cannot exceed remaining amount: Rs. ' + formItem.txn_due, 'error');
                 return;
             }
             if (payAmt < 0) {
