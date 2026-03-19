@@ -3,7 +3,7 @@ import { NavigationContainer, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Icon from 'react-native-vector-icons/Ionicons';
-import * as SecureStore from 'expo-secure-store';
+import { tokenStorage } from '../utils/tokenStorage';
 import { ActivityIndicator, View, Dimensions } from 'react-native';
 
 import { useAuthStore } from '../store/authStore';
@@ -92,7 +92,7 @@ export default function AppNavigator() {
     useEffect(() => {
         const checkToken = async () => {
             try {
-                const storedToken = await SecureStore.getItemAsync('token');
+                const storedToken = await tokenStorage.getItemAsync('token');
                 if (storedToken) {
                     setAuth(null, storedToken);
                 } else {

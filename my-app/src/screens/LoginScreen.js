@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../api/auth';
-import * as SecureStore from 'expo-secure-store';
+import { tokenStorage } from '../utils/tokenStorage';
 import { COLORS, FONTS } from '../theme/theme';
 
 export default function LoginScreen() {
@@ -21,7 +21,7 @@ export default function LoginScreen() {
             setLoading(true);
             const data = await authService.login(email, password);
             // Save token securely (encrypted) instead of plain-text AsyncStorage
-            await SecureStore.setItemAsync('token', data.token);
+            await tokenStorage.setItemAsync('token', data.token);
             // Backend returns flat object: { _id, name, email, role, token }
             const user = { id: data._id, name: data.name, email: data.email, role: data.role };
             setAuth(user, data.token);

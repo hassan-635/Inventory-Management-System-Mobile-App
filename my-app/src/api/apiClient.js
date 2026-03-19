@@ -1,5 +1,5 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import { tokenStorage } from '../utils/tokenStorage';
 
 // Fetching URL securely from Environment variables
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -19,7 +19,7 @@ const api = axios.create({
 
 api.interceptors.request.use(
     async (config) => {
-        const token = await SecureStore.getItemAsync('token');
+        const token = await tokenStorage.getItemAsync('token');
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -38,7 +38,7 @@ api.interceptors.response.use(
     async (error) => {
         if (error.response && error.response.status === 401) {
             console.warn("Unauthorized request detected (401). Forcing logout.");
-            await SecureStore.deleteItemAsync('token');
+            await tokenStorage.deleteItemAsync('token');
             useAuthStore.getState().logout();
         }
         return Promise.reject(error);
