@@ -94,7 +94,8 @@ export default function ProductsScreen() {
     const [formItem, setFormItem] = useState({ 
         id: null, name: '', category: 'Hardware', price: '', 
         purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
-        max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0'
+        max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
+        supplier_phone: '', supplier_company_name: ''
     });
     const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
@@ -148,7 +149,9 @@ export default function ProductsScreen() {
                 max_discount: product.max_discount?.toString() || '0',
                 total_quantity: product.total_quantity?.toString() || '0',
                 purchase_date: product.purchase_date ? new Date(product.purchase_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-                paid_amount: '0'
+                paid_amount: '0',
+                supplier_phone: '',
+                supplier_company_name: ''
             });
 
             // Fetch supplier transactions for this product
@@ -166,7 +169,8 @@ export default function ProductsScreen() {
             setFormItem({ 
                 id: null, name: '', category: 'Hardware', price: '', 
                 purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
-                max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0'
+                max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
+                supplier_phone: '', supplier_company_name: ''
             });
         }
         setModalVisible(true);
@@ -444,6 +448,19 @@ export default function ProductsScreen() {
                                 </Text>
                                 <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
                             </TouchableOpacity>
+
+                            {/* Show auto-create supplier fields if it's a new supplier */}
+                            {formItem.purchased_from && !supplierOptions.includes(formItem.purchased_from) && (
+                                <View style={{ backgroundColor: 'rgba(99, 102, 241, 0.05)', padding: 12, borderRadius: 10, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)' }}>
+                                    <Text style={[styles.inputLabel, { color: COLORS.accent.primary }]}>✨ Auto-Create New Supplier</Text>
+                                    
+                                    <Text style={styles.inputLabel}>Phone Number</Text>
+                                    <TextInput style={styles.input} value={formItem.supplier_phone} onChangeText={t => setFormItem({...formItem, supplier_phone: t})} keyboardType="phone-pad" placeholder="Enter supplier's phone" placeholderTextColor={COLORS.text.muted} />
+                                    
+                                    <Text style={styles.inputLabel}>Company Name (Optional)</Text>
+                                    <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.supplier_company_name} onChangeText={t => setFormItem({...formItem, supplier_company_name: t})} placeholder="Enter company name" placeholderTextColor={COLORS.text.muted} />
+                                </View>
+                            )}
 
                             <Text style={styles.inputLabel}>Max Discount (Rs)</Text>
                             <TextInput style={styles.input} value={formItem.max_discount} onChangeText={t => setFormItem({...formItem, max_discount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={COLORS.text.muted} />
