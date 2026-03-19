@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl, Modal } from 'react-native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
@@ -20,6 +20,8 @@ export default function MonthlyReportScreen() {
 
     const [selectedYear, setSelectedYear] = useState(currentYear);
     const [selectedMonth, setSelectedMonth] = useState(currentMonth);
+    const [showMonthPicker, setShowMonthPicker] = useState(false);
+    const [pickerYear, setPickerYear] = useState(currentYear);
 
     const fetchReport = async () => {
         try {
@@ -89,7 +91,10 @@ export default function MonthlyReportScreen() {
                 <TouchableOpacity style={styles.dateBtn} onPress={() => changeMonth(-1)}>
                     <Icon name="chevron-back" size={24} color={COLORS.text.primary} />
                 </TouchableOpacity>
-                <Text style={styles.dateLabel}>{monthNames[selectedMonth - 1]} {selectedYear}</Text>
+                <TouchableOpacity style={styles.dateSelectorCenter} onPress={() => { setPickerYear(selectedYear); setShowMonthPicker(true); }}>
+                    <Text style={styles.dateLabel}>{monthNames[selectedMonth - 1]} {selectedYear}</Text>
+                    <Icon name="calendar-outline" size={16} color={COLORS.text.secondary} style={{ marginLeft: 6 }} />
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.dateBtn} onPress={() => changeMonth(1)}>
                     <Icon name="chevron-forward" size={24} color={COLORS.text.primary} />
                 </TouchableOpacity>
@@ -306,6 +311,44 @@ export default function MonthlyReportScreen() {
                 )}
 
             </ScrollView>
+
+            {/* Custom Month/Year Picker Modal */}
+            <Modal visible={showMonthPicker} transparent animationType="fade">
+                <View style={styles.modalOverlay}>
+                    <View style={styles.monthPickerBox}>
+                        <View style={styles.yearRow}>
+                            <TouchableOpacity onPress={() => setPickerYear(y => y - 1)} style={styles.yearBtn}>
+                                <Icon name="chevron-back" size={20} color={COLORS.text.primary}/>
+                            </TouchableOpacity>
+                            <Text style={styles.yearText}>{pickerYear}</Text>
+                            <TouchableOpacity onPress={() => setPickerYear(y => y + 1)} style={styles.yearBtn}>
+                                <Icon name="chevron-forward" size={20} color={COLORS.text.primary}/>
+                            </TouchableOpacity>
+                        </View>
+                        <View style={styles.monthsGrid}>
+                            {monthNames.map((m, index) => {
+                                const isActive = pickerYear === selectedYear && (index + 1) === selectedMonth;
+                                return (
+                                    <TouchableOpacity 
+                                        key={m} 
+                                        style={[styles.monthCell, isActive && styles.monthCellActive]}
+                                        onPress={() => { 
+                                            setSelectedYear(pickerYear);
+                                            setSelectedMonth(index + 1);
+                                            setShowMonthPicker(false); 
+                                        }}
+                                    >
+                                        <Text style={[styles.monthCellText, isActive && { color: '#fff' }]}>{m}</Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </View>
+                        <TouchableOpacity style={styles.closePickerBtn} onPress={() => setShowMonthPicker(false)}>
+                            <Text style={styles.closePickerText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
@@ -316,9 +359,10 @@ const styles = StyleSheet.create({
     header: { padding: 16, paddingBottom: 5 },
     headerTitle: { fontSize: 24, color: COLORS.text.primary, fontFamily: FONTS.bold },
 
-    dateSelectorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, marginHorizontal: 16, backgroundColor: COLORS.background.secondary, borderRadius: 12, marginBottom: 15 },
-    dateBtn: { padding: 10 },
-    dateLabel: { fontSize: 18, color: COLORS.text.primary, fontFamily: FONTS.bold, minWidth: 100, textAlign: 'center' },
+    dateSelectorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, marginHorizontal: 16, backgroundColor: COLORS.background.secondary, borderRadius: 12, marginBottom: 15, paddingHorizontal: 16 },
+    dateSelectorCenter: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
+    dateBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 },
+    dateLabel: { fontSize: 18, color: COLORS.text.primary, fontFamily: FONTS.bold, textAlign: 'center' },
 
     scrollContainer: { paddingHorizontal: 16 },
 
@@ -373,4 +417,16 @@ const styles = StyleSheet.create({
     breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
     breakdownCat: { color: COLORS.text.secondary, fontFamily: FONTS.regular },
     breakdownAmt: { color: COLORS.text.primary, fontFamily: FONTS.medium },
+
+    modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+    monthPickerBox: { backgroundColor: COLORS.background.secondary, borderRadius: 16, padding: 20, width: '85%', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)' },
+    yearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 20 },
+    yearBtn: { padding: 10, backgroundColor: COLORS.background.tertiary, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)' },
+    yearText: { color: COLORS.text.primary, fontSize: 20, fontFamily: FONTS.bold },
+    monthsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', width: '100%', gap: 10 },
+    monthCell: { width: '30%', paddingVertical: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)', backgroundColor: COLORS.background.primary },
+    monthCellActive: { backgroundColor: COLORS.accent.primary, borderColor: COLORS.accent.primary },
+    monthCellText: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
+    closePickerBtn: { marginTop: 20, paddingVertical: 12, width: '100%', alignItems: 'center', borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' },
+    closePickerText: { color: COLORS.text.secondary, fontFamily: FONTS.bold, fontSize: 15 },
 });
