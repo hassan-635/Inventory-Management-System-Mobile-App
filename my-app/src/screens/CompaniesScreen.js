@@ -288,8 +288,9 @@ const styles = StyleSheet.create({
 
     card: {
         backgroundColor: COLORS.background.secondary,
-        borderRadius: 14, marginBottom: 14,
-        borderWidth: 1, borderColor: COLORS.border.color,
+        borderRadius: 16, marginBottom: 16,
+        borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)',
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 4,
         overflow: 'hidden',
     },
     cardAlert: { borderColor: 'rgba(239,68,68,0.3)' },
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
         padding: 14, gap: 10,
     },
     cardIconWrap: {
-        width: 40, height: 40, borderRadius: 10,
+        width: 44, height: 44, borderRadius: 22,
         backgroundColor: 'rgba(99,102,241,0.15)',
         justifyContent: 'center', alignItems: 'center',
     },
@@ -336,10 +337,11 @@ const styles = StyleSheet.create({
     buyerDue: { fontFamily: FONTS.medium, fontSize: 13 },
 
     payBtn: {
-        marginTop: 12, backgroundColor: COLORS.accent.primary,
-        borderRadius: 8, paddingVertical: 10,
+        marginTop: 16, backgroundColor: COLORS.accent.primary,
+        borderRadius: 12, paddingVertical: 12,
         flexDirection: 'row', justifyContent: 'center',
         alignItems: 'center', gap: 8,
+        shadowColor: COLORS.accent.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
     },
     payBtnText: { color: '#fff', fontFamily: FONTS.bold, fontSize: 14 },
 

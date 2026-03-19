@@ -323,13 +323,22 @@ const styles = StyleSheet.create({
     scrollContainer: { paddingHorizontal: 16 },
 
     statsGrid: { flexDirection: 'row', gap: 15, marginBottom: 20 },
-    statCard: { flex: 1, backgroundColor: COLORS.background.secondary, padding: 16, borderRadius: 12 },
-    statIcon: { marginBottom: 10 },
+    statCard: { 
+        flex: 1, 
+        backgroundColor: COLORS.background.secondary, 
+        padding: 18, 
+        borderRadius: 16,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 
+    },
+    statIcon: { marginBottom: 12 },
     statTitle: { color: COLORS.text.secondary, fontSize: 13, fontFamily: FONTS.medium, marginBottom: 5 },
     statValue: { fontSize: 18, fontFamily: FONTS.bold },
 
     ledgerSection: { gap: 15, marginBottom: 20 },
-    ledgerCard: { backgroundColor: COLORS.background.secondary, padding: 16, borderRadius: 12, borderWidth: 1 },
+    ledgerCard: { 
+        backgroundColor: COLORS.background.secondary, padding: 20, borderRadius: 16, borderWidth: 1,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 
+    },
     ledgerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, gap: 8 },
     ledgerTitle: { fontSize: 16, fontFamily: FONTS.bold },
     ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
@@ -337,14 +346,21 @@ const styles = StyleSheet.create({
     ledgerText: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 14 },
     ledgerAmt: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
 
-    alertPanel: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(234, 179, 8, 0.1)', borderWidth: 1, borderColor: 'rgba(234, 179, 8, 0.3)', padding: 16, borderRadius: 12, marginBottom: 20 },
+    alertPanel: { 
+        flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(234, 179, 8, 0.1)', 
+        borderWidth: 1, borderColor: 'rgba(234, 179, 8, 0.3)', padding: 18, borderRadius: 16, marginBottom: 20,
+        shadowColor: "rgba(234, 179, 8, 0.2)", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 6, elevation: 3 
+    },
     alertTextWrapper: { marginLeft: 15 },
-    alertTitle: { color: '#eab308', fontFamily: FONTS.bold, fontSize: 14, marginBottom: 2 },
+    alertTitle: { color: '#eab308', fontFamily: FONTS.bold, fontSize: 15, marginBottom: 4 },
     alertSub: { color: '#ca8a04', fontFamily: FONTS.medium, fontSize: 14 },
 
-    whiteCard: { backgroundColor: COLORS.background.secondary, padding: 16, borderRadius: 12, marginBottom: 20 },
+    whiteCard: { 
+        backgroundColor: COLORS.background.secondary, padding: 20, borderRadius: 16, marginBottom: 24,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 
+    },
     cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, borderBottomColor: COLORS.border?.color || 'rgba(255,255,255,0.1)', borderBottomWidth: 1, paddingBottom: 10 },
-    cardHeader: { color: COLORS.text.primary, fontSize: 15, fontFamily: FONTS.bold },
+    cardHeader: { color: COLORS.text.primary, fontSize: 16, fontFamily: FONTS.bold },
 
     tableHeaderRow: { marginBottom: 6 },
     tableHeaderText: { color: COLORS.text.muted || COLORS.text.secondary, fontSize: 11, fontFamily: FONTS.medium, textTransform: 'uppercase', letterSpacing: 0.5 },

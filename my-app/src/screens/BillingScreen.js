@@ -504,11 +504,16 @@ const styles = StyleSheet.create({
     headerTitle: { fontSize: 26, color: COLORS.text.primary, fontFamily: FONTS.bold, marginBottom: 16 },
     cardSection: {
         backgroundColor: COLORS.background.secondary,
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 16,
+        borderRadius: 16,
+        padding: 20,
+        marginBottom: 18,
         borderWidth: 1,
-        borderColor: COLORS.border.color,
+        borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
     },
     sectionHeader: {
         fontSize: 18,
@@ -577,8 +582,9 @@ const styles = StyleSheet.create({
     
     // Totals
     totalCard: {
-        backgroundColor: COLORS.background.secondary, borderRadius: 12, padding: 16,
-        borderWidth: 1, borderColor: COLORS.border.color, marginBottom: 20,
+        backgroundColor: COLORS.background.secondary, borderRadius: 16, padding: 20,
+        borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)', marginBottom: 24,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5,
     },
     totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
     totalBorder: { borderTopWidth: 1, borderTopColor: COLORS.border.color, marginTop: 8, paddingTop: 12, marginBottom: 6 },
@@ -588,7 +594,17 @@ const styles = StyleSheet.create({
     totalValBig: { color: COLORS.accent.primary, fontFamily: FONTS.bold, fontSize: 20 },
     
     // Submit
-    submitBtn: { backgroundColor: COLORS.accent.primary, borderRadius: 12, padding: 18, alignItems: 'center' },
+    submitBtn: { 
+        backgroundColor: COLORS.accent.primary, 
+        borderRadius: 14, 
+        padding: 18, 
+        alignItems: 'center',
+        shadowColor: COLORS.accent.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
     submitBtnTxt: { color: '#fff', fontFamily: FONTS.bold, fontSize: 16 },
 });
 

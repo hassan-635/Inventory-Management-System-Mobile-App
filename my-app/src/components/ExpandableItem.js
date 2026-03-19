@@ -57,10 +57,15 @@ const ExpandableItem = ({ title, subtitle, rightText, detailsData, iconName = 'c
 const styles = StyleSheet.create({
     container: {
         backgroundColor: COLORS.background.secondary,
-        borderRadius: 12,
-        marginBottom: 12,
+        borderRadius: 16,
+        marginBottom: 14,
         borderWidth: 1,
-        borderColor: COLORS.border.color,
+        borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)',
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 4,
         overflow: 'hidden',
     },
     header: {
@@ -75,13 +80,13 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     iconContainer: {
-        width: 40,
-        height: 40,
-        borderRadius: 8,
-        backgroundColor: COLORS.background.tertiary,
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: COLORS.background.tertiary || 'rgba(99, 102, 241, 0.1)',
         justifyContent: 'center',
         alignItems: 'center',
-        marginRight: 12,
+        marginRight: 14,
     },
     title: {
         color: COLORS.text.primary,
@@ -107,10 +112,10 @@ const styles = StyleSheet.create({
     },
     detailsContainer: {
         padding: 16,
-        paddingTop: 8,
-        backgroundColor: 'rgba(255,255,255,0.02)',
+        paddingTop: 12,
+        backgroundColor: 'rgba(0,0,0,0.15)',
         borderTopWidth: 1,
-        borderTopColor: COLORS.border.color,
+        borderTopColor: COLORS.border.color || 'rgba(255,255,255,0.02)',
     },
     detailRow: {
         flexDirection: 'row',
