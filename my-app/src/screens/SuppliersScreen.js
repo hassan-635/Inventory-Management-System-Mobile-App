@@ -14,7 +14,7 @@ export default function SuppliersScreen() {
     // CRUD State
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '' });
+    const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0 });
 
     const fetchSuppliers = async () => {
         try {
@@ -34,14 +34,17 @@ export default function SuppliersScreen() {
     // CRUD Functions
     const openModal = (supplier = null) => {
         if (supplier) {
+            const txnDue = (supplier.supplier_transactions || []).reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0);
             setFormItem({
                 id: supplier.id,
                 name: supplier.name || '',
                 phone: supplier.phone || '',
-                company_name: supplier.company_name || ''
+                company_name: supplier.company_name || '',
+                payment_amount: '',
+                txn_due: txnDue
             });
         } else {
-            setFormItem({ id: null, name: '', phone: '', company_name: '' });
+            setFormItem({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0 });
         }
         setModalVisible(true);
     };
@@ -51,12 +54,27 @@ export default function SuppliersScreen() {
             Alert.alert("Error", "Supplier name is required.");
             return;
         }
+        
+        const payload = { ...formItem };
+        if (formItem.id && formItem.payment_amount) {
+            const payAmt = Number(formItem.payment_amount);
+            if (payAmt > formItem.txn_due) {
+                Alert.alert('Error', `Payment cannot exceed remaining amount: Rs. ${formItem.txn_due}`);
+                return;
+            }
+            if (payAmt < 0) {
+                Alert.alert('Error', 'Payment amount cannot be negative.');
+                return;
+            }
+            payload.payment_amount = payAmt;
+        }
+
         setIsSaving(true);
         try {
             if (formItem.id) {
-                await suppliersService.update(formItem.id, formItem);
+                await suppliersService.update(formItem.id, payload);
             } else {
-                await suppliersService.create(formItem);
+                await suppliersService.create(payload);
             }
             setModalVisible(false);
             fetchSuppliers();
@@ -223,6 +241,15 @@ export default function SuppliersScreen() {
                             <Text style={styles.inputLabel}>Company Name</Text>
                             <TextInput style={styles.input} value={formItem.company_name} onChangeText={t => setFormItem({...formItem, company_name: t})} placeholder="Company Name (optional)" placeholderTextColor={COLORS.text.muted} />
                             
+                            {formItem.id && formItem.txn_due > 0 && (
+                                <>
+                                    <View style={{ height: 1, backgroundColor: COLORS.border.color, marginVertical: 10 }} />
+                                    <Text style={[styles.inputLabel, { color: COLORS.accent.primary, fontWeight: 'bold' }]}>Make Payment (Rs) <Text style={{color: COLORS.text.muted, fontSize: 12}}>(max: {formItem.txn_due})</Text></Text>
+                                    <Text style={{ fontSize: 11, color: COLORS.text.muted, marginBottom: 8 }}>Pay off oldest unpaid bills sequentially.</Text>
+                                    <TextInput style={styles.input} value={formItem.payment_amount} onChangeText={t => setFormItem({...formItem, payment_amount: t})} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={COLORS.text.muted} />
+                                </>
+                            )}
+
                             <View style={{ height: 20 }} />
                         </ScrollView>
                         <View style={styles.modalFooter}>
