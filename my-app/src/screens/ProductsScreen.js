@@ -19,7 +19,7 @@ const FILTERS = [
     { key: 'out', label: '❌ Out of Stock' },
 ];
 
-const UNIT_OPTIONS = ['Per Unit', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
+const UNIT_OPTIONS = ['Per Piece', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
 const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware'];
 
 // A searchable modal picker for Dropdowns
@@ -93,7 +93,7 @@ export default function ProductsScreen() {
     const [isSaving, setIsSaving] = useState(false);
     const [formItem, setFormItem] = useState({ 
         id: null, name: '', category: 'Hardware', price: '', 
-        purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
+        purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece', 
         max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
         supplier_phone: '', supplier_company_name: ''
     });
@@ -145,7 +145,7 @@ export default function ProductsScreen() {
                 price: product.price?.toString() || '',
                 purchase_rate: product.purchase_rate?.toString() || '',
                 purchased_from: product.purchased_from || '',
-                quantity_unit: product.quantity_unit || 'Per Unit',
+                quantity_unit: product.quantity_unit || 'Per Piece',
                 max_discount: product.max_discount?.toString() || '0',
                 total_quantity: product.total_quantity?.toString() || '0',
                 purchase_date: product.purchase_date ? new Date(product.purchase_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -168,7 +168,7 @@ export default function ProductsScreen() {
         } else {
             setFormItem({ 
                 id: null, name: '', category: 'Hardware', price: '', 
-                purchase_rate: '', purchased_from: '', quantity_unit: 'Per Unit', 
+                purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece', 
                 max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
                 supplier_phone: '', supplier_company_name: ''
             });
@@ -348,7 +348,7 @@ export default function ProductsScreen() {
                                 'Supplier': item.purchased_from || 'N/A',
                                 'Sale Price': `Rs. ${item.price}`,
                                 'Purchase Price': `Rs. ${item.purchase_rate || '-'}`,
-                                'Unit': item.quantity_unit || 'Per Unit',
+                                'Unit': item.quantity_unit || 'Per Piece',
                                 'Max Discount': `Rs. ${item.max_discount || 0}`,
                                 'Total Qty': item.total_quantity,
                                 'Remaining Qty': `${remaining}${isZero ? ' ❌ (Out of Stock)' : isLow ? ' ⚠️' : ''}`,
