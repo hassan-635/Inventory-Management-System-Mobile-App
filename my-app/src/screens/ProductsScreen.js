@@ -22,6 +22,11 @@ const FILTERS = [
 const UNIT_OPTIONS = ['Per Piece', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
 const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware'];
 
+const formatProductId = (id) => {
+    if (!id) return '';
+    return `AB${String(id).padStart(2, '0')}`;
+};
+
 // A searchable modal picker for Dropdowns
 const PickerModal = ({ visible, onClose, items, onSelect, title, allowCustom = false, customValue = '', onCustomChange = null }) => {
     const [q, setQ] = useState('');
@@ -82,6 +87,7 @@ export default function ProductsScreen() {
     const [activeFilter, setActiveFilter] = useState('all');
     const [search, setSearch] = useState('');
     const [lowStockLimit, setLowStockLimit] = useState(10); // Default to 10
+    const [showPurchaseRates, setShowPurchaseRates] = useState(false);
 
     // Picker State
     const [showUnitPicker, setShowUnitPicker] = useState(false);
@@ -266,7 +272,12 @@ export default function ProductsScreen() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.headerTitle}>Products Inventory</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingRight: 16 }}>
+                <Text style={styles.headerTitle}>Products Inventory</Text>
+                <TouchableOpacity onPress={() => setShowPurchaseRates(!showPurchaseRates)} style={{ padding: 8, backgroundColor: COLORS.background.secondary, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border.color }}>
+                    <Icon name={showPurchaseRates ? "eye-off-outline" : "eye-outline"} size={20} color={COLORS.text.secondary} />
+                </TouchableOpacity>
+            </View>
 
             {/* Search */}
             <View style={styles.searchRow}>
@@ -343,11 +354,11 @@ export default function ProductsScreen() {
                             iconName="cube-outline"
                             containerStyle={containerStyle}
                             detailsData={{
-                                'Product ID': item.id,
+                                'Product ID': formatProductId(item.id),
                                 'Category': item.category || 'N/A',
                                 'Supplier': item.purchased_from || 'N/A',
                                 'Sale Price': `Rs. ${item.price}`,
-                                'Purchase Price': `Rs. ${item.purchase_rate || '-'}`,
+                                'Purchase Price': showPurchaseRates ? `Rs. ${item.purchase_rate || '-'}` : '***',
                                 'Unit': item.quantity_unit || 'Per Piece',
                                 'Max Discount': `Rs. ${item.max_discount || 0}`,
                                 'Total Qty': item.total_quantity,

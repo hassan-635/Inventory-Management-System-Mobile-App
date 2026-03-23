@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { salesService } from '../api/sales';
 import { COLORS, FONTS } from '../theme/theme';
+import { useToastStore } from '../store/toastStore';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -14,6 +15,11 @@ const TIME_FILTERS = [
     { key: '5y', label: '5Y' },
     { key: 'all', label: 'All' },
 ];
+
+const formatProductId = (id) => {
+    if (!id) return '';
+    return `AB${String(id).padStart(2, '0')}`;
+};
 
 const getDateThreshold = (key) => {
     const now = new Date();
@@ -49,6 +55,32 @@ export default function SalesScreen() {
 
     useEffect(() => { fetchSales(); }, []);
     const onRefresh = () => { setRefreshing(true); fetchSales(); };
+
+    const handleUndoSale = (id) => {
+        Alert.alert(
+            "Undo Sale",
+            "Are you sure you want to undo this sale? This will restore the stock and clear associated debt and payments.",
+            [
+                { text: "Cancel", style: "cancel" },
+                {
+                    text: "Return Items",
+                    style: "destructive",
+                    onPress: async () => {
+                        try {
+                            setLoading(true);
+                            await salesService.delete(id);
+                            useToastStore.getState().showToast('Reversed', 'Sale Reversed Successfully!', 'success');
+                            fetchSales();
+                        } catch (err) {
+                            console.error('Error undoing sale:', err);
+                            useToastStore.getState().showToast('Error', 'Failed to undo sale. Please try again.', 'error');
+                            setLoading(false);
+                        }
+                    }
+                }
+            ]
+        );
+    };
 
     const filteredSales = useMemo(() => {
         const threshold = getDateThreshold(activeFilter);
@@ -133,13 +165,25 @@ export default function SalesScreen() {
                             iconName="receipt-outline"
                             detailsData={{
                                 'Txn ID': `#${item.id}`,
+                                'Product ID': formatProductId(item.product_id),
                                 'Buyer': item.buyers?.name || 'Walk-in',
-                                'Quantity': item.quantity,
+                                'Quantity': `${item.quantity} ${item.quantity_unit ? `(${item.quantity_unit})` : ''}`,
                                 'Price/Unit': `Rs. ${item.products?.price || '-'}`,
                                 'Paid Amount': `Rs. ${item.paid_amount || 0}`,
                                 'Remaining': remaining > 0 ? `Rs. ${remaining}` : '✓ Fully Paid',
                                 'Date': new Date(item.purchase_date).toLocaleDateString()
                             }}
+                            renderActions={() => (
+                                <View style={{ flexDirection: 'row', paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border.color || 'rgba(255,255,255,0.05)', marginTop: 8 }}>
+                                    <TouchableOpacity 
+                                        style={[styles.actionBtn, styles.actionBtnDanger, { flex: 1, justifyContent: 'center' }]} 
+                                        onPress={() => handleUndoSale(item.id)}
+                                    >
+                                        <Icon name="arrow-undo-outline" size={18} color={COLORS.danger || '#ef4444'} />
+                                        <Text style={[styles.actionBtnTxt, { color: COLORS.danger || '#ef4444' }]}>Return Items & Undo</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            )}
                         />
                     );
                 }}
@@ -185,4 +229,8 @@ const styles = StyleSheet.create({
     searchInput: { flex: 1, color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
     listContainer: { paddingHorizontal: 16, paddingBottom: 40 },
     emptyText: { color: COLORS.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
+
+    actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background.tertiary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 6 },
+    actionBtnDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
+    actionBtnTxt: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
 });

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { suppliersService } from '../api/suppliers';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
@@ -15,7 +16,8 @@ export default function SuppliersScreen() {
     // CRUD State
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0 });
+    const [showDatePicker, setShowDatePicker] = useState(false);
+    const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0, payment_date: new Date() });
 
     const fetchSuppliers = async () => {
         try {
@@ -42,10 +44,11 @@ export default function SuppliersScreen() {
                 phone: supplier.phone || '',
                 company_name: supplier.company_name || '',
                 payment_amount: '',
+                payment_date: new Date(),
                 txn_due: txnDue
             });
         } else {
-            setFormItem({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0 });
+            setFormItem({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0, payment_date: new Date() });
         }
         setModalVisible(true);
     };
@@ -68,6 +71,7 @@ export default function SuppliersScreen() {
                 return;
             }
             payload.payment_amount = payAmt;
+            payload.date = formItem.payment_date.toISOString().split('T')[0];
         }
 
         setIsSaving(true);
@@ -250,6 +254,29 @@ export default function SuppliersScreen() {
                                     <Text style={[styles.inputLabel, { color: COLORS.accent.primary, fontWeight: 'bold' }]}>Make Payment (Rs) <Text style={{color: COLORS.text.muted, fontSize: 12}}>(max: {formItem.txn_due})</Text></Text>
                                     <Text style={{ fontSize: 11, color: COLORS.text.muted, marginBottom: 8 }}>Pay off oldest unpaid bills sequentially.</Text>
                                     <TextInput style={styles.input} value={formItem.payment_amount} onChangeText={t => setFormItem({...formItem, payment_amount: t})} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={COLORS.text.muted} />
+
+                                    <Text style={styles.inputLabel}>Payment Date</Text>
+                                    <TouchableOpacity 
+                                        style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                                        onPress={() => setShowDatePicker(true)}
+                                    >
+                                        <Text style={{ color: COLORS.text.primary, fontFamily: FONTS.regular }}>
+                                            {formItem.payment_date.toLocaleDateString()}
+                                        </Text>
+                                        <Icon name="calendar-outline" size={18} color={COLORS.text.secondary} />
+                                    </TouchableOpacity>
+
+                                    {showDatePicker && (
+                                        <DateTimePicker
+                                            value={formItem.payment_date}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(event, selectedDate) => {
+                                                setShowDatePicker(Platform.OS === 'ios');
+                                                if (selectedDate) setFormItem({...formItem, payment_date: selectedDate});
+                                            }}
+                                        />
+                                    )}
                                 </>
                             )}
 

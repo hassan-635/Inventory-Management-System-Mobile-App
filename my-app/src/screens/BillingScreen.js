@@ -16,6 +16,13 @@ const BILL_TYPES = [
     { key: 'CREDIT', label: '💳 Udhaar' },
 ];
 
+const formatProductId = (id) => {
+    if (!id) return '';
+    return `AB${String(id).padStart(2, '0')}`;
+};
+
+const UNIT_OPTIONS = ['Per Piece', 'Per Dozen', 'Per Box', 'Per Kg', 'Per Liter', 'Per Meter', 'Per Roll', 'Per Pack', 'Per Case'];
+
 // A searchable modal picker for Products and Companies
 const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'name', renderSub, isStringList = false }) => {
     const [q, setQ] = useState('');
@@ -77,6 +84,8 @@ export default function BillingScreen() {
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [showProductPicker, setShowProductPicker] = useState(false);
     const [quantity, setQuantity] = useState('1');
+    const [selectedUnit, setSelectedUnit] = useState('Per Piece');
+    const [showUnitPicker, setShowUnitPicker] = useState(false);
 
     // Customer State
     const [buyerSearch, setBuyerSearch] = useState('');
@@ -150,14 +159,17 @@ export default function BillingScreen() {
                 return;
             }
             
+            
             newCart[existingItemIndex].quantity = newTotalQty;
+            newCart[existingItemIndex].cart_unit = selectedUnit;
             setCart(newCart);
         } else {
-            setCart([...cart, { ...selectedProduct, quantity: qtyToAdd }]);
+            setCart([...cart, { ...selectedProduct, quantity: qtyToAdd, cart_unit: selectedUnit }]);
         }
 
         setSelectedProduct(null);
         setQuantity('1');
+        setSelectedUnit('Per Piece');
     };
 
     const removeFromCart = (id) => {
@@ -230,7 +242,8 @@ export default function BillingScreen() {
                     buyer_id: activeBuyerId,
                     buyer_name: bName,
                     company_name: companyName.trim() || null,
-                    paid_amount: isCreditBill ? userPaid : itemTotal
+                    paid_amount: isCreditBill ? userPaid : itemTotal,
+                    quantity_unit: item.cart_unit
                 };
                 
                 // If multiple items, we assign the full paid amount to the first item for simplicity, 
@@ -259,6 +272,7 @@ export default function BillingScreen() {
         setBuyerPhone('');
         setCompanyName('');
         setQuantity('1');
+        setSelectedUnit('Per Piece');
         setPaidAmount('');
         setBillType('REAL');
     };
@@ -371,7 +385,9 @@ export default function BillingScreen() {
                             {selectedProduct ? (
                                 <>
                                     <Text style={styles.pickerBtnTxt} numberOfLines={1}>{selectedProduct.name}</Text>
-                                    <Text style={styles.pickerBtnSub}>Rs. {selectedProduct.price} | Stock: {selectedProduct.remaining_quantity}</Text>
+                                    <Text style={styles.pickerBtnSub}>
+                                        <Text style={{color: COLORS.accent.primary}}>{formatProductId(selectedProduct.id)}</Text> | Rs. {selectedProduct.price} | Stock: {selectedProduct.remaining_quantity}
+                                    </Text>
                                 </>
                             ) : (
                                 <Text style={[styles.pickerBtnTxt, {color: COLORS.text.muted}]}>Tap to search product...</Text>
@@ -381,7 +397,7 @@ export default function BillingScreen() {
                     </TouchableOpacity>
                 </View>
 
-                <View style={[styles.row, { alignItems: 'flex-end' }]}>
+                <View style={[styles.row, { alignItems: 'flex-end', marginTop: 12 }]}>
                     <View style={[styles.inputGroup, { flex: 1, marginRight: 10, marginBottom: 0 }]}>
                         <Text style={styles.inputLabel}>Quantity</Text>
                         <TextInput 
@@ -389,6 +405,13 @@ export default function BillingScreen() {
                             value={quantity} onChangeText={setQuantity} 
                             placeholder="1" placeholderTextColor={COLORS.text.muted} 
                         />
+                    </View>
+                    <View style={[styles.inputGroup, { flex: 1.5, marginRight: 10, marginBottom: 0 }]}>
+                        <Text style={styles.inputLabel}>Unit</Text>
+                        <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowUnitPicker(true)}>
+                            <Text style={styles.pickerBtnTxt} numberOfLines={1}>{selectedUnit}</Text>
+                            <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
+                        </TouchableOpacity>
                     </View>
                     <TouchableOpacity style={styles.addBtn} onPress={addToCart}>
                         <Icon name="add" size={24} color="#fff" />
@@ -419,7 +442,9 @@ export default function BillingScreen() {
                         <View key={`${item.id}-${index}`} style={styles.cartItem}>
                             <View style={styles.cartItemDetails}>
                                 <Text style={styles.cartItemName}>{item.name}</Text>
-                                <Text style={styles.cartItemSub}>Rs. {item.price} x {item.quantity}</Text>
+                                <Text style={styles.cartItemSub}>
+                                    <Text style={{color: COLORS.accent.primary}}>{formatProductId(item.id)}</Text> | Rs. {item.price} x {item.quantity} {item.cart_unit ? `(${item.cart_unit})` : ''}
+                                </Text>
                             </View>
                             <View style={styles.cartItemRight}>
                                 <Text style={styles.cartItemTotal}>Rs. {(item.price * item.quantity).toLocaleString()}</Text>
@@ -480,10 +505,22 @@ export default function BillingScreen() {
                 visible={showProductPicker}
                 onClose={() => setShowProductPicker(false)}
                 items={products.filter(p => billType === 'QUOTATION' || p.remaining_quantity >= 1)}
-                onSelect={setSelectedProduct}
+                onSelect={(prod) => {
+                    setSelectedProduct(prod);
+                    setSelectedUnit(prod.quantity_unit || 'Per Piece');
+                }}
                 title="Select Product"
                 searchKey="name"
-                renderSub={p => `Rs. ${p.price} | Stock: ${p.remaining_quantity}`}
+                renderSub={p => `${formatProductId(p.id)} | Rs. ${p.price} | Stock: ${p.remaining_quantity}`}
+            />
+
+            <PickerModal
+                visible={showUnitPicker}
+                onClose={() => setShowUnitPicker(false)}
+                items={UNIT_OPTIONS}
+                onSelect={setSelectedUnit}
+                title="Select Unit"
+                isStringList={true}
             />
 
             <PickerModal

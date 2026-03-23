@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { buyersService } from '../api/buyers';
 import { COLORS, FONTS } from '../theme/theme';
 import ExpandableItem from '../components/ExpandableItem';
@@ -15,7 +16,8 @@ export default function BuyersScreen() {
   // CRUD State
   const [modalVisible, setModalVisible] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', address: '' });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', address: '', payment_amount: '', txn_due: 0, payment_date: new Date() });
 
   const fetchBuyers = async () => {
     try {
@@ -35,15 +37,19 @@ export default function BuyersScreen() {
   // CRUD Functions
   const openModal = (buyer = null) => {
     if (buyer) {
+      const txnDue = (buyer.buyer_transactions || []).reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0);
       setFormItem({
         id: buyer.id,
         name: buyer.name || '',
         phone: buyer.phone || '',
         company_name: buyer.company_name || '',
-        address: buyer.address || ''
+        address: buyer.address || '',
+        payment_amount: '',
+        txn_due: txnDue,
+        payment_date: new Date()
       });
     } else {
-      setFormItem({ id: null, name: '', phone: '', company_name: '', address: '' });
+      setFormItem({ id: null, name: '', phone: '', company_name: '', address: '', payment_amount: '', txn_due: 0, payment_date: new Date() });
     }
     setModalVisible(true);
   };
@@ -53,12 +59,28 @@ export default function BuyersScreen() {
       useToastStore.getState().showToast("Error", "Customer name is required.", "error");
       return;
     }
+
+    const payload = { ...formItem };
+    if (formItem.id && formItem.payment_amount) {
+        const payAmt = Number(formItem.payment_amount);
+        if (payAmt > formItem.txn_due) {
+            useToastStore.getState().showToast('Error', 'Payment cannot exceed remaining amount: Rs. ' + formItem.txn_due, 'error');
+            return;
+        }
+        if (payAmt < 0) {
+            useToastStore.getState().showToast('Error', 'Payment amount cannot be negative.', 'error');
+            return;
+        }
+        payload.payment_amount = payAmt;
+        payload.date = formItem.payment_date.toISOString().split('T')[0];
+    }
+
     setIsSaving(true);
     try {
       if (formItem.id) {
-        await buyersService.update(formItem.id, formItem);
+        await buyersService.update(formItem.id, payload);
       } else {
-        await buyersService.create(formItem);
+        await buyersService.create(payload);
       }
       setModalVisible(false);
       useToastStore.getState().showToast('Saved', 'Customer saved successfully!', 'success');
@@ -194,6 +216,38 @@ export default function BuyersScreen() {
                       <Text style={styles.inputLabel}>Address</Text>
                       <TextInput style={[styles.input, { height: 80, textAlignVertical: 'top' }]} value={formItem.address} onChangeText={t => setFormItem({...formItem, address: t})} multiline placeholder="Full Address (optional)" placeholderTextColor={COLORS.text.muted} />
                       
+                      {formItem.id && formItem.txn_due > 0 && (
+                          <>
+                              <View style={{ height: 1, backgroundColor: COLORS.border.color, marginVertical: 10 }} />
+                              <Text style={[styles.inputLabel, { color: COLORS.accent.primary, fontWeight: 'bold' }]}>Make Payment (Rs) <Text style={{color: COLORS.text.muted, fontSize: 12}}>(max: {formItem.txn_due})</Text></Text>
+                              <Text style={{ fontSize: 11, color: COLORS.text.muted, marginBottom: 8 }}>Pay off oldest unpaid bills sequentially.</Text>
+                              <TextInput style={styles.input} value={formItem.payment_amount} onChangeText={t => setFormItem({...formItem, payment_amount: t})} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={COLORS.text.muted} />
+
+                              <Text style={styles.inputLabel}>Payment Date</Text>
+                              <TouchableOpacity 
+                                  style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                                  onPress={() => setShowDatePicker(true)}
+                              >
+                                  <Text style={{ color: COLORS.text.primary, fontFamily: FONTS.regular }}>
+                                      {formItem.payment_date.toLocaleDateString()}
+                                  </Text>
+                                  <Icon name="calendar-outline" size={18} color={COLORS.text.secondary} />
+                              </TouchableOpacity>
+
+                              {showDatePicker && (
+                                  <DateTimePicker
+                                      value={formItem.payment_date}
+                                      mode="date"
+                                      display="default"
+                                      onChange={(event, selectedDate) => {
+                                          setShowDatePicker(Platform.OS === 'ios');
+                                          if (selectedDate) setFormItem({...formItem, payment_date: selectedDate});
+                                      }}
+                                  />
+                              )}
+                          </>
+                      )}
+
                       <View style={{ height: 20 }} />
                   </ScrollView>
                   <View style={styles.modalFooter}>
