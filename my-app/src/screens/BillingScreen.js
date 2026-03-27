@@ -9,6 +9,7 @@ import { salesService } from '../api/sales';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { generateInvoicePdf } from '../utils/pdfGenerator';
 
 const BILL_TYPES = [
     { key: 'QUOTATION', label: '📋 Quotation' },
@@ -82,6 +83,7 @@ export default function BillingScreen() {
     const [buyers, setBuyers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
+    const [lastSaleData, setLastSaleData] = useState(null); // for PDF after sale
 
     // Form state
     const [billType, setBillType] = useState('REAL');
@@ -199,8 +201,26 @@ export default function BillingScreen() {
 
         // QUOTATION LOGIC
         if (billType === 'QUOTATION') {
-            useToastStore.getState().showToast('Quotation Generated', 'This is a quotation invoice.', 'info');
-            // In a real app, this would trigger PDF generation or printing.
+            // Generate a quotation PDF
+            try {
+                const cartForPdf = cart.map(item => ({
+                    name: item.name,
+                    quantity: item.quantity,
+                    unitPrice: item.price,
+                    selectedUnit: item.cart_unit || 'Per Piece'
+                }));
+                await generateInvoicePdf(
+                    { amount: totalAmount },
+                    cartForPdf,
+                    buyerSearch.trim() || 'Walk-in Customer',
+                    totalAmount,
+                    0,
+                    totalAmount,
+                    null
+                );
+            } catch (e) {
+                useToastStore.getState().showToast('Quotation', 'PDF generation failed, please try again.', 'error');
+            }
             resetForm();
             return;
         }
@@ -257,6 +277,24 @@ export default function BillingScreen() {
             }
 
             useToastStore.getState().showToast('Success', `${isCreditBill ? 'Udhaar' : 'Original'} Bill saved successfully!`, 'success');
+            
+            // Save sale data for PDF download
+            const cartForPdf = cart.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                unitPrice: item.price,
+                selectedUnit: item.cart_unit || 'Per Piece'
+            }));
+            setLastSaleData({
+                transactionInfo: { amount: isCreditBill ? Number(paidAmount || 0) : totalAmount },
+                cartItems: cartForPdf,
+                customerName: bName,
+                totalBill: totalAmount,
+                discount: 0,
+                finalAmount: totalAmount,
+                customPaymentDate: null
+            });
+            
             resetForm();
             loadData(); // Refresh stock
 
@@ -500,6 +538,36 @@ export default function BillingScreen() {
                     </Text>
                 )}
             </TouchableOpacity>
+
+            {/* Download Last Invoice Banner */}
+            {lastSaleData && (
+                <TouchableOpacity
+                    style={{
+                        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                        backgroundColor: 'rgba(34, 197, 94, 0.15)', borderWidth: 1,
+                        borderColor: 'rgba(34, 197, 94, 0.4)', borderRadius: 12,
+                        padding: 14, marginTop: 10
+                    }}
+                    onPress={async () => {
+                        try {
+                            await generateInvoicePdf(
+                                lastSaleData.transactionInfo,
+                                lastSaleData.cartItems,
+                                lastSaleData.customerName,
+                                lastSaleData.totalBill,
+                                lastSaleData.discount,
+                                lastSaleData.finalAmount,
+                                lastSaleData.customPaymentDate
+                            );
+                        } catch(e) { Alert.alert('Error', 'Could not generate PDF.'); }
+                    }}
+                >
+                    <Icon name="download-outline" size={20} color="#22c55e" />
+                    <Text style={{ color: '#22c55e', fontFamily: FONTS.bold, fontSize: 14 }}>
+                        Download Last Invoice ({lastSaleData.customerName})
+                    </Text>
+                </TouchableOpacity>
+            )}
 
             <View style={{height: 20}} />
 

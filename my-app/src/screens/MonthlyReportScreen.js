@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl, Modal, useWindowDimensions } from 'react-native';
+import {
+    View, Text, StyleSheet, ScrollView, ActivityIndicator,
+    TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions
+} from 'react-native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
+import { generateMonthlyReportPdf } from '../utils/pdfGenerator';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -27,6 +31,8 @@ export default function MonthlyReportScreen() {
     const [selectedMonth, setSelectedMonth] = useState(currentMonth);
     const [showMonthPicker, setShowMonthPicker] = useState(false);
     const [pickerYear, setPickerYear] = useState(currentYear);
+    const [viewMode, setViewMode] = useState('overview'); // 'overview' | 'daily_summary'
+    const [generatingPdf, setGeneratingPdf] = useState(false);
 
     const fetchReport = async () => {
         try {
@@ -48,9 +54,19 @@ export default function MonthlyReportScreen() {
         fetchReport();
     }, [selectedYear, selectedMonth]);
 
-    const onRefresh = () => {
-        setRefreshing(true);
-        fetchReport();
+    const onRefresh = () => { setRefreshing(true); fetchReport(); };
+
+    const handleDownloadPdf = async () => {
+        if (!reportData) return;
+        setGeneratingPdf(true);
+        try {
+            const formattedMonth = selectedMonth.toString().padStart(2, '0');
+            await generateMonthlyReportPdf(reportData, formattedMonth, selectedYear, viewMode === 'daily_summary');
+        } catch (e) {
+            Alert.alert('Error', 'Could not generate PDF. Please try again.');
+        } finally {
+            setGeneratingPdf(false);
+        }
     };
 
     const changeMonth = (increment) => {
@@ -89,9 +105,19 @@ export default function MonthlyReportScreen() {
             {/* Header */}
             <View style={styles.header}>
                 <Text style={styles.headerTitle}>Financial Report</Text>
+                <TouchableOpacity
+                    style={[styles.pdfBtn, generatingPdf && { opacity: 0.6 }]}
+                    onPress={handleDownloadPdf}
+                    disabled={generatingPdf}
+                >
+                    {generatingPdf
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <Icon name="download-outline" size={16} color="#fff" />
+                    }
+                    <Text style={styles.pdfBtnText}>{generatingPdf ? 'Generating...' : 'Download PDF'}</Text>
+                </TouchableOpacity>
             </View>
 
-            {/* Date Selector */}
             <View style={styles.dateSelectorRow}>
                 <TouchableOpacity style={styles.dateBtn} onPress={() => changeMonth(-1)}>
                     <Icon name="chevron-back" size={24} color={colors.text.primary} />
@@ -102,6 +128,24 @@ export default function MonthlyReportScreen() {
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.dateBtn} onPress={() => changeMonth(1)}>
                     <Icon name="chevron-forward" size={24} color={colors.text.primary} />
+                </TouchableOpacity>
+            </View>
+
+            {/* Overview / Daily Summary Toggle */}
+            <View style={styles.toggleRow}>
+                <TouchableOpacity
+                    style={[styles.toggleBtn, viewMode === 'overview' && styles.toggleBtnActive]}
+                    onPress={() => setViewMode('overview')}
+                >
+                    <Icon name="pie-chart-outline" size={14} color={viewMode === 'overview' ? '#fff' : colors.text.secondary} />
+                    <Text style={[styles.toggleBtnText, viewMode === 'overview' && { color: '#fff' }]}>Overview</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                    style={[styles.toggleBtn, viewMode === 'daily_summary' && styles.toggleBtnActive]}
+                    onPress={() => setViewMode('daily_summary')}
+                >
+                    <Icon name="calendar-outline" size={14} color={viewMode === 'daily_summary' ? '#fff' : colors.text.secondary} />
+                    <Text style={[styles.toggleBtnText, viewMode === 'daily_summary' && { color: '#fff' }]}>Daily Summary</Text>
                 </TouchableOpacity>
             </View>
 
@@ -278,7 +322,7 @@ export default function MonthlyReportScreen() {
                 )}
 
                 {/* Company-Wise Summary */}
-                {companySummary.length > 0 && (
+                {viewMode === 'overview' && companySummary.length > 0 && (
                     <View style={styles.whiteCard}>
                         <View style={styles.cardHeaderRow}>
                             <Icon name="business" size={18} color="#38bdf8" />
@@ -312,6 +356,66 @@ export default function MonthlyReportScreen() {
                                 Rs. {companySummary.reduce((s, c) => s + c.total_outstanding, 0).toLocaleString()}
                             </Text>
                         </View>
+                    </View>
+                )}
+
+                {/* Daily Summary View */}
+                {viewMode === 'daily_summary' && (
+                    <View style={styles.whiteCard}>
+                        <View style={styles.cardHeaderRow}>
+                            <Icon name="calendar-outline" size={18} color={colors.accent.primary} />
+                            <Text style={[styles.cardHeader, { color: colors.accent.primary }]}>Day-by-Day Breakdown</Text>
+                        </View>
+                        {(!reportData.daily_breakdown || reportData.daily_breakdown.length === 0) ? (
+                            <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+                                <Icon name="calendar-outline" size={36} color={colors.text.secondary} />
+                                <Text style={{ color: colors.text.secondary, marginTop: 10, fontFamily: FONTS.regular }}>No activity recorded this month.</Text>
+                            </View>
+                        ) : (
+                            <>
+                                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                                    <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Date</Text>
+                                    <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Sales</Text>
+                                    <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Cash In</Text>
+                                    <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Udhaar</Text>
+                                    <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Expenses</Text>
+                                </View>
+                                {reportData.daily_breakdown.map((day, idx) => (
+                                    <View key={idx} style={styles.tableRow}>
+                                        <Text style={[styles.tableCell, { flex: 1.2, fontFamily: FONTS.medium }]}>
+                                            {new Date(day.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                        </Text>
+                                        <Text style={[styles.tableCell, { flex: 1, textAlign: 'right', color: colors.text.secondary }]}>
+                                            {day.num_new_sales > 0 ? day.num_new_sales : '-'}
+                                        </Text>
+                                        <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: '#22c55e' }]}>
+                                            {day.cash_in > 0 ? `Rs.${day.cash_in.toLocaleString()}` : '-'}
+                                        </Text>
+                                        <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: day.udhaar_given > 0 ? '#f59e0b' : colors.text.secondary }]}>
+                                            {day.udhaar_given > 0 ? `Rs.${day.udhaar_given.toLocaleString()}` : '-'}
+                                        </Text>
+                                        <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: day.expenses > 0 ? '#ef4444' : colors.text.secondary }]}>
+                                            {day.expenses > 0 ? `Rs.${day.expenses.toLocaleString()}` : '-'}
+                                        </Text>
+                                    </View>
+                                ))}
+                                <View style={[styles.tableRow, { borderTopWidth: 1.5, borderTopColor: colors.border.color || 'rgba(255,255,255,0.15)', borderBottomWidth: 0, marginTop: 4 }]}>
+                                    <Text style={[styles.totalText, { flex: 1.2 }]}>Total</Text>
+                                    <Text style={[styles.totalText, { flex: 1, textAlign: 'right' }]}>
+                                        {reportData.daily_breakdown.reduce((s, d) => s + d.num_new_sales, 0)}
+                                    </Text>
+                                    <Text style={[styles.totalText, { flex: 1.5, textAlign: 'right', color: '#22c55e' }]}>
+                                        Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.cash_in, 0).toLocaleString()}
+                                    </Text>
+                                    <Text style={[styles.totalText, { flex: 1.5, textAlign: 'right', color: '#f59e0b' }]}>
+                                        Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.udhaar_given, 0).toLocaleString()}
+                                    </Text>
+                                    <Text style={[styles.totalText, { flex: 1.5, textAlign: 'right', color: '#ef4444' }]}>
+                                        Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.expenses, 0).toLocaleString()}
+                                    </Text>
+                                </View>
+                            </>
+                        )}
                     </View>
                 )}
 
@@ -361,8 +465,24 @@ export default function MonthlyReportScreen() {
 const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background.primary },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
-    header: { padding: 16, paddingBottom: 5 },
+    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 5 },
     headerTitle: { fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold },
+
+    pdfBtn: {
+        flexDirection: 'row', alignItems: 'center', gap: 6,
+        backgroundColor: colors.accent.primary, paddingHorizontal: 12, paddingVertical: 8,
+        borderRadius: 10, shadowColor: colors.accent.primary, shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.3, shadowRadius: 5, elevation: 4
+    },
+    pdfBtnText: { color: '#fff', fontFamily: FONTS.bold, fontSize: 12 },
+
+    toggleRow: {
+        flexDirection: 'row', marginHorizontal: 16, marginBottom: 12, borderRadius: 10,
+        backgroundColor: colors.background.secondary, padding: 4, gap: 4
+    },
+    toggleBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, borderRadius: 8 },
+    toggleBtnActive: { backgroundColor: colors.accent.primary },
+    toggleBtnText: { color: colors.text.secondary, fontFamily: FONTS.medium, fontSize: 13 },
 
     dateSelectorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, marginHorizontal: 16, backgroundColor: colors.background.secondary, borderRadius: 12, marginBottom: 15, paddingHorizontal: 16 },
     dateSelectorCenter: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
