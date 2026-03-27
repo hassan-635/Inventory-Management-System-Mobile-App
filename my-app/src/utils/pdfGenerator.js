@@ -212,9 +212,9 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
         <body>
             <div class="invoice-header">
                 <div class="shop-details">
-                    <h1 class="shop-name" style="text-align:left;">JELLANI HARDWARE</h1>
-                    <p style="margin:2px 0; font-size:13px;">G.T Road, Mandra</p>
-                    <p style="margin:2px 0; font-size:13px;">📞 0333-5188825 | 0346-5389622</p>
+                    <h1 class="shop-name" style="text-align:left;">JELLANI HARDWARE, PAINT AND ELECTRIC STORE</h1>
+                    <p style="margin:2px 0; font-size:13px;">Main Kallar Syedan Road, Near DHA Phase 7 Gate 1</p>
+                    <p style="margin:2px 0; font-size:13px;">📞 0329-5749291</p>
                 </div>
                 <div class="invoice-details">
                     <h2 style="margin:0 !important; font-size:20px !important; border:none !important;">INVOICE</h2>
