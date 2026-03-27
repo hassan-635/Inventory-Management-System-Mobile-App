@@ -104,7 +104,7 @@ export default function BillingScreen() {
     
     // Company State
     const [companyName, setCompanyName] = useState('');
-    const [showCompanyPicker, setShowCompanyPicker] = useState(false);
+    const [showCompanyDD, setShowCompanyDD] = useState(false);
 
     // Udhaar State
     const [paidAmount, setPaidAmount] = useState('');
@@ -126,11 +126,20 @@ export default function BillingScreen() {
         }
     };
 
-    // Derived Companies List from Buyers
+    // Derived Companies List from Buyers (unique, sorted)
     const companyOptions = useMemo(() => {
         const companies = buyers.map(b => b.company_name).filter(Boolean);
-        return [...new Set(companies)];
+        return [...new Set(companies)].sort();
     }, [buyers]);
+
+    // Filtered companies based on current company input
+    const filteredCompanies = useMemo(() => {
+        if (!companyName.trim()) return companyOptions;
+        return companyOptions.filter(c => c.toLowerCase().includes(companyName.toLowerCase()));
+    }, [companyOptions, companyName]);
+
+    const isNewCompany = companyName.trim().length > 0 &&
+        !companyOptions.some(c => c.toLowerCase() === companyName.trim().toLowerCase());
 
     // Derived Values
     const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -382,12 +391,42 @@ export default function BillingScreen() {
                 {billType !== 'QUOTATION' && (
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Company Name</Text>
-                        <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowCompanyPicker(true)}>
-                            <Text style={[styles.pickerBtnTxt, !companyName && {color: colors.text.muted}]}>
-                                {companyName ? `🏢 ${companyName}` : 'Select or type company...'}
-                            </Text>
-                            <Icon name="chevron-down" size={18} color={colors.text.secondary} />
-                        </TouchableOpacity>
+                        <TextInput
+                            style={styles.textInput}
+                            placeholder="Type or select company..."
+                            placeholderTextColor={colors.text.muted}
+                            value={companyName}
+                            onChangeText={t => { setCompanyName(t); setShowCompanyDD(true); }}
+                            onFocus={() => setShowCompanyDD(true)}
+                            onBlur={() => setTimeout(() => setShowCompanyDD(false), 200)}
+                        />
+                        {showCompanyDD && (companyName.trim().length > 0 || filteredCompanies.length > 0) && (
+                            <View style={styles.dropdown}>
+                                {filteredCompanies.slice(0, 6).map((c, i) => (
+                                    <TouchableOpacity
+                                        key={i}
+                                        style={styles.dropdownItem}
+                                        onPress={() => { setCompanyName(c); setShowCompanyDD(false); }}
+                                    >
+                                        <Text style={styles.dropdownItemTxt} numberOfLines={1}>🏢 {c}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                                {isNewCompany && (
+                                    <TouchableOpacity
+                                        style={[styles.dropdownItem, { borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.08)' }]}
+                                        onPress={() => { setShowCompanyDD(false); }}
+                                    >
+                                        <Text style={[styles.dropdownItemTxt, { color: colors.accent.primary }]}>
+                                            ✚ Use "{companyName.trim()}" as new company
+                                        </Text>
+                                        <Text style={styles.dropdownItemSub}>Will be saved when bill is created</Text>
+                                    </TouchableOpacity>
+                                )}
+                                {filteredCompanies.length === 0 && !isNewCompany && (
+                                    <Text style={[styles.dropdownEmpty, { padding: 12 }]}>No companies found</Text>
+                                )}
+                            </View>
+                        )}
                     </View>
                 )}
 
@@ -593,17 +632,6 @@ export default function BillingScreen() {
                 items={UNIT_OPTIONS}
                 onSelect={setSelectedUnit}
                 title="Select Unit"
-                isStringList={true}
-                colors={colors}
-                FONTS={FONTS}
-            />
-
-            <PickerModal
-                visible={showCompanyPicker}
-                onClose={() => setShowCompanyPicker(false)}
-                items={companyOptions}
-                onSelect={setCompanyName}
-                title="Select Company"
                 isStringList={true}
                 colors={colors}
                 FONTS={FONTS}
