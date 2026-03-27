@@ -1,13 +1,13 @@
 import React, { useEffect } from 'react';
-import { NavigationContainer, DarkTheme } from '@react-navigation/native';
+import { NavigationContainer, DefaultTheme, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { tokenStorage } from '../utils/tokenStorage';
-import { ActivityIndicator, View, Dimensions } from 'react-native';
+import { ActivityIndicator, View, Dimensions, TouchableOpacity } from 'react-native';
 
 import { useAuthStore } from '../store/authStore';
-import { COLORS, FONTS } from '../theme/theme';
+import { useAppTheme } from '../theme/useAppTheme';
 
 // Screens
 import LoginScreen from '../screens/LoginScreen';
@@ -22,14 +22,13 @@ import MonthlyReportScreen from '../screens/MonthlyReportScreen';
 import CompaniesScreen from '../screens/CompaniesScreen';
 
 const Stack = createNativeStackNavigator();
-const Tab = createBottomTabNavigator();
+const Drawer = createDrawerNavigator();
 
 import { useSocketNotifications } from '../utils/notifications';
 
-// Responsive tab icon size
+// Responsive icon size
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const TAB_ICON_SIZE = Math.min(22, SCREEN_WIDTH * 0.058);
-const TAB_LABEL_SIZE = Math.min(10, SCREEN_WIDTH * 0.026);
+const DRAWER_ICON_SIZE = Math.min(22, SCREEN_WIDTH * 0.058);
 
 const ICON_MAP = {
     Billing: { focused: 'document-text', outline: 'document-text-outline' },
@@ -43,56 +42,58 @@ const ICON_MAP = {
     Settings: { focused: 'settings', outline: 'settings-outline' },
 };
 
-const TabNavigator = () => {
+const DrawerNavigator = () => {
     useSocketNotifications(); // Initialize Real-time Sales Alerts
+    const { colors, FONTS, isDarkMode } = useAppTheme();
 
     return (
-        <Tab.Navigator
-            screenOptions={({ route }) => ({
-                headerStyle: { backgroundColor: COLORS.background.secondary },
-                headerTintColor: COLORS.text.primary,
+        <Drawer.Navigator
+            screenOptions={({ route, navigation }) => ({
+                headerStyle: { backgroundColor: colors.background.secondary },
+                headerTintColor: colors.text.primary,
                 headerTitleStyle: { fontFamily: FONTS.bold },
-                tabBarStyle: {
-                    backgroundColor: COLORS.background.secondary,
-                    borderTopColor: 'rgba(255,255,255,0.03)',
-                    paddingBottom: 8,
-                    paddingTop: 8,
-                    height: Math.max(65, SCREEN_WIDTH * 0.15),
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: -4 },
-                    shadowOpacity: 0.15,
-                    shadowRadius: 12,
-                    elevation: 15,
+                drawerStyle: {
+                    backgroundColor: colors.background.secondary,
+                    width: Math.min(SCREEN_WIDTH * 0.75, 320),
                 },
-                tabBarActiveTintColor: COLORS.accent.primary,
-                tabBarInactiveTintColor: COLORS.text.secondary,
-                tabBarLabelStyle: {
+                drawerActiveBackgroundColor: colors.accent.glow,
+                drawerActiveTintColor: colors.accent.primary,
+                drawerInactiveTintColor: colors.text.secondary,
+                drawerLabelStyle: {
                     fontFamily: FONTS.medium,
-                    fontSize: TAB_LABEL_SIZE,
+                    fontSize: 16,
                 },
-                tabBarIcon: ({ focused, color }) => {
+                headerLeft: () => (
+                    <TouchableOpacity 
+                        onPress={() => navigation.toggleDrawer()} 
+                        style={{ marginLeft: 16 }}
+                    >
+                        <Icon name="menu" size={26} color={colors.text.primary} />
+                    </TouchableOpacity>
+                ),
+                drawerIcon: ({ focused, color }) => {
                     const icons = ICON_MAP[route.name];
                     const iconName = icons ? (focused ? icons.focused : icons.outline) : 'apps-outline';
-                    return <Icon name={iconName} size={TAB_ICON_SIZE} color={color} />;
+                    return <Icon name={iconName} size={DRAWER_ICON_SIZE} color={color} />;
                 },
             })}
         >
-            {/* Tab order: Billing > Products > Buyers > Suppliers > Sales > Companies > Expenses > Report > Settings */}
-            <Tab.Screen name="Billing" component={BillingScreen} />
-            <Tab.Screen name="Products" component={ProductsScreen} />
-            <Tab.Screen name="Buyers" component={BuyersScreen} />
-            <Tab.Screen name="Suppliers" component={SuppliersScreen} />
-            <Tab.Screen name="Sales" component={SalesScreen} />
-            <Tab.Screen name="Companies" component={CompaniesScreen} />
-            <Tab.Screen name="Expenses" component={ExpensesScreen} />
-            <Tab.Screen name="Report" component={MonthlyReportScreen} />
-            <Tab.Screen name="Settings" component={SettingsScreen} />
-        </Tab.Navigator>
+            <Drawer.Screen name="Billing" component={BillingScreen} />
+            <Drawer.Screen name="Products" component={ProductsScreen} />
+            <Drawer.Screen name="Buyers" component={BuyersScreen} />
+            <Drawer.Screen name="Suppliers" component={SuppliersScreen} />
+            <Drawer.Screen name="Sales" component={SalesScreen} />
+            <Drawer.Screen name="Companies" component={CompaniesScreen} />
+            <Drawer.Screen name="Expenses" component={ExpensesScreen} />
+            <Drawer.Screen name="Report" component={MonthlyReportScreen} />
+            <Drawer.Screen name="Settings" component={SettingsScreen} />
+        </Drawer.Navigator>
     );
 };
 
 export default function AppNavigator() {
     const { token, isLoading, setAuth, setLoading } = useAuthStore();
+    const { colors, isDarkMode } = useAppTheme();
 
     useEffect(() => {
         const checkToken = async () => {
@@ -112,19 +113,23 @@ export default function AppNavigator() {
 
     if (isLoading) {
         return (
-            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background.primary }}>
-                <ActivityIndicator size="large" color={COLORS.accent.primary} />
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary }}>
+                <ActivityIndicator size="large" color={colors.accent.primary} />
             </View>
         );
     }
 
+    const navigationTheme = isDarkMode 
+        ? { ...NavigationDarkTheme, colors: { ...NavigationDarkTheme.colors, background: colors.background.primary } }
+        : { ...DefaultTheme, colors: { ...DefaultTheme.colors, background: colors.background.primary } };
+
     return (
-        <NavigationContainer theme={{ ...DarkTheme, colors: { ...DarkTheme.colors, background: COLORS.background.primary } }}>
+        <NavigationContainer theme={navigationTheme}>
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {token == null ? (
                     <Stack.Screen name="Login" component={LoginScreen} />
                 ) : (
-                    <Stack.Screen name="MainTabs" component={TabNavigator} />
+                    <Stack.Screen name="MainDrawer" component={DrawerNavigator} />
                 )}
             </Stack.Navigator>
         </NavigationContainer>

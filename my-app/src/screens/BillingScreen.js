@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
-    TextInput, Alert, ActivityIndicator, FlatList, Modal
+    TextInput, Alert, ActivityIndicator, FlatList, Modal, useWindowDimensions
 } from 'react-native';
 import { productsService } from '../api/products';
 import { buyersService } from '../api/buyers';
 import { salesService } from '../api/sales';
-import { COLORS, FONTS } from '../theme/theme';
+import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -24,8 +24,10 @@ const formatProductId = (id) => {
 const UNIT_OPTIONS = ['Per Piece', 'Per Dozen', 'Per Box', 'Per Kg', 'Per Liter', 'Per Meter', 'Per Roll', 'Per Pack', 'Per Case'];
 
 // A searchable modal picker for Products and Companies
-const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'name', renderSub, isStringList = false }) => {
+const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'name', renderSub, isStringList = false, colors, FONTS }) => {
     const [q, setQ] = useState('');
+    const modalStyles = useMemo(() => getModalStyles(colors, FONTS), [colors, FONTS]);
+
     const filtered = useMemo(() => {
         if (isStringList) {
             return items.filter(i => i.toLowerCase().includes(q.toLowerCase()));
@@ -35,18 +37,18 @@ const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'na
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
-            <View style={modal.overlay}>
-                <View style={modal.sheet}>
-                    <View style={modal.header}>
-                        <Text style={modal.title}>{title}</Text>
-                        <TouchableOpacity onPress={onClose}><Icon name="close" size={22} color={COLORS.text.secondary} /></TouchableOpacity>
+            <View style={modalStyles.overlay}>
+                <View style={modalStyles.sheet}>
+                    <View style={modalStyles.header}>
+                        <Text style={modalStyles.title}>{title}</Text>
+                        <TouchableOpacity onPress={onClose}><Icon name="close" size={22} color={colors.text.secondary} /></TouchableOpacity>
                     </View>
-                    <View style={modal.searchRow}>
-                        <Icon name="search-outline" size={16} color={COLORS.text.secondary} style={{ marginRight: 8 }} />
+                    <View style={modalStyles.searchRow}>
+                        <Icon name="search-outline" size={16} color={colors.text.secondary} style={{ marginRight: 8 }} />
                         <TextInput
-                            style={modal.searchInput}
+                            style={modalStyles.searchInput}
                             placeholder={`Search ${title.toLowerCase()}...`}
-                            placeholderTextColor={COLORS.text.muted}
+                            placeholderTextColor={colors.text.muted}
                             value={q}
                             onChangeText={setQ}
                             autoFocus
@@ -57,12 +59,12 @@ const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'na
                         keyExtractor={(item, i) => isStringList ? item : (item.id || i).toString()}
                         contentContainerStyle={{ paddingBottom: 24 }}
                         renderItem={({ item }) => (
-                            <TouchableOpacity style={modal.item} onPress={() => { onSelect(item); setQ(''); onClose(); }}>
-                                <Text style={modal.itemName} numberOfLines={1}>{isStringList ? item : item[searchKey]}</Text>
-                                {!isStringList && renderSub && <Text style={modal.itemSub}>{renderSub(item)}</Text>}
+                            <TouchableOpacity style={modalStyles.item} onPress={() => { onSelect(item); setQ(''); onClose(); }}>
+                                <Text style={modalStyles.itemName} numberOfLines={1}>{isStringList ? item : item[searchKey]}</Text>
+                                {!isStringList && renderSub && <Text style={modalStyles.itemSub}>{renderSub(item)}</Text>}
                             </TouchableOpacity>
                         )}
-                        ListEmptyComponent={<Text style={modal.empty}>No results found</Text>}
+                        ListEmptyComponent={<Text style={modalStyles.empty}>No results found</Text>}
                     />
                 </View>
             </View>
@@ -71,6 +73,11 @@ const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'na
 };
 
 export default function BillingScreen() {
+    const { colors, FONTS } = useAppTheme();
+    const styles = useMemo(() => getStyles(colors, FONTS), [colors, FONTS]);
+    const { width } = useWindowDimensions();
+    const isTablet = width > 768;
+
     const [products, setProducts] = useState([]);
     const [buyers, setBuyers] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -128,10 +135,10 @@ export default function BillingScreen() {
     const totalAmount = subtotal;
     const remaining = Math.max(0, totalAmount - Number(paidAmount || 0));
 
-    const filteredBuyers = buyers.filter(b =>
-        b.name?.toLowerCase().includes(buyerSearch.toLowerCase()) || 
+    const filteredBuyers = useMemo(() => buyers.filter(b =>
+        (b.name || '').toLowerCase().includes(buyerSearch.toLowerCase()) || 
         (b.company_name && b.company_name.toLowerCase().includes(buyerSearch.toLowerCase()))
-    );
+    ), [buyers, buyerSearch]);
 
     const addToCart = () => {
         if (!selectedProduct) return;
@@ -246,10 +253,6 @@ export default function BillingScreen() {
                     quantity_unit: item.cart_unit
                 };
                 
-                // If multiple items, we assign the full paid amount to the first item for simplicity, 
-                // or distribute it. Since backend `createSale` logs payment history, distributing it 
-                // perfectly is tricky. For now, sending userPaid for all might duplicate payments if backend 
-                // isn't careful. Frontend sends it per item too.
                 await salesService.create(payload);
             }
 
@@ -280,13 +283,13 @@ export default function BillingScreen() {
     if (loading && products.length === 0) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color={COLORS.accent.primary} />
+                <ActivityIndicator size="large" color={colors.accent.primary} />
             </View>
         );
     }
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { paddingHorizontal: '10%' }]} keyboardShouldPersistTaps="handled">
             <Text style={styles.headerTitle}>Generate Bill</Text>
 
             {/* --- BILL DETAILS SECTION --- */}
@@ -315,7 +318,7 @@ export default function BillingScreen() {
                     <TextInput
                         style={styles.textInput}
                         placeholder={billType === 'CREDIT' ? 'Enter customer name (required)' : 'Search or type customer...'}
-                        placeholderTextColor={COLORS.text.muted}
+                        placeholderTextColor={colors.text.muted}
                         value={buyerSearch}
                         onChangeText={t => { setBuyerSearch(t); setShowBuyerDD(true); setSelectedBuyer(null); }}
                         onFocus={() => setShowBuyerDD(true)}
@@ -342,10 +345,10 @@ export default function BillingScreen() {
                     <View style={styles.inputGroup}>
                         <Text style={styles.inputLabel}>Company Name</Text>
                         <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowCompanyPicker(true)}>
-                            <Text style={[styles.pickerBtnTxt, !companyName && {color: COLORS.text.muted}]}>
+                            <Text style={[styles.pickerBtnTxt, !companyName && {color: colors.text.muted}]}>
                                 {companyName ? `🏢 ${companyName}` : 'Select or type company...'}
                             </Text>
-                            <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
+                            <Icon name="chevron-down" size={18} color={colors.text.secondary} />
                         </TouchableOpacity>
                     </View>
                 )}
@@ -358,7 +361,7 @@ export default function BillingScreen() {
                             <TextInput 
                                 style={styles.textInput} keyboardType="phone-pad" 
                                 value={buyerPhone} onChangeText={setBuyerPhone} 
-                                placeholder="03xx-xxxxxxx" placeholderTextColor={COLORS.text.muted} 
+                                placeholder="03xx-xxxxxxx" placeholderTextColor={colors.text.muted} 
                             />
                         </View>
                         <View style={[styles.inputGroup, { flex: 1, marginLeft: 6 }]}>
@@ -366,7 +369,7 @@ export default function BillingScreen() {
                             <TextInput 
                                 style={styles.textInput} keyboardType="numeric" 
                                 value={paidAmount} onChangeText={setPaidAmount} 
-                                placeholder="0" placeholderTextColor={COLORS.text.muted} 
+                                placeholder="0" placeholderTextColor={colors.text.muted} 
                             />
                         </View>
                     </View>
@@ -380,20 +383,20 @@ export default function BillingScreen() {
                 <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Select Product</Text>
                     <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowProductPicker(true)}>
-                        <Icon name="cube-outline" size={18} color={COLORS.text.secondary} style={{ marginRight: 8 }} />
+                        <Icon name="cube-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
                         <View style={{ flex: 1 }}>
                             {selectedProduct ? (
                                 <>
                                     <Text style={styles.pickerBtnTxt} numberOfLines={1}>{selectedProduct.name}</Text>
                                     <Text style={styles.pickerBtnSub}>
-                                        <Text style={{color: COLORS.accent.primary}}>{formatProductId(selectedProduct.id)}</Text> | Rs. {selectedProduct.price} | Stock: {selectedProduct.remaining_quantity}
+                                        <Text style={{color: colors.accent.primary}}>{formatProductId(selectedProduct.id)}</Text> | Rs. {selectedProduct.price} | Stock: {selectedProduct.remaining_quantity}
                                     </Text>
                                 </>
                             ) : (
-                                <Text style={[styles.pickerBtnTxt, {color: COLORS.text.muted}]}>Tap to search product...</Text>
+                                <Text style={[styles.pickerBtnTxt, {color: colors.text.muted}]}>Tap to search product...</Text>
                             )}
                         </View>
-                        <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
+                        <Icon name="chevron-down" size={18} color={colors.text.secondary} />
                     </TouchableOpacity>
                 </View>
 
@@ -403,14 +406,14 @@ export default function BillingScreen() {
                         <TextInput 
                             style={styles.textInput} keyboardType="numeric" 
                             value={quantity} onChangeText={setQuantity} 
-                            placeholder="1" placeholderTextColor={COLORS.text.muted} 
+                            placeholder="1" placeholderTextColor={colors.text.muted} 
                         />
                     </View>
                     <View style={[styles.inputGroup, { flex: 1.5, marginRight: 10, marginBottom: 0 }]}>
                         <Text style={styles.inputLabel}>Unit</Text>
                         <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowUnitPicker(true)}>
                             <Text style={styles.pickerBtnTxt} numberOfLines={1}>{selectedUnit}</Text>
-                            <Icon name="chevron-down" size={18} color={COLORS.text.secondary} />
+                            <Icon name="chevron-down" size={18} color={colors.text.secondary} />
                         </TouchableOpacity>
                     </View>
                     <TouchableOpacity style={styles.addBtn} onPress={addToCart}>
@@ -434,7 +437,7 @@ export default function BillingScreen() {
 
                 {cart.length === 0 ? (
                     <View style={styles.emptyCart}>
-                        <Icon name="receipt-outline" size={32} color={COLORS.text.muted} />
+                        <Icon name="receipt-outline" size={32} color={colors.text.muted} />
                         <Text style={styles.emptyCartTxt}>No items added yet</Text>
                     </View>
                 ) : (
@@ -443,13 +446,13 @@ export default function BillingScreen() {
                             <View style={styles.cartItemDetails}>
                                 <Text style={styles.cartItemName}>{item.name}</Text>
                                 <Text style={styles.cartItemSub}>
-                                    <Text style={{color: COLORS.accent.primary}}>{formatProductId(item.id)}</Text> | Rs. {item.price} x {item.quantity} {item.cart_unit ? `(${item.cart_unit})` : ''}
+                                    <Text style={{color: colors.accent.primary}}>{formatProductId(item.id)}</Text> | Rs. {item.price} x {item.quantity} {item.cart_unit ? `(${item.cart_unit})` : ''}
                                 </Text>
                             </View>
                             <View style={styles.cartItemRight}>
                                 <Text style={styles.cartItemTotal}>Rs. {(item.price * item.quantity).toLocaleString()}</Text>
                                 <TouchableOpacity style={styles.removeBtn} onPress={() => removeFromCart(item.id)}>
-                                    <Icon name="trash-outline" size={18} color={COLORS.status.danger} />
+                                    <Icon name="trash-outline" size={18} color={colors.status.danger} />
                                 </TouchableOpacity>
                             </View>
                         </View>
@@ -475,8 +478,8 @@ export default function BillingScreen() {
                                 <Text style={styles.totalVal}>Rs. {Number(paidAmount || 0).toLocaleString()}</Text>
                             </View>
                             <View style={styles.totalRow}>
-                                <Text style={[styles.totalLabel, { color: COLORS.status.danger }]}>Remaining (Udhaar)</Text>
-                                <Text style={[styles.totalVal, { color: COLORS.status.danger, fontWeight: 'bold' }]}>Rs. {remaining.toLocaleString()}</Text>
+                                <Text style={[styles.totalLabel, { color: colors.status.danger }]}>Remaining (Udhaar)</Text>
+                                <Text style={[styles.totalVal, { color: colors.status.danger, fontWeight: 'bold' }]}>Rs. {remaining.toLocaleString()}</Text>
                             </View>
                         </>
                     )}
@@ -512,6 +515,8 @@ export default function BillingScreen() {
                 title="Select Product"
                 searchKey="name"
                 renderSub={p => `${formatProductId(p.id)} | Rs. ${p.price} | Stock: ${p.remaining_quantity}`}
+                colors={colors}
+                FONTS={FONTS}
             />
 
             <PickerModal
@@ -521,6 +526,8 @@ export default function BillingScreen() {
                 onSelect={setSelectedUnit}
                 title="Select Unit"
                 isStringList={true}
+                colors={colors}
+                FONTS={FONTS}
             />
 
             <PickerModal
@@ -530,23 +537,25 @@ export default function BillingScreen() {
                 onSelect={setCompanyName}
                 title="Select Company"
                 isStringList={true}
+                colors={colors}
+                FONTS={FONTS}
             />
         </ScrollView>
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background.primary },
+const getStyles = (colors, FONTS) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background.primary },
     content: { padding: 16, paddingBottom: 40 },
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background.primary },
-    headerTitle: { fontSize: 26, color: COLORS.text.primary, fontFamily: FONTS.bold, marginBottom: 16 },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
+    headerTitle: { fontSize: 26, color: colors.text.primary, fontFamily: FONTS.bold, marginBottom: 16 },
     cardSection: {
-        backgroundColor: COLORS.background.secondary,
+        backgroundColor: colors.background.secondary,
         borderRadius: 16,
         padding: 20,
         marginBottom: 18,
         borderWidth: 1,
-        borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)',
+        borderColor: colors.border.color || 'rgba(255,255,255,0.05)',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
@@ -555,89 +564,89 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         fontSize: 18,
-        color: COLORS.text.primary,
+        color: colors.text.primary,
         fontFamily: FONTS.semibold,
         marginBottom: 16,
     },
     inputGroup: { marginBottom: 16 },
-    inputLabel: { color: COLORS.text.secondary, fontFamily: FONTS.medium, fontSize: 13, marginBottom: 6 },
+    inputLabel: { color: colors.text.secondary, fontFamily: FONTS.medium, fontSize: 13, marginBottom: 6 },
     textInput: {
-        backgroundColor: COLORS.background.tertiary, borderRadius: 10, padding: 12,
-        color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 14,
-        borderWidth: 1, borderColor: COLORS.border.color,
+        backgroundColor: colors.background.tertiary, borderRadius: 10, padding: 12,
+        color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14,
+        borderWidth: 1, borderColor: colors.border.color,
     },
     pickerBtn: {
         flexDirection: 'row', alignItems: 'center',
-        backgroundColor: COLORS.background.tertiary, borderRadius: 10, padding: 14,
-        borderWidth: 1, borderColor: COLORS.border.color,
+        backgroundColor: colors.background.tertiary, borderRadius: 10, padding: 14,
+        borderWidth: 1, borderColor: colors.border.color,
     },
-    pickerBtnTxt: { flex: 1, color: COLORS.text.primary, fontFamily: FONTS.semibold, fontSize: 14 },
-    pickerBtnSub: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
+    pickerBtnTxt: { flex: 1, color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 14 },
+    pickerBtnSub: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
     row: { flexDirection: 'row' },
     addBtn: {
-        backgroundColor: COLORS.accent.primary,
+        backgroundColor: colors.accent.primary,
         width: 50, height: 50, borderRadius: 10,
         justifyContent: 'center', alignItems: 'center',
     },
-    stockHint: { color: '#a78bfa', fontFamily: FONTS.medium, fontSize: 12, marginTop: 6 },
+    stockHint: { color: colors.accent.primary, fontFamily: FONTS.medium, fontSize: 12, marginTop: 6 },
     
     // Dropdown
     dropdown: {
-        backgroundColor: COLORS.background.tertiary, borderRadius: 10,
-        borderWidth: 1, borderColor: COLORS.border.color, marginTop: 4,
+        backgroundColor: colors.background.tertiary, borderRadius: 10,
+        borderWidth: 1, borderColor: colors.border.color, marginTop: 4,
     },
-    dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border.color },
-    dropdownItemTxt: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
-    dropdownItemSub: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
-    dropdownEmpty: { color: COLORS.text.secondary, padding: 12, fontFamily: FONTS.regular, fontStyle: 'italic' },
+    dropdownItem: { padding: 12, borderBottomWidth: 1, borderBottomColor: colors.border.color },
+    dropdownItemTxt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
+    dropdownItemSub: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
+    dropdownEmpty: { color: colors.text.secondary, padding: 12, fontFamily: FONTS.regular, fontStyle: 'italic' },
     
     // Bill Types
     billTypeRow: { flexDirection: 'row', gap: 8 },
     billTypeBtn: {
         flex: 1, paddingVertical: 10, borderRadius: 10,
-        backgroundColor: COLORS.background.tertiary, borderWidth: 1, borderColor: COLORS.border.color,
+        backgroundColor: colors.background.tertiary, borderWidth: 1, borderColor: colors.border.color,
         alignItems: 'center',
     },
-    billTypeBtnActive: { backgroundColor: COLORS.accent.primary, borderColor: COLORS.accent.primary },
-    billTypeTxt: { color: COLORS.text.secondary, fontFamily: FONTS.medium, fontSize: 12 },
+    billTypeBtnActive: { backgroundColor: colors.accent.primary, borderColor: colors.accent.primary },
+    billTypeTxt: { color: colors.text.secondary, fontFamily: FONTS.medium, fontSize: 12 },
     billTypeTxtActive: { color: '#fff' },
     
     // Cart
     cartHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    itemCountText: { color: COLORS.accent.primary, fontFamily: FONTS.medium, fontSize: 13 },
+    itemCountText: { color: colors.accent.primary, fontFamily: FONTS.medium, fontSize: 13 },
     emptyCart: { alignItems: 'center', padding: 20 },
-    emptyCartTxt: { color: COLORS.text.muted, fontFamily: FONTS.regular, marginTop: 8 },
+    emptyCartTxt: { color: colors.text.muted, fontFamily: FONTS.regular, marginTop: 8 },
     cartItem: {
         flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-        paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: COLORS.border.color,
+        paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border.color,
     },
     cartItemDetails: { flex: 1 },
-    cartItemName: { color: COLORS.text.primary, fontFamily: FONTS.semibold, fontSize: 15 },
-    cartItemSub: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 13, marginTop: 2 },
+    cartItemName: { color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 15 },
+    cartItemSub: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 13, marginTop: 2 },
     cartItemRight: { flexDirection: 'row', alignItems: 'center' },
-    cartItemTotal: { color: COLORS.text.primary, fontFamily: FONTS.semibold, fontSize: 15, marginRight: 12 },
+    cartItemTotal: { color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 15, marginRight: 12 },
     removeBtn: { padding: 6, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 6 },
     
     // Totals
     totalCard: {
-        backgroundColor: COLORS.background.secondary, borderRadius: 16, padding: 20,
-        borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)', marginBottom: 24,
+        backgroundColor: colors.background.secondary, borderRadius: 16, padding: 20,
+        borderWidth: 1, borderColor: colors.border.color || 'rgba(255,255,255,0.05)', marginBottom: 24,
         shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 5,
     },
     totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 },
-    totalBorder: { borderTopWidth: 1, borderTopColor: COLORS.border.color, marginTop: 8, paddingTop: 12, marginBottom: 6 },
-    totalLabel: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 15 },
-    totalVal: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 15 },
-    totalLabelBig: { color: COLORS.text.primary, fontFamily: FONTS.bold, fontSize: 18 },
-    totalValBig: { color: COLORS.accent.primary, fontFamily: FONTS.bold, fontSize: 20 },
+    totalBorder: { borderTopWidth: 1, borderTopColor: colors.border.color, marginTop: 8, paddingTop: 12, marginBottom: 6 },
+    totalLabel: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 15 },
+    totalVal: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 15 },
+    totalLabelBig: { color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 },
+    totalValBig: { color: colors.accent.primary, fontFamily: FONTS.bold, fontSize: 20 },
     
     // Submit
     submitBtn: { 
-        backgroundColor: COLORS.accent.primary, 
+        backgroundColor: colors.accent.primary, 
         borderRadius: 14, 
         padding: 18, 
         alignItems: 'center',
-        shadowColor: COLORS.accent.primary,
+        shadowColor: colors.accent.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -646,23 +655,23 @@ const styles = StyleSheet.create({
     submitBtnTxt: { color: '#fff', fontFamily: FONTS.bold, fontSize: 16 },
 });
 
-const modal = StyleSheet.create({
+const getModalStyles = (colors, FONTS) => StyleSheet.create({
     overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
     sheet: {
-        backgroundColor: COLORS.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+        backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20,
         maxHeight: '80%', padding: 16,
     },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-    title: { color: COLORS.text.primary, fontFamily: FONTS.bold, fontSize: 18 },
+    title: { color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 },
     searchRow: {
         flexDirection: 'row', alignItems: 'center',
-        backgroundColor: COLORS.background.primary, borderRadius: 10,
+        backgroundColor: colors.background.primary, borderRadius: 10,
         paddingHorizontal: 12, paddingVertical: 8,
-        marginBottom: 12, borderWidth: 1, borderColor: COLORS.border.color,
+        marginBottom: 12, borderWidth: 1, borderColor: colors.border.color,
     },
-    searchInput: { flex: 1, color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
-    item: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: COLORS.border.color },
-    itemName: { color: COLORS.text.primary, fontFamily: FONTS.semibold, fontSize: 15 },
-    itemSub: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 3 },
-    empty: { color: COLORS.text.secondary, textAlign: 'center', padding: 24, fontFamily: FONTS.regular },
+    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    item: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color },
+    itemName: { color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 15 },
+    itemSub: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 3 },
+    empty: { color: colors.text.secondary, textAlign: 'center', padding: 24, fontFamily: FONTS.regular },
 });

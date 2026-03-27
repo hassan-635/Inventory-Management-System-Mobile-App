@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform, Switch, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenStorage } from '../utils/tokenStorage';
-import { COLORS, FONTS } from '../theme/theme';
+import { useAppTheme } from '../theme/useAppTheme';
+import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -10,6 +11,14 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { scheduleAllLowStockNotifications } from '../utils/notifications';
 
 export default function SettingsScreen() {
+    const { colors, FONTS } = useAppTheme();
+    const { width } = useWindowDimensions();
+    const isTablet = width > 768;
+    const styles = useMemo(() => getStyles(colors, FONTS, isTablet), [colors, FONTS, isTablet]);
+
+    const { theme, toggleTheme } = useThemeStore();
+    const isDark = theme === 'dark';
+
     const [stockLimit, setStockLimit] = useState('10');
     const [notificationTimes, setNotificationTimes] = useState([]);
     const [showPicker, setShowPicker] = useState(false);
@@ -101,10 +110,30 @@ export default function SettingsScreen() {
     };
 
     return (
-        <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+        <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, isTablet && { paddingHorizontal: '15%' }]}>
             <Text style={styles.headerTitle}>App Settings</Text>
 
+            {/* Appearance Section */}
             <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Appearance</Text>
+                <Text style={styles.description}>Customize the look and feel of your app.</Text>
+
+                <View style={styles.appearanceRow}>
+                    <View style={styles.themeInfo}>
+                        <Icon name={isDark ? "moon" : "sunny"} size={24} color={isDark ? '#a78bfa' : '#f59e0b'} />
+                        <Text style={styles.themeLabel}>{isDark ? 'Dark Mode' : 'Light Mode'}</Text>
+                    </View>
+                    <Switch
+                        value={isDark}
+                        onValueChange={toggleTheme}
+                        trackColor={{ false: '#d1d5db', true: colors.accent.primary }}
+                        thumbColor={'#fff'}
+                    />
+                </View>
+            </View>
+
+            {/* Stock Rules Section */}
+            <View style={[styles.section, { marginTop: 16 }]}>
                 <Text style={styles.sectionTitle}>Stock Rules</Text>
                 <Text style={styles.description}>Set the remaining quantity limit to trigger low stock alerts.</Text>
 
@@ -116,10 +145,12 @@ export default function SettingsScreen() {
                         onChangeText={setStockLimit}
                         keyboardType="numeric"
                         maxLength={4}
+                        placeholderTextColor={colors.text.muted}
                     />
                 </View>
             </View>
 
+            {/* Notifications Section */}
             <View style={[styles.section, { marginTop: 16 }]}>
                 <Text style={styles.sectionTitle}>Notification Times</Text>
                 <Text style={styles.description}>Select multiples times when you want to receive low stock notifications.</Text>
@@ -130,10 +161,10 @@ export default function SettingsScreen() {
                     ) : (
                         notificationTimes.map((time, idx) => (
                             <View key={idx} style={styles.timeTag}>
-                                <Icon name="time-outline" size={16} color={COLORS.accent.primary} />
+                                <Icon name="time-outline" size={16} color={colors.accent.primary} />
                                 <Text style={styles.timeTagText}>{formatTo12Hour(time)}</Text>
                                 <TouchableOpacity onPress={() => removeTime(time)} style={styles.removeTimeBtn}>
-                                    <Icon name="close-circle" size={20} color={COLORS.status.danger} />
+                                    <Icon name="close-circle" size={20} color={colors.status?.danger || '#ef4444'} />
                                 </TouchableOpacity>
                             </View>
                         ))
@@ -147,7 +178,7 @@ export default function SettingsScreen() {
                             mode="time"
                             display="spinner"
                             onChange={handleTimeChange}
-                            textColor="white"
+                            textColor={colors.text.primary}
                         />
                         <TouchableOpacity 
                             style={styles.iosConfirmBtn} 
@@ -189,24 +220,27 @@ export default function SettingsScreen() {
     );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background.primary,
+        backgroundColor: colors.background.primary,
+    },
+    contentContainer: {
         padding: 16,
+        paddingBottom: 40
     },
     headerTitle: {
         fontSize: 24,
-        color: COLORS.text.primary,
+        color: colors.text.primary,
         fontFamily: FONTS.bold,
         marginBottom: 20,
     },
     section: {
-        backgroundColor: COLORS.background.secondary,
+        backgroundColor: colors.background.secondary,
         padding: 20,
         borderRadius: 16,
         borderWidth: 1,
-        borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)',
+        borderColor: colors.border.color || 'rgba(255,255,255,0.05)',
         shadowColor: "#000",
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.15,
@@ -215,15 +249,34 @@ const styles = StyleSheet.create({
     },
     sectionTitle: {
         fontSize: 18,
-        color: COLORS.text.primary,
+        color: colors.text.primary,
         fontFamily: FONTS.semibold,
         marginBottom: 8,
     },
     description: {
-        color: COLORS.text.secondary,
+        color: colors.text.secondary,
         fontSize: 14,
         marginBottom: 16,
         fontFamily: FONTS.regular,
+    },
+    appearanceRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginTop: 8,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: colors.border.color || 'rgba(255,255,255,0.05)',
+    },
+    themeInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    themeLabel: {
+        fontSize: 16,
+        fontFamily: FONTS.medium,
+        color: colors.text.primary,
     },
     inputRow: {
         flexDirection: 'row',
@@ -231,21 +284,21 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     label: {
-        color: COLORS.text.primary,
+        color: colors.text.primary,
         fontSize: 16,
         marginRight: 10,
         fontFamily: FONTS.medium,
     },
     input: {
-        backgroundColor: COLORS.background.tertiary,
-        color: COLORS.text.primary,
+        backgroundColor: colors.background.tertiary,
+        color: colors.text.primary,
         borderRadius: 8,
         paddingHorizontal: 12,
         paddingVertical: 8,
         width: 70,
         textAlign: 'center',
         borderWidth: 1,
-        borderColor: COLORS.border.color,
+        borderColor: colors.border.color,
         fontFamily: FONTS.bold,
         fontSize: 16
     },
@@ -256,7 +309,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     emptyText: {
-        color: COLORS.text.muted,
+        color: colors.text.muted,
         fontFamily: FONTS.regular,
         fontStyle: 'italic'
     },
@@ -272,7 +325,7 @@ const styles = StyleSheet.create({
         gap: 8,
     },
     timeTagText: {
-        color: COLORS.text.primary,
+        color: colors.text.primary,
         fontFamily: FONTS.medium,
         fontSize: 15,
     },
@@ -281,17 +334,17 @@ const styles = StyleSheet.create({
     },
     addTimeBtn: {
         flexDirection: 'row',
-        backgroundColor: COLORS.background.tertiary,
+        backgroundColor: colors.background.tertiary,
         paddingVertical: 12,
         borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: COLORS.border.color,
+        borderColor: colors.border.color,
         gap: 8,
     },
     addTimeText: {
-        color: '#fff',
+        color: colors.text.primary,
         fontFamily: FONTS.medium,
         fontSize: 15,
     },
@@ -300,7 +353,7 @@ const styles = StyleSheet.create({
         marginVertical: 10,
     },
     iosConfirmBtn: {
-        backgroundColor: COLORS.accent.primary,
+        backgroundColor: colors.accent.primary,
         paddingVertical: 10,
         paddingHorizontal: 20,
         borderRadius: 8,
@@ -311,12 +364,12 @@ const styles = StyleSheet.create({
         fontFamily: FONTS.bold,
     },
     saveBtn: {
-        backgroundColor: COLORS.accent.primary,
+        backgroundColor: colors.accent.primary,
         paddingVertical: 16,
         borderRadius: 14,
         alignItems: 'center',
         marginTop: 24,
-        shadowColor: COLORS.accent.primary,
+        shadowColor: colors.accent.primary,
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
@@ -324,7 +377,7 @@ const styles = StyleSheet.create({
     },
     saveBtnText: {
         color: '#fff',
-        fontWeight: 'bold',
+        fontFamily: FONTS.bold,
         fontSize: 16,
     },
     logoutBtn: {
@@ -336,8 +389,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(239, 68, 68, 0.3)',
     },
     logoutBtnText: {
-        color: COLORS.status.danger,
-        fontWeight: 'bold',
+        color: colors.status?.danger || '#ef4444',
+        fontFamily: FONTS.bold,
         fontSize: 16,
     }
 });

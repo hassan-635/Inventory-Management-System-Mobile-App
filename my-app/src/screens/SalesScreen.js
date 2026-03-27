@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, Alert, useWindowDimensions } from 'react-native';
 import { salesService } from '../api/sales';
-import { COLORS, FONTS } from '../theme/theme';
+import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -35,6 +35,11 @@ const getDateThreshold = (key) => {
 };
 
 export default function SalesScreen() {
+    const { colors, FONTS } = useAppTheme();
+    const styles = useMemo(() => getStyles(colors, FONTS), [colors, FONTS]);
+    const { width } = useWindowDimensions();
+    const isTablet = width > 768;
+
     const [sales, setSales] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
@@ -126,11 +131,11 @@ export default function SalesScreen() {
 
             {/* Search */}
             <View style={styles.searchRow}>
-                <Icon name="search-outline" size={18} color={COLORS.text.secondary} style={{ marginRight: 8 }} />
+                <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
                 <TextInput
                     style={styles.searchInput}
                     placeholder="Search by product or buyer..."
-                    placeholderTextColor={COLORS.text.muted}
+                    placeholderTextColor={colors.text.muted}
                     value={search}
                     onChangeText={setSearch}
                 />
@@ -141,7 +146,7 @@ export default function SalesScreen() {
     if (loading && !refreshing) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color={COLORS.accent.primary} />
+                <ActivityIndicator size="large" color={colors.accent.primary} />
             </View>
         );
     }
@@ -152,8 +157,8 @@ export default function SalesScreen() {
             <FlatList
                 data={filteredSales}
                 keyExtractor={(item, index) => (item.id || index).toString()}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent.primary} />}
-                contentContainerStyle={styles.listContainer}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
+                contentContainerStyle={[styles.listContainer, isTablet && { paddingHorizontal: 32 }]}
                 ListHeaderComponent={<ListHeader />}
                 renderItem={({ item }) => {
                     const remaining = Number(item.total_amount || 0) - Number(item.paid_amount || 0);
@@ -174,13 +179,13 @@ export default function SalesScreen() {
                                 'Date': new Date(item.purchase_date).toLocaleDateString()
                             }}
                             renderActions={() => (
-                                <View style={{ flexDirection: 'row', paddingTop: 12, borderTopWidth: 1, borderTopColor: COLORS.border.color || 'rgba(255,255,255,0.05)', marginTop: 8 }}>
+                                <View style={{ flexDirection: 'row', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border.color || 'rgba(255,255,255,0.05)', marginTop: 8 }}>
                                     <TouchableOpacity 
                                         style={[styles.actionBtn, styles.actionBtnDanger, { flex: 1, justifyContent: 'center' }]} 
                                         onPress={() => handleUndoSale(item.id)}
                                     >
-                                        <Icon name="arrow-undo-outline" size={18} color={COLORS.danger || '#ef4444'} />
-                                        <Text style={[styles.actionBtnTxt, { color: COLORS.danger || '#ef4444' }]}>Return Items & Undo</Text>
+                                        <Icon name="arrow-undo-outline" size={18} color={colors.status.danger} />
+                                        <Text style={[styles.actionBtnTxt, { color: colors.status.danger }]}>Return Items & Undo</Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
@@ -193,44 +198,44 @@ export default function SalesScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background.primary },
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background.primary },
+const getStyles = (colors, FONTS) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background.primary },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
     headerTitle: {
-        fontSize: 24, color: COLORS.text.primary, fontFamily: FONTS.bold,
+        fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold,
         paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
     },
     summaryCard: {
         marginHorizontal: 16, marginBottom: 12,
-        backgroundColor: COLORS.background.secondary,
+        backgroundColor: colors.background.secondary,
         borderRadius: 12, padding: 14,
-        borderWidth: 1, borderColor: COLORS.border.color,
+        borderWidth: 1, borderColor: colors.border.color,
     },
-    summaryLabel: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 12 },
-    summaryValue: { color: COLORS.accent.primary, fontFamily: FONTS.bold, fontSize: 22, marginVertical: 2 },
-    summaryCount: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 12 },
+    summaryLabel: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12 },
+    summaryValue: { color: colors.accent.primary, fontFamily: FONTS.bold, fontSize: 22, marginVertical: 2 },
+    summaryCount: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12 },
     filterWrapper: { height: 44, marginBottom: 10 },
     filterRow: { paddingHorizontal: 16, alignItems: 'center', gap: 8 },
     filterBtn: {
         paddingHorizontal: 16, paddingVertical: 7,
-        borderRadius: 20, borderWidth: 1, borderColor: COLORS.border.color,
-        backgroundColor: COLORS.background.secondary,
+        borderRadius: 20, borderWidth: 1, borderColor: colors.border.color,
+        backgroundColor: colors.background.secondary,
     },
-    filterBtnActive: { backgroundColor: COLORS.accent.primary, borderColor: COLORS.accent.primary },
-    filterBtnText: { color: COLORS.text.secondary, fontFamily: FONTS.medium, fontSize: 13 },
+    filterBtnActive: { backgroundColor: colors.accent.primary, borderColor: colors.accent.primary },
+    filterBtnText: { color: colors.text.secondary, fontFamily: FONTS.medium, fontSize: 13 },
     filterBtnTextActive: { color: '#fff' },
     searchRow: {
         flexDirection: 'row', alignItems: 'center',
         marginHorizontal: 16, marginBottom: 10,
-        backgroundColor: COLORS.background.secondary,
+        backgroundColor: colors.background.secondary,
         borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-        borderWidth: 1, borderColor: COLORS.border.color,
+        borderWidth: 1, borderColor: colors.border.color,
     },
-    searchInput: { flex: 1, color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
     listContainer: { paddingHorizontal: 16, paddingBottom: 40 },
-    emptyText: { color: COLORS.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
+    emptyText: { color: colors.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
 
-    actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: COLORS.background.tertiary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 6 },
+    actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.tertiary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 6 },
     actionBtnDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-    actionBtnTxt: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
+    actionBtnTxt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
 });

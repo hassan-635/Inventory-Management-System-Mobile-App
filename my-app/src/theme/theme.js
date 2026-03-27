@@ -5,7 +5,7 @@ export const FONTS = {
     bold: 'Inter-Bold',
 };
 
-export const COLORS = {
+export const DARK_COLORS = {
     background: {
         primary: '#09090b',
         secondary: '#18181b',
@@ -35,6 +35,40 @@ export const COLORS = {
         border: 'rgba(255, 255, 255, 0.08)',
     }
 };
+
+export const LIGHT_COLORS = {
+    background: {
+        primary: '#f4f4f5', // Zinc 100
+        secondary: '#ffffff', // White
+        tertiary: '#f4f4f5', // For contrast matching
+    },
+    accent: {
+        primary: '#7c3aed', // Violet 600
+        secondary: '#8b5cf6', // Violet 500
+        glow: 'rgba(124, 58, 237, 0.2)', // Lighter glow
+    },
+    text: {
+        primary: '#09090b', // Zinc 950
+        secondary: '#52525b', // Zinc 600
+        muted: '#a1a1aa', // Zinc 400
+    },
+    border: {
+        color: 'rgba(0, 0, 0, 0.1)',
+        highlight: 'rgba(0, 0, 0, 0.05)',
+    },
+    status: {
+        danger: '#dc2626', // Red 600
+        success: '#059669', // Emerald 600
+        warning: '#d97706', // Amber 600
+    },
+    glass: {
+        bg: 'rgba(255, 255, 255, 0.7)',
+        border: 'rgba(0, 0, 0, 0.08)',
+    }
+};
+
+// Aliased for backward compatibility until all screens are refactored
+export const COLORS = DARK_COLORS;
 
 export const SHADOWS = {
     sm: {

@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl, Modal } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, RefreshControl, Modal, useWindowDimensions } from 'react-native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
-import { COLORS, FONTS } from '../theme/theme';
+import { useAppTheme } from '../theme/useAppTheme';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function MonthlyReportScreen() {
+    const { colors, FONTS } = useAppTheme();
+    const { width } = useWindowDimensions();
+    const isTablet = width > 768;
+    const styles = useMemo(() => getStyles(colors, FONTS, isTablet), [colors, FONTS, isTablet]);
+
     const { token } = useAuthStore();
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -60,7 +65,7 @@ export default function MonthlyReportScreen() {
     if (loading && !refreshing) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color={COLORS.accent.primary} />
+                <ActivityIndicator size="large" color={colors.accent.primary} />
             </View>
         );
     }
@@ -68,7 +73,7 @@ export default function MonthlyReportScreen() {
     if (!reportData) {
         return (
             <View style={styles.centerContainer}>
-                <Text style={{ color: COLORS.text.secondary }}>Failed to load report data.</Text>
+                <Text style={{ color: colors.text.secondary }}>Failed to load report data.</Text>
             </View>
         );
     }
@@ -89,21 +94,21 @@ export default function MonthlyReportScreen() {
             {/* Date Selector */}
             <View style={styles.dateSelectorRow}>
                 <TouchableOpacity style={styles.dateBtn} onPress={() => changeMonth(-1)}>
-                    <Icon name="chevron-back" size={24} color={COLORS.text.primary} />
+                    <Icon name="chevron-back" size={24} color={colors.text.primary} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.dateSelectorCenter} onPress={() => { setPickerYear(selectedYear); setShowMonthPicker(true); }}>
                     <Text style={styles.dateLabel}>{monthNames[selectedMonth - 1]} {selectedYear}</Text>
-                    <Icon name="calendar-outline" size={16} color={COLORS.text.secondary} style={{ marginLeft: 6 }} />
+                    <Icon name="calendar-outline" size={16} color={colors.text.secondary} style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.dateBtn} onPress={() => changeMonth(1)}>
-                    <Icon name="chevron-forward" size={24} color={COLORS.text.primary} />
+                    <Icon name="chevron-forward" size={24} color={colors.text.primary} />
                 </TouchableOpacity>
             </View>
 
             <ScrollView
                 style={styles.scrollContainer}
                 contentContainerStyle={{ paddingBottom: 40 }}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent.primary} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
             >
                 {/* Key Metrics */}
                 <View style={styles.statsGrid}>
@@ -194,7 +199,7 @@ export default function MonthlyReportScreen() {
                         {cashSalesList.map((s) => (
                             <View key={s.id} style={styles.tableRow}>
                                 <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{s.salesman_name}</Text>
-                                <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: COLORS.text.muted }]}>{s.num_cash_bills}</Text>
+                                <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: colors.text.muted }]}>{s.num_cash_bills}</Text>
                                 <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: '#22c55e', fontFamily: FONTS.bold }]}>
                                     Rs. {s.total_cash_collected.toLocaleString()}
                                 </Text>
@@ -228,7 +233,7 @@ export default function MonthlyReportScreen() {
                         {udhaarList.map((b) => (
                             <View key={b.id} style={styles.tableRow}>
                                 <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{b.name}</Text>
-                                <Text style={[styles.tableCell, { flex: 2, color: COLORS.text.muted }]} numberOfLines={1}>{b.phone}</Text>
+                                <Text style={[styles.tableCell, { flex: 2, color: colors.text.muted }]} numberOfLines={1}>{b.phone}</Text>
                                 <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: '#a78bfa', fontFamily: FONTS.bold }]}>
                                     Rs. {b.amount_paid_this_month.toLocaleString()}
                                 </Text>
@@ -318,11 +323,11 @@ export default function MonthlyReportScreen() {
                     <View style={styles.monthPickerBox}>
                         <View style={styles.yearRow}>
                             <TouchableOpacity onPress={() => setPickerYear(y => y - 1)} style={styles.yearBtn}>
-                                <Icon name="chevron-back" size={20} color={COLORS.text.primary}/>
+                                <Icon name="chevron-back" size={20} color={colors.text.primary}/>
                             </TouchableOpacity>
                             <Text style={styles.yearText}>{pickerYear}</Text>
                             <TouchableOpacity onPress={() => setPickerYear(y => y + 1)} style={styles.yearBtn}>
-                                <Icon name="chevron-forward" size={20} color={COLORS.text.primary}/>
+                                <Icon name="chevron-forward" size={20} color={colors.text.primary}/>
                             </TouchableOpacity>
                         </View>
                         <View style={styles.monthsGrid}>
@@ -353,42 +358,42 @@ export default function MonthlyReportScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background.primary },
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background.primary },
+const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background.primary },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
     header: { padding: 16, paddingBottom: 5 },
-    headerTitle: { fontSize: 24, color: COLORS.text.primary, fontFamily: FONTS.bold },
+    headerTitle: { fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold },
 
-    dateSelectorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, marginHorizontal: 16, backgroundColor: COLORS.background.secondary, borderRadius: 12, marginBottom: 15, paddingHorizontal: 16 },
+    dateSelectorRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 10, marginHorizontal: 16, backgroundColor: colors.background.secondary, borderRadius: 12, marginBottom: 15, paddingHorizontal: 16 },
     dateSelectorCenter: { flexDirection: 'row', alignItems: 'center', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8, backgroundColor: 'rgba(255,255,255,0.05)' },
     dateBtn: { padding: 8, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 8 },
-    dateLabel: { fontSize: 18, color: COLORS.text.primary, fontFamily: FONTS.bold, textAlign: 'center' },
+    dateLabel: { fontSize: 18, color: colors.text.primary, fontFamily: FONTS.bold, textAlign: 'center' },
 
-    scrollContainer: { paddingHorizontal: 16 },
+    scrollContainer: { paddingHorizontal: 16, ...(isTablet && { paddingHorizontal: 32 }) },
 
     statsGrid: { flexDirection: 'row', gap: 15, marginBottom: 20 },
     statCard: { 
         flex: 1, 
-        backgroundColor: COLORS.background.secondary, 
+        backgroundColor: colors.background.secondary, 
         padding: 18, 
         borderRadius: 16,
         shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 
     },
     statIcon: { marginBottom: 12 },
-    statTitle: { color: COLORS.text.secondary, fontSize: 13, fontFamily: FONTS.medium, marginBottom: 5 },
+    statTitle: { color: colors.text.secondary, fontSize: 13, fontFamily: FONTS.medium, marginBottom: 5 },
     statValue: { fontSize: 18, fontFamily: FONTS.bold },
 
     ledgerSection: { gap: 15, marginBottom: 20 },
     ledgerCard: { 
-        backgroundColor: COLORS.background.secondary, padding: 20, borderRadius: 16, borderWidth: 1,
+        backgroundColor: colors.background.secondary, padding: 20, borderRadius: 16, borderWidth: 1,
         shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 
     },
     ledgerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, gap: 8 },
     ledgerTitle: { fontSize: 16, fontFamily: FONTS.bold },
     ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    ledgerRowBorder: { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: COLORS.border?.color || 'rgba(255,255,255,0.1)' },
-    ledgerText: { color: COLORS.text.secondary, fontFamily: FONTS.regular, fontSize: 14 },
-    ledgerAmt: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
+    ledgerRowBorder: { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border.color || 'rgba(255,255,255,0.1)' },
+    ledgerText: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 14 },
+    ledgerAmt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
 
     alertPanel: { 
         flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(234, 179, 8, 0.1)', 
@@ -400,33 +405,34 @@ const styles = StyleSheet.create({
     alertSub: { color: '#ca8a04', fontFamily: FONTS.medium, fontSize: 14 },
 
     whiteCard: { 
-        backgroundColor: COLORS.background.secondary, padding: 20, borderRadius: 16, marginBottom: 24,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 
+        backgroundColor: colors.background.secondary, padding: 20, borderRadius: 16, marginBottom: 24,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3,
+        borderWidth: 1, borderColor: colors.border.color || 'transparent'
     },
-    cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, borderBottomColor: COLORS.border?.color || 'rgba(255,255,255,0.1)', borderBottomWidth: 1, paddingBottom: 10 },
-    cardHeader: { color: COLORS.text.primary, fontSize: 16, fontFamily: FONTS.bold },
+    cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, borderBottomColor: colors.border.color || 'rgba(255,255,255,0.1)', borderBottomWidth: 1, paddingBottom: 10 },
+    cardHeader: { color: colors.text.primary, fontSize: 16, fontFamily: FONTS.bold },
 
     tableHeaderRow: { marginBottom: 6 },
-    tableHeaderText: { color: COLORS.text.muted || COLORS.text.secondary, fontSize: 11, fontFamily: FONTS.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
-    tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: 'rgba(255,255,255,0.05)' },
-    tableCell: { color: COLORS.text.primary, fontFamily: FONTS.regular, fontSize: 13 },
+    tableHeaderText: { color: colors.text.muted || colors.text.secondary, fontSize: 11, fontFamily: FONTS.medium, textTransform: 'uppercase', letterSpacing: 0.5 },
+    tableRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: colors.border.color || 'rgba(255,255,255,0.05)' },
+    tableCell: { color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 13 },
 
-    totalRow: { marginTop: 4, borderTopWidth: 2, borderTopColor: 'rgba(255,255,255,0.15)', borderBottomWidth: 0, paddingTop: 8 },
-    totalText: { color: COLORS.text.primary, fontFamily: FONTS.bold, fontSize: 13 },
+    totalRow: { marginTop: 4, borderTopWidth: 2, borderTopColor: colors.border.color || 'rgba(255,255,255,0.15)', borderBottomWidth: 0, paddingTop: 8 },
+    totalText: { color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 13 },
 
     breakdownRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
-    breakdownCat: { color: COLORS.text.secondary, fontFamily: FONTS.regular },
-    breakdownAmt: { color: COLORS.text.primary, fontFamily: FONTS.medium },
+    breakdownCat: { color: colors.text.secondary, fontFamily: FONTS.regular },
+    breakdownAmt: { color: colors.text.primary, fontFamily: FONTS.medium },
 
     modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
-    monthPickerBox: { backgroundColor: COLORS.background.secondary, borderRadius: 16, padding: 20, width: '85%', alignItems: 'center', borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)' },
+    monthPickerBox: { backgroundColor: colors.background.secondary, borderRadius: 16, padding: 20, width: '85%', alignItems: 'center', borderWidth: 1, borderColor: colors.border.color || 'rgba(255,255,255,0.05)' },
     yearRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', marginBottom: 20 },
-    yearBtn: { padding: 10, backgroundColor: COLORS.background.tertiary, borderRadius: 8, borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)' },
-    yearText: { color: COLORS.text.primary, fontSize: 20, fontFamily: FONTS.bold },
+    yearBtn: { padding: 10, backgroundColor: colors.background.tertiary, borderRadius: 8, borderWidth: 1, borderColor: colors.border.color || 'rgba(255,255,255,0.05)' },
+    yearText: { color: colors.text.primary, fontSize: 20, fontFamily: FONTS.bold },
     monthsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', width: '100%', gap: 10 },
-    monthCell: { width: '30%', paddingVertical: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: COLORS.border.color || 'rgba(255,255,255,0.05)', backgroundColor: COLORS.background.primary },
-    monthCellActive: { backgroundColor: COLORS.accent.primary, borderColor: COLORS.accent.primary },
-    monthCellText: { color: COLORS.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
+    monthCell: { width: '30%', paddingVertical: 12, alignItems: 'center', borderRadius: 10, borderWidth: 1, borderColor: colors.border.color || 'rgba(255,255,255,0.05)', backgroundColor: colors.background.primary },
+    monthCellActive: { backgroundColor: colors.accent.primary, borderColor: colors.accent.primary },
+    monthCellText: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
     closePickerBtn: { marginTop: 20, paddingVertical: 12, width: '100%', alignItems: 'center', borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.05)' },
-    closePickerText: { color: COLORS.text.secondary, fontFamily: FONTS.bold, fontSize: 15 },
+    closePickerText: { color: colors.text.secondary, fontFamily: FONTS.bold, fontSize: 15 },
 });

@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ScrollView } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ScrollView, useWindowDimensions } from 'react-native';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
-import { COLORS, FONTS } from '../theme/theme';
+import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -10,6 +10,11 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
 
 export default function ExpensesScreen() {
+    const { colors, FONTS } = useAppTheme();
+    const { width } = useWindowDimensions();
+    const isTablet = width > 768;
+    const styles = useMemo(() => getStyles(colors, FONTS, isTablet), [colors, FONTS, isTablet]);
+
     const { token } = useAuthStore();
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -114,7 +119,7 @@ export default function ExpensesScreen() {
     if (loading && !refreshing) {
         return (
             <View style={styles.centerContainer}>
-                <ActivityIndicator size="large" color={COLORS.accent.primary} />
+                <ActivityIndicator size="large" color={colors.accent.primary} />
             </View>
         );
     }
@@ -180,6 +185,7 @@ export default function ExpensesScreen() {
                         onChangeText={setFilterYear}
                         keyboardType="numeric"
                         maxLength={4}
+                        placeholderTextColor={colors.text.muted}
                     />
                 </View>
                 <View style={styles.filterInputGroup}>
@@ -190,6 +196,7 @@ export default function ExpensesScreen() {
                         onChangeText={(t) => setFilterMonth(t.padStart(2, '0'))}
                         keyboardType="numeric"
                         maxLength={2}
+                        placeholderTextColor={colors.text.muted}
                     />
                 </View>
             </View>
@@ -205,7 +212,7 @@ export default function ExpensesScreen() {
                 renderItem={renderExpenseItem}
                 contentContainerStyle={styles.listContainer}
                 ListEmptyComponent={<Text style={styles.emptyText}>No expenses found.</Text>}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.accent.primary} />}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
             />
 
             {/* Manage Expense Modal */}
@@ -215,16 +222,17 @@ export default function ExpensesScreen() {
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>{formItem.id ? 'Edit Expense' : 'Add Expense'}</Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
-                                <Icon name="close" size={24} color={COLORS.text.secondary} />
+                                <Icon name="close" size={24} color={colors.text.secondary} />
                             </TouchableOpacity>
                         </View>
 
-                        <ScrollView style={styles.modalBody}>
+                        <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                             <Text style={styles.inputLabel}>Date (YYYY-MM-DD)</Text>
                             <TextInput
                                 style={styles.input}
                                 value={formItem.date}
                                 onChangeText={(t) => setFormItem({ ...formItem, date: t })}
+                                placeholderTextColor={colors.text.muted}
                             />
 
                             <Text style={styles.inputLabel}>Category</Text>
@@ -247,7 +255,7 @@ export default function ExpensesScreen() {
                                 onChangeText={(t) => setFormItem({ ...formItem, amount: t })}
                                 keyboardType="numeric"
                                 placeholder="Enter amount"
-                                placeholderTextColor={COLORS.text.muted}
+                                placeholderTextColor={colors.text.muted}
                             />
 
                             <Text style={styles.inputLabel}>Description</Text>
@@ -257,7 +265,7 @@ export default function ExpensesScreen() {
                                 onChangeText={(t) => setFormItem({ ...formItem, description: t })}
                                 multiline
                                 placeholder="Optional description..."
-                                placeholderTextColor={COLORS.text.muted}
+                                placeholderTextColor={colors.text.muted}
                             />
                         </ScrollView>
 
@@ -276,27 +284,27 @@ export default function ExpensesScreen() {
     );
 }
 
-const styles = StyleSheet.create({
-    container: { flex: 1, backgroundColor: COLORS.background.primary },
-    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background.primary },
+const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
+    container: { flex: 1, backgroundColor: colors.background.primary },
+    centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
-    headerTitle: { fontSize: 24, color: COLORS.text.primary, fontFamily: FONTS.bold },
-    addBtn: { backgroundColor: COLORS.accent.primary, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold },
+    addBtn: { backgroundColor: colors.accent.primary, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
 
     filterContainer: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 15, gap: 15 },
     filterInputGroup: { flex: 1 },
-    filterLabel: { color: COLORS.text.secondary, fontSize: 12, marginBottom: 5, fontFamily: FONTS.regular },
-    filterInput: { backgroundColor: COLORS.background.secondary, borderRadius: 8, padding: 10, color: COLORS.text.primary, borderWidth: 1, borderColor: COLORS.border.color },
+    filterLabel: { color: colors.text.secondary, fontSize: 12, marginBottom: 5, fontFamily: FONTS.regular },
+    filterInput: { backgroundColor: colors.background.secondary, borderRadius: 8, padding: 10, color: colors.text.primary, borderWidth: 1, borderColor: colors.border.color },
 
     summaryContainer: { marginHorizontal: 16, marginBottom: 15, padding: 20, backgroundColor: 'rgba(239, 68, 68, 0.1)', borderRadius: 12, borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)' },
-    summaryLabel: { color: COLORS.text.secondary, fontSize: 14, fontFamily: FONTS.medium, marginBottom: 5 },
-    summaryAmount: { color: '#ef4444', fontSize: 28, fontFamily: FONTS.bold },
+    summaryLabel: { color: colors.text.secondary, fontSize: 14, fontFamily: FONTS.medium, marginBottom: 5 },
+    summaryAmount: { color: colors.status?.danger || '#ef4444', fontSize: 28, fontFamily: FONTS.bold },
 
     listContainer: { padding: 16, paddingBottom: 40 },
-    emptyText: { color: COLORS.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
+    emptyText: { color: colors.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
 
     card: { 
-        backgroundColor: COLORS.background.secondary, 
+        backgroundColor: colors.background.secondary, 
         borderRadius: 16, 
         padding: 16, 
         marginBottom: 14, 
@@ -309,38 +317,43 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 3,
         borderWidth: 1, 
-        borderColor: COLORS.border.color 
+        borderColor: colors.border.color || 'rgba(255,255,255,0.05)'
     },
     cardLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
     catIconContainer: { width: 50, height: 50, borderRadius: 25, justifyContent: 'center', alignItems: 'center', marginRight: 15 },
     cardDetails: { flex: 1, justifyContent: 'center' },
-    cardTitle: { color: COLORS.text.primary, fontSize: 16, fontFamily: FONTS.bold, marginBottom: 2 },
-    cardDesc: { color: COLORS.text.secondary, fontSize: 13, fontFamily: FONTS.regular, marginBottom: 4 },
-    cardDate: { color: COLORS.text.muted, fontSize: 11, fontFamily: FONTS.medium },
+    cardTitle: { color: colors.text.primary, fontSize: 16, fontFamily: FONTS.bold, marginBottom: 2 },
+    cardDesc: { color: colors.text.secondary, fontSize: 13, fontFamily: FONTS.regular, marginBottom: 4 },
+    cardDate: { color: colors.text.muted, fontSize: 11, fontFamily: FONTS.medium },
     
     cardRight: { alignItems: 'flex-end', justifyContent: 'center' },
-    cardAmount: { color: COLORS.text.primary, fontSize: 17, fontFamily: FONTS.bold, marginBottom: 12 },
+    cardAmount: { color: colors.text.primary, fontSize: 17, fontFamily: FONTS.bold, marginBottom: 12 },
     cardActions: { flexDirection: 'row', gap: 10 },
-    editBtn: { backgroundColor: COLORS.accent.primary, padding: 8, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
-    deleteBtn: { backgroundColor: '#ef4444', padding: 8, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+    editBtn: { backgroundColor: colors.accent.primary, padding: 8, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
+    deleteBtn: { backgroundColor: colors.status?.danger || '#ef4444', padding: 8, borderRadius: 8, justifyContent: 'center', alignItems: 'center' },
 
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
-    modalContent: { backgroundColor: COLORS.background.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '80%' },
+    modalContent: { 
+        backgroundColor: colors.background.secondary, 
+        borderTopLeftRadius: 24, borderTopRightRadius: 24, 
+        padding: 20, maxHeight: '80%',
+        ...(isTablet && { width: '60%', alignSelf: 'center', maxHeight: '70%' }) 
+    },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-    modalTitle: { fontSize: 20, color: COLORS.text.primary, fontFamily: FONTS.bold },
+    modalTitle: { fontSize: 20, color: colors.text.primary, fontFamily: FONTS.bold },
     modalBody: { marginBottom: 20 },
-    inputLabel: { color: COLORS.text.secondary, fontSize: 14, marginBottom: 8, fontFamily: FONTS.medium },
-    input: { backgroundColor: COLORS.background.primary, color: COLORS.text.primary, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: COLORS.border.color, fontFamily: FONTS.regular },
+    inputLabel: { color: colors.text.secondary, fontSize: 14, marginBottom: 8, fontFamily: FONTS.medium },
+    input: { backgroundColor: colors.background.primary, color: colors.text.primary, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.border.color, fontFamily: FONTS.regular },
 
     categoryContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 },
-    catBtn: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.background.primary, borderWidth: 1, borderColor: COLORS.border.color },
+    catBtn: { paddingHorizontal: 15, paddingVertical: 8, borderRadius: 20, backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color },
     catBtnActive: { backgroundColor: 'rgba(56, 189, 248, 0.2)', borderColor: '#38bdf8' },
-    catText: { color: COLORS.text.secondary, fontFamily: FONTS.medium, fontSize: 13 },
+    catText: { color: colors.text.secondary, fontFamily: FONTS.medium, fontSize: 13 },
     catTextActive: { color: '#38bdf8' },
 
     modalFooter: { flexDirection: 'row', gap: 15 },
-    cancelBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: COLORS.background.primary, alignItems: 'center' },
-    cancelBtnText: { color: COLORS.text.secondary, fontFamily: FONTS.bold, fontSize: 16 },
-    saveBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: COLORS.accent.primary, alignItems: 'center' },
+    cancelBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: colors.background.primary, alignItems: 'center' },
+    cancelBtnText: { color: colors.text.secondary, fontFamily: FONTS.bold, fontSize: 16 },
+    saveBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: colors.accent.primary, alignItems: 'center' },
     saveBtnText: { color: '#fff', fontFamily: FONTS.bold, fontSize: 16 },
 });
