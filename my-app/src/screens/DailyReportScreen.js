@@ -3,9 +3,8 @@ import {
     View, Text, StyleSheet, ScrollView, ActivityIndicator,
     TouchableOpacity, RefreshControl, Alert, useWindowDimensions
 } from 'react-native';
-import axios from 'axios';
+import api from '../api/apiClient';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import { generateDailyReportPdf } from '../utils/pdfGenerator';
 
@@ -17,7 +16,6 @@ export default function DailyReportScreen() {
     const isTablet = width > 768;
     const styles = useMemo(() => getStyles(colors, FONTS, isTablet), [colors, FONTS, isTablet]);
 
-    const { token } = useAuthStore();
     const [reportDate, setReportDate] = useState(new Date().toISOString().split('T')[0]);
     const [reportData, setReportData] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -26,13 +24,63 @@ export default function DailyReportScreen() {
 
     const fetchReport = async () => {
         try {
-            const res = await axios.get(`${API_URL}/reports/daily?date=${reportDate}`, {
-                headers: { Authorization: `Bearer ${token}` }
+            const [salesRes, productsRes, suppliersRes, buyersRes, returnsRes] = await Promise.all([
+                api.get('/sales'),
+                api.get('/products'),
+                api.get('/suppliers'),
+                api.get('/buyers'),
+                api.get('/sales/returns').catch(() => ({ data: [] }))
+            ]);
+
+            // Filter sales for selected date
+            const salesToday = (salesRes.data || []).filter(s => {
+                const d = s.date || s.purchase_date || s.created_at || '';
+                return d.startsWith(reportDate);
             });
-            setReportData(res.data);
+
+            // Filter returns for selected date
+            const returnsToday = (returnsRes.data || []).filter(r => {
+                const d = r.returned_at ? r.returned_at.split('T')[0] : '';
+                return d === reportDate;
+            });
+
+            // Filter products added on selected date
+            const productsToday = (productsRes.data || []).filter(p => {
+                const d = p.created_at || p.date || '';
+                return d.startsWith(reportDate);
+            });
+
+            // Filter supplier transactions & new suppliers
+            const supplierTxnsToday = [];
+            const newSuppliers = [];
+            (suppliersRes.data || []).forEach(supplier => {
+                (supplier.supplier_transactions || []).forEach(txn => {
+                    const d = txn.purchase_date || txn.date || txn.created_at || '';
+                    if (d.startsWith(reportDate)) {
+                        supplierTxnsToday.push({ ...txn, supplierName: supplier.name });
+                    }
+                });
+                const d = supplier.created_at || supplier.date || '';
+                if (d.startsWith(reportDate)) newSuppliers.push(supplier);
+            });
+
+            // Filter buyers added today
+            const buyersToday = (buyersRes.data || []).filter(b => {
+                const d = b.created_at || b.date || '';
+                return d.startsWith(reportDate);
+            });
+
+            setReportData({
+                sales_today: salesToday,
+                returns_today: returnsToday,
+                products_added_today: productsToday,
+                supplier_transactions_today: supplierTxnsToday,
+                suppliers_added_today: newSuppliers,
+                buyers_added_today: buyersToday,
+            });
         } catch (error) {
             console.error('Daily report fetch error:', error);
-            Alert.alert('Error', 'Failed to load daily report data.');
+            Alert.alert('Error', 'Failed to load daily report data. Check your connection.');
         } finally {
             setLoading(false);
             setRefreshing(false);
