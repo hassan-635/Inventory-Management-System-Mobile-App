@@ -339,9 +339,17 @@ export default function ProductsScreen() {
                     
                     let containerStyle = {};
                     if (isZero) {
-                        containerStyle = { borderColor: 'rgba(239, 68, 68, 0.5)', backgroundColor: 'rgba(239, 68, 68, 0.05)' };
+                        containerStyle = {
+                            borderColor: colors.border.color,
+                            borderLeftWidth: 4,
+                            borderLeftColor: colors.status.danger,
+                        };
                     } else if (isLow) {
-                        containerStyle = { borderColor: 'rgba(234, 179, 8, 0.3)' };
+                        containerStyle = {
+                            borderColor: colors.border.color,
+                            borderLeftWidth: 4,
+                            borderLeftColor: colors.status.warning,
+                        };
                     }
 
                     const stockBorder =
@@ -349,17 +357,22 @@ export default function ProductsScreen() {
                     const stockColor =
                         isZero ? colors.status.danger : isLow ? colors.status.warning : colors.status.success;
 
+                    const stockSummaryLabel = isZero ? 'Status' : 'In Stock';
+                    const stockSummaryValue = isZero ? 'Out of stock' : String(remaining);
+
                     return (
                         <ExpandableItem
                             title={item.name}
                             subtitle={item.category || item.purchased_from || null}
                             rightText={`Rs. ${item.price}`}
-                            rightSubText={`Stock: ${remaining}${isZero ? ' · Out' : isLow ? ' · Low' : ''}`}
+                            rightSubText={
+                                isZero ? 'Out of stock' : isLow ? `Low stock · ${remaining} left` : `Stock: ${remaining}`
+                            }
                             summaryBoxes={[
                                 { label: 'Sale Price', value: `Rs. ${item.price}` },
                                 {
-                                    label: 'In Stock',
-                                    value: String(remaining),
+                                    label: stockSummaryLabel,
+                                    value: stockSummaryValue,
                                     valueColor: stockColor,
                                     borderColor: stockBorder,
                                 },
