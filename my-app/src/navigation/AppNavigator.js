@@ -45,6 +45,62 @@ const ICON_MAP = {
     Settings: { focused: 'settings', outline: 'settings-outline' },
 };
 
+/** Center header: logo + app name (+ current screen) — fills the top bar area */
+function DrawerScreenHeaderTitle({ routeName }) {
+    const { colors, FONTS } = useAppTheme();
+    const styles = useMemo(
+        () =>
+            StyleSheet.create({
+                wrap: {
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    maxWidth: SCREEN_WIDTH - 130,
+                },
+                iconBox: {
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    backgroundColor: 'rgba(99, 102, 241, 0.15)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderWidth: 1,
+                    borderColor: 'rgba(99, 102, 241, 0.28)',
+                },
+                textCol: { marginLeft: 10, flexShrink: 1 },
+                appName: {
+                    fontFamily: FONTS.bold,
+                    fontSize: 17,
+                    color: colors.text.primary,
+                    letterSpacing: 0.2,
+                },
+                screenLabel: {
+                    fontFamily: FONTS.medium,
+                    fontSize: 11,
+                    color: colors.text.secondary,
+                    marginTop: 1,
+                },
+            }),
+        [colors, FONTS]
+    );
+
+    return (
+        <View style={styles.wrap}>
+            <View style={styles.iconBox}>
+                <Icon name="cube" size={20} color={colors.accent.primary} />
+            </View>
+            <View style={styles.textCol}>
+                <Text style={styles.appName} numberOfLines={1}>
+                    Inventory Pro
+                </Text>
+                <Text style={styles.screenLabel} numberOfLines={1}>
+                    {routeName}
+                </Text>
+            </View>
+        </View>
+    );
+}
+
 function AppDrawerContent(props) {
     const { colors, FONTS } = useAppTheme();
     const insets = useSafeAreaInsets();
@@ -89,7 +145,7 @@ function AppDrawerContent(props) {
 
 const DrawerNavigator = () => {
     useSocketNotifications(); // Initialize Real-time Sales Alerts
-    const { colors, FONTS, isDarkMode } = useAppTheme();
+    const { colors, FONTS } = useAppTheme();
 
     return (
         <Drawer.Navigator
@@ -97,7 +153,8 @@ const DrawerNavigator = () => {
             screenOptions={({ route, navigation }) => ({
                 headerStyle: { backgroundColor: colors.background.secondary },
                 headerTintColor: colors.text.primary,
-                headerTitleStyle: { fontFamily: FONTS.bold },
+                headerTitleAlign: 'center',
+                headerTitle: () => <DrawerScreenHeaderTitle routeName={route.name} />,
                 drawerStyle: {
                     backgroundColor: colors.background.secondary,
                     width: Math.min(SCREEN_WIDTH * 0.75, 320),

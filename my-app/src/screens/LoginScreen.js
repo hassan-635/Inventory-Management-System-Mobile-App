@@ -4,6 +4,7 @@ import { useAuthStore } from '../store/authStore';
 import { authService } from '../api/auth';
 import { tokenStorage } from '../utils/tokenStorage';
 import { COLORS, FONTS } from '../theme/theme';
+import Icon from 'react-native-vector-icons/Ionicons';
 
 export default function LoginScreen() {
     const [email, setEmail] = useState('');
@@ -37,7 +38,12 @@ export default function LoginScreen() {
         <SafeAreaView style={styles.container}>
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
                 <View style={styles.formContainer}>
-                    <Text style={styles.title}>Inventory Pro</Text>
+                    <View style={styles.brandRow}>
+                        <View style={styles.logoIconWrap}>
+                            <Icon name="cube" size={28} color={COLORS.accent.primary} />
+                        </View>
+                        <Text style={styles.title}>Inventory Pro</Text>
+                    </View>
                     <Text style={styles.subtitle}>Welcome back, login to your account</Text>
 
                     <View style={styles.inputGroup}>
@@ -100,10 +106,25 @@ const styles = StyleSheet.create({
         shadowRadius: 20,
         elevation: 10,
     },
+    brandRow: {
+        alignItems: 'center',
+        marginBottom: 8,
+    },
+    logoIconWrap: {
+        width: 56,
+        height: 56,
+        borderRadius: 14,
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(99, 102, 241, 0.28)',
+    },
     title: {
         color: '#fff',
         fontSize: 28,
-        fontWeight: 'bold',
+        fontFamily: FONTS.bold,
         marginBottom: 8,
         textAlign: 'center',
     },
