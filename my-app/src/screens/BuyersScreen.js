@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList, ActivityIndicator,
     RefreshControl, TextInput, TouchableOpacity, Modal,
@@ -10,6 +10,7 @@ import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
 export default function BuyersScreen() {
     const { colors, FONTS } = useAppTheme();
@@ -31,7 +32,7 @@ export default function BuyersScreen() {
         payment_amount: '', txn_due: 0, payment_date: new Date()
     });
 
-    const fetchBuyers = async () => {
+    const fetchBuyers = useCallback(async () => {
         try {
             const data = await buyersService.getAll();
             setBuyers(data);
@@ -41,9 +42,9 @@ export default function BuyersScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchBuyers(); }, []);
+    useRefetchOnFocus(fetchBuyers);
     const onRefresh = () => { setRefreshing(true); fetchBuyers(); };
 
     const filtered = useMemo(() => buyers.filter(b =>

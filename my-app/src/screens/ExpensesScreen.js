@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ScrollView, useWindowDimensions } from 'react-native';
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
@@ -6,6 +6,7 @@ import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
@@ -32,7 +33,7 @@ export default function ExpensesScreen() {
     const [filterYear, setFilterYear] = useState(currentYearStr);
     const [filterMonth, setFilterMonth] = useState(currentMonthStr);
 
-    const fetchExpenses = async () => {
+    const fetchExpenses = useCallback(async () => {
         try {
             const res = await axios.get(`${API_URL}/expenses?year=${filterYear}&month=${filterMonth}`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -45,12 +46,14 @@ export default function ExpensesScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [filterYear, filterMonth, token]);
 
     useEffect(() => {
         setLoading(true);
         fetchExpenses();
-    }, [filterYear, filterMonth]);
+    }, [fetchExpenses]);
+
+    useRefetchOnFocus(fetchExpenses, [filterYear, filterMonth, token]);
 
     const onRefresh = () => {
         setRefreshing(true);

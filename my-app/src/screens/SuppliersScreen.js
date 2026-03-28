@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { suppliersService } from '../api/suppliers';
 import { useAppTheme } from '../theme/useAppTheme';
 import ExpandableItem from '../components/ExpandableItem';
 import { flatListPerformanceProps } from '../utils/listPerf';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -25,7 +26,7 @@ export default function SuppliersScreen() {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0, payment_date: new Date() });
 
-    const fetchSuppliers = async () => {
+    const fetchSuppliers = useCallback(async () => {
         try {
             const data = await suppliersService.getAll();
             setSuppliers(data);
@@ -35,9 +36,9 @@ export default function SuppliersScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchSuppliers(); }, []);
+    useRefetchOnFocus(fetchSuppliers);
     const onRefresh = () => { setRefreshing(true); fetchSuppliers(); };
 
     // CRUD Functions

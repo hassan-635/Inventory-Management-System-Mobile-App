@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     TextInput, Alert, ActivityIndicator, FlatList, Modal, useWindowDimensions
@@ -11,6 +11,8 @@ import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { generateInvoicePdf } from '../utils/pdfGenerator';
 import { formatProductId } from '../utils/formatProductId';
+import { useFocusEffect } from '@react-navigation/native';
+import { useDataRefreshStore } from '../store/dataRefreshStore';
 
 const BILL_TYPES = [
     { key: 'QUOTATION', label: '📋 Quotation' },
@@ -105,13 +107,12 @@ export default function BillingScreen() {
     // Udhaar State
     const [paidAmount, setPaidAmount] = useState('');
 
-    useEffect(() => {
-        loadData();
-    }, []);
+    const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
+    const billingFirstFocus = useRef(true);
 
-    const loadData = async () => {
+    const loadData = useCallback(async (opts = { showLoading: true }) => {
         try {
-            setLoading(true);
+            if (opts.showLoading) setLoading(true);
             const [p, b] = await Promise.all([productsService.getAll(), buyersService.getAll()]);
             setProducts(p);
             setBuyers(b);
@@ -120,7 +121,19 @@ export default function BillingScreen() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            loadData({ showLoading: billingFirstFocus.current });
+            billingFirstFocus.current = false;
+        }, [loadData]),
+    );
+
+    useEffect(() => {
+        if (inventoryTick === 0) return;
+        loadData({ showLoading: false });
+    }, [inventoryTick, loadData]);
 
     // Derived Companies List from Buyers (unique, sorted)
     const companyOptions = useMemo(() => {
@@ -282,7 +295,8 @@ export default function BillingScreen() {
             }
 
             useToastStore.getState().showToast('Success', `${isCreditBill ? 'Udhaar' : 'Original'} Bill saved successfully!`, 'success');
-            
+            useDataRefreshStore.getState().bumpInventory();
+
             // Save sale data for PDF download
             const cartForPdf = cart.map(item => ({
                 name: item.name,

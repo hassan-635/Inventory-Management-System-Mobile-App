@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, ScrollView, Modal, Alert, useWindowDimensions, Platform } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { productsService } from '../api/products';
@@ -11,6 +11,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatProductId } from '../utils/formatProductId';
 import { flatListPerformanceProps } from '../utils/listPerf';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
+import { useDataRefreshStore } from '../store/dataRefreshStore';
 
 const FILTERS = [
     { key: 'all', label: 'All' },
@@ -133,8 +135,9 @@ export default function ProductsScreen() {
     const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
     const [showRestockDatePicker, setShowRestockDatePicker] = useState(false);
+    const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
 
-    const fetchProductsAndSuppliers = async () => {
+    const fetchProductsAndSuppliers = useCallback(async () => {
         try {
             const [prodData, suppData] = await Promise.all([
                 productsService.getAll(),
@@ -154,9 +157,14 @@ export default function ProductsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchProductsAndSuppliers(); }, []);
+    useRefetchOnFocus(fetchProductsAndSuppliers);
+
+    useEffect(() => {
+        if (inventoryTick === 0) return;
+        fetchProductsAndSuppliers();
+    }, [inventoryTick, fetchProductsAndSuppliers]);
 
     const onRefresh = () => { setRefreshing(true); fetchProductsAndSuppliers(); };
 
@@ -295,6 +303,7 @@ export default function ProductsScreen() {
             }
             setModalVisible(false);
             useToastStore.getState().showToast('Saved', formItem.id ? 'Product updated successfully.' : 'Product saved successfully.', 'success');
+            useDataRefreshStore.getState().bumpInventory();
             fetchProductsAndSuppliers();
         } catch (error) {
             console.error("Save product error", error);

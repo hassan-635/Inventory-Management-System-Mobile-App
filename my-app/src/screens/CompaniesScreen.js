@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList, ActivityIndicator,
     RefreshControl, TextInput, TouchableOpacity, Modal,
@@ -9,6 +9,7 @@ import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
 export default function CompaniesScreen() {
     const { colors, FONTS } = useAppTheme();
@@ -24,7 +25,7 @@ export default function CompaniesScreen() {
     const [payAmount, setPayAmount] = useState('');
     const [paying, setPaying] = useState(false);
 
-    const fetchCompanies = async () => {
+    const fetchCompanies = useCallback(async () => {
         try {
             const res = await api.get('/buyers/companies');
             setCompanies(res.data);
@@ -34,9 +35,9 @@ export default function CompaniesScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchCompanies(); }, []);
+    useRefetchOnFocus(fetchCompanies);
     const onRefresh = () => { setRefreshing(true); fetchCompanies(); };
 
     const filtered = useMemo(() => companies.filter(c =>

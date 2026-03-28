@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, ActivityIndicator,
     TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions,
@@ -8,6 +8,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import { generateMonthlyReportPdf } from '../utils/pdfGenerator';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -34,7 +35,7 @@ export default function MonthlyReportScreen() {
     const [viewMode, setViewMode] = useState('overview'); // 'overview' | 'daily_summary'
     const [generatingPdf, setGeneratingPdf] = useState(false);
 
-    const fetchReport = async () => {
+    const fetchReport = useCallback(async () => {
         try {
             const formattedMonth = selectedMonth.toString().padStart(2, '0');
             const res = await axios.get(`${API_URL}/reports/monthly?year=${selectedYear}&month=${formattedMonth}`, {
@@ -47,12 +48,14 @@ export default function MonthlyReportScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [selectedYear, selectedMonth, token]);
 
     useEffect(() => {
         setLoading(true);
         fetchReport();
-    }, [selectedYear, selectedMonth]);
+    }, [fetchReport]);
+
+    useRefetchOnFocus(fetchReport, [selectedYear, selectedMonth, token]);
 
     const onRefresh = () => { setRefreshing(true); fetchReport(); };
 

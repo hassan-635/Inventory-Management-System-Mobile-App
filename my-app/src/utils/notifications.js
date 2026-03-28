@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 import { productsService } from '../api/products';
+import { useDataRefreshStore } from '../store/dataRefreshStore';
 
 // Load Socket server address from environment variable
 const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
@@ -79,6 +80,7 @@ export const useSocketNotifications = () => {
         // Listen for new sales
         socket.on('new_sale', async (data) => {
             console.log('New sale received via socket:', data);
+            useDataRefreshStore.getState().bumpInventory();
 
             // Trigger local notification
             await Notifications.scheduleNotificationAsync({

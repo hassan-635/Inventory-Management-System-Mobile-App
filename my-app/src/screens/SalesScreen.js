@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, Alert, useWindowDimensions } from 'react-native';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, Alert, useWindowDimensions, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { salesService } from '../api/sales';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
@@ -8,6 +8,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { generateSalesAnalyticsPdf } from '../utils/pdfGenerator';
 import { formatProductId } from '../utils/formatProductId';
 import { flatListPerformanceProps } from '../utils/listPerf';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
+import { useDataRefreshStore } from '../store/dataRefreshStore';
 
 const TIME_FILTERS = [
     { key: '1d', label: '1D' },
@@ -54,10 +56,15 @@ export default function SalesScreen() {
     const [activeFilter, setActiveFilter] = useState('1m');
     const [search, setSearch] = useState('');
     const [pdfLoading, setPdfLoading] = useState(false);
+    const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
+
+    const [returnModalSale, setReturnModalSale] = useState(null);
+    const [returnQtyInput, setReturnQtyInput] = useState('');
+    const [returnSubmitting, setReturnSubmitting] = useState(false);
 
     const periodLabel = TIME_FILTER_LABELS[activeFilter] || activeFilter;
 
-    const fetchSales = async () => {
+    const fetchSales = useCallback(async () => {
         try {
             const data = await salesService.getAll();
             setSales(data);
@@ -67,34 +74,77 @@ export default function SalesScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, []);
 
-    useEffect(() => { fetchSales(); }, []);
+    useRefetchOnFocus(fetchSales);
+
+    useEffect(() => {
+        if (inventoryTick === 0) return;
+        fetchSales();
+    }, [inventoryTick, fetchSales]);
+
     const onRefresh = () => { setRefreshing(true); fetchSales(); };
 
-    const handleUndoSale = (id) => {
+    const openPartialReturnModal = (sale) => {
+        const max = Number(sale.quantity);
+        setReturnQtyInput(max > 1 ? '' : String(max));
+        setReturnModalSale(sale);
+    };
+
+    const submitPartialReturn = async () => {
+        if (!returnModalSale) return;
+        const max = Number(returnModalSale.quantity);
+        const raw = String(returnQtyInput).trim();
+        const q = raw === '' ? max : Number(raw);
+        if (!Number.isFinite(q) || q <= 0 || q > max) {
+            useToastStore.getState().showToast('Error', `Quantity 1 se ${max} tak honi chahiye.`, 'error');
+            return;
+        }
+        setReturnSubmitting(true);
+        try {
+            if (q >= max) {
+                await salesService.delete(returnModalSale.id);
+                useToastStore.getState().showToast('Done', 'Poori line return / undo ho gayi.', 'success');
+            } else {
+                await salesService.returnQty(returnModalSale.id, q);
+                useToastStore.getState().showToast('Done', `${q} wapas — stock aur udhaar proportion mein update.`, 'success');
+            }
+            useDataRefreshStore.getState().bumpInventory();
+            setReturnModalSale(null);
+            setReturnQtyInput('');
+            await fetchSales();
+        } catch (err) {
+            console.error('Return failed:', err);
+            useToastStore.getState().showToast('Error', err.response?.data?.error || 'Return save nahi ho saka.', 'error');
+        } finally {
+            setReturnSubmitting(false);
+        }
+    };
+
+    const handleFullUndo = (sale) => {
         Alert.alert(
-            "Undo Sale",
-            "Are you sure you want to undo this sale? This will restore the stock and clear associated debt and payments.",
+            'Poori sale undo',
+            'Stock poori quantity wapas mile gi aur is line ka udhaar / payments clear ho jaye ga.',
             [
-                { text: "Cancel", style: "cancel" },
+                { text: 'Cancel', style: 'cancel' },
                 {
-                    text: "Return Items",
-                    style: "destructive",
+                    text: 'Undo',
+                    style: 'destructive',
                     onPress: async () => {
                         try {
                             setLoading(true);
-                            await salesService.delete(id);
-                            useToastStore.getState().showToast('Reversed', 'Sale Reversed Successfully!', 'success');
-                            fetchSales();
+                            await salesService.delete(sale.id);
+                            useToastStore.getState().showToast('Reversed', 'Sale undo ho gayi.', 'success');
+                            useDataRefreshStore.getState().bumpInventory();
+                            await fetchSales();
                         } catch (err) {
                             console.error('Error undoing sale:', err);
-                            useToastStore.getState().showToast('Error', 'Failed to undo sale. Please try again.', 'error');
+                            useToastStore.getState().showToast('Error', 'Undo fail. Dobara try karein.', 'error');
                             setLoading(false);
                         }
-                    }
-                }
-            ]
+                    },
+                },
+            ],
         );
     };
 
@@ -240,13 +290,24 @@ export default function SalesScreen() {
                                 'Date': new Date(item.purchase_date).toLocaleDateString()
                             }}
                             renderActions={() => (
-                                <View style={{ flexDirection: 'row', flex: 1, minWidth: '100%' }}>
+                                <View style={{ flexDirection: 'row', flex: 1, minWidth: '100%', gap: 8 }}>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, { flex: 1, justifyContent: 'center', borderWidth: 1, borderColor: colors.border.color }]}
+                                        onPress={() => openPartialReturnModal(item)}
+                                    >
+                                        <Icon name="swap-vertical-outline" size={18} color={colors.accent.primary} />
+                                        <Text style={[styles.actionBtnTxt, { color: colors.accent.primary, fontSize: 12 }]} numberOfLines={2}>
+                                            Partial return
+                                        </Text>
+                                    </TouchableOpacity>
                                     <TouchableOpacity
                                         style={[styles.actionBtn, styles.actionBtnDanger, { flex: 1, justifyContent: 'center' }]}
-                                        onPress={() => handleUndoSale(item.id)}
+                                        onPress={() => handleFullUndo(item)}
                                     >
                                         <Icon name="arrow-undo-outline" size={18} color={colors.status.danger} />
-                                        <Text style={[styles.actionBtnTxt, { color: colors.status.danger }]}>Return Items & Undo</Text>
+                                        <Text style={[styles.actionBtnTxt, { color: colors.status.danger, fontSize: 12 }]} numberOfLines={2}>
+                                            Full undo
+                                        </Text>
                                     </TouchableOpacity>
                                 </View>
                             )}
@@ -255,6 +316,52 @@ export default function SalesScreen() {
                 }}
                 ListEmptyComponent={<Text style={styles.emptyText}>No sales in this period.</Text>}
             />
+
+            <Modal visible={!!returnModalSale} transparent animationType="slide" onRequestClose={() => !returnSubmitting && setReturnModalSale(null)}>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.returnModalOverlay}>
+                    <View style={[styles.returnModalBox, { backgroundColor: colors.background.secondary, borderColor: colors.border.color }]}>
+                        <Text style={[styles.returnModalTitle, { color: colors.text.primary, fontFamily: FONTS.bold }]}>
+                            Return kitni qty?
+                        </Text>
+                        {returnModalSale && (
+                            <Text style={{ color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 13, marginBottom: 12 }}>
+                                Max {returnModalSale.quantity} ({returnModalSale.products?.name || 'Product'})
+                                {'\n'}
+                                Kam qty = stock utni wapas; udhaar sirf is line ka ratio se kam.
+                            </Text>
+                        )}
+                        <TextInput
+                            style={[styles.returnModalInput, { color: colors.text.primary, borderColor: colors.border.color, backgroundColor: colors.background.primary }]}
+                            placeholder={returnModalSale ? `1 – ${returnModalSale.quantity}` : ''}
+                            placeholderTextColor={colors.text.muted}
+                            keyboardType="number-pad"
+                            value={returnQtyInput}
+                            onChangeText={setReturnQtyInput}
+                            editable={!returnSubmitting}
+                        />
+                        <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                            <TouchableOpacity
+                                style={[styles.returnModalBtn, { flex: 1, backgroundColor: colors.background.primary }]}
+                                onPress={() => !returnSubmitting && setReturnModalSale(null)}
+                                disabled={returnSubmitting}
+                            >
+                                <Text style={{ color: colors.text.secondary, fontFamily: FONTS.bold }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[styles.returnModalBtn, { flex: 1, backgroundColor: colors.accent.primary }]}
+                                onPress={submitPartialReturn}
+                                disabled={returnSubmitting}
+                            >
+                                {returnSubmitting ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={{ color: '#fff', fontFamily: FONTS.bold }}>Save return</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </KeyboardAvoidingView>
+            </Modal>
         </View>
     );
 }
@@ -312,4 +419,10 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.tertiary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, gap: 6 },
     actionBtnDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
     actionBtnTxt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
+
+    returnModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', padding: 24 },
+    returnModalBox: { borderRadius: 16, padding: 20, borderWidth: 1 },
+    returnModalTitle: { fontSize: 18, marginBottom: 8 },
+    returnModalInput: { borderWidth: 1, borderRadius: 10, padding: 14, fontSize: 16, marginBottom: 8 },
+    returnModalBtn: { paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 });

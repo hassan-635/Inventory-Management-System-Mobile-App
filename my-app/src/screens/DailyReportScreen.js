@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, ActivityIndicator,
     TouchableOpacity, RefreshControl, Alert, useWindowDimensions
@@ -7,6 +7,7 @@ import api from '../api/apiClient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '../theme/useAppTheme';
 import { generateDailyReportPdf } from '../utils/pdfGenerator';
+import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -22,7 +23,7 @@ export default function DailyReportScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [generatingPdf, setGeneratingPdf] = useState(false);
 
-    const fetchReport = async () => {
+    const fetchReport = useCallback(async () => {
         try {
             const [salesRes, productsRes, suppliersRes, buyersRes, returnsRes] = await Promise.all([
                 api.get('/sales'),
@@ -85,13 +86,14 @@ export default function DailyReportScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    };
+    }, [reportDate]);
 
     useEffect(() => {
         setLoading(true);
         fetchReport();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [reportDate]);
+    }, [fetchReport]);
+
+    useRefetchOnFocus(fetchReport, [reportDate]);
 
     const onRefresh = () => { setRefreshing(true); fetchReport(); };
 
