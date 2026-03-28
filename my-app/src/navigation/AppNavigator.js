@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { NavigationContainer, DefaultTheme, DarkTheme as NavigationDarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createDrawerNavigator } from '@react-navigation/drawer';
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { tokenStorage } from '../utils/tokenStorage';
-import { ActivityIndicator, View, Dimensions, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, View, Text, Dimensions, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
@@ -44,12 +45,55 @@ const ICON_MAP = {
     Settings: { focused: 'settings', outline: 'settings-outline' },
 };
 
+function AppDrawerContent(props) {
+    const { colors, FONTS } = useAppTheme();
+    const insets = useSafeAreaInsets();
+    const styles = useMemo(() => getDrawerContentStyles(colors, FONTS), [colors, FONTS]);
+
+    return (
+        <View style={[styles.root, { backgroundColor: colors.background.secondary }]}>
+            <View style={styles.drawerHeader}>
+                <View style={styles.logoIconWrap}>
+                    <Icon name="cube" size={26} color={colors.accent.primary} />
+                </View>
+                <Text style={styles.appTitle}>Inventory Pro</Text>
+                <Text style={styles.appSubtitle}>Inventory, billing & reports</Text>
+            </View>
+
+            <DrawerContentScrollView
+                {...props}
+                style={styles.scroll}
+                contentContainerStyle={styles.scrollContent}
+            >
+                <DrawerItemList {...props} />
+            </DrawerContentScrollView>
+
+            <View style={[styles.drawerFooter, { paddingBottom: Math.max(insets.bottom, 14) }]}>
+                <View style={styles.adCard}>
+                    <Text style={styles.adHeading}>Software Developed by Hassan Ali Abrar</Text>
+                    <Text style={styles.adBody}>
+                        Instagram:{' '}
+                        <Text style={styles.adAccentInfo}>hassan.secure</Text>
+                        {'  |  '}
+                        WhatsApp:{' '}
+                        <Text style={styles.adAccentOk}>+92 348 5055098</Text>
+                    </Text>
+                    <Text style={styles.adTagline}>
+                        Contact for custom software development & business automation
+                    </Text>
+                </View>
+            </View>
+        </View>
+    );
+}
+
 const DrawerNavigator = () => {
     useSocketNotifications(); // Initialize Real-time Sales Alerts
     const { colors, FONTS, isDarkMode } = useAppTheme();
 
     return (
         <Drawer.Navigator
+            drawerContent={(p) => <AppDrawerContent {...p} />}
             screenOptions={({ route, navigation }) => ({
                 headerStyle: { backgroundColor: colors.background.secondary },
                 headerTintColor: colors.text.primary,
@@ -93,6 +137,85 @@ const DrawerNavigator = () => {
         </Drawer.Navigator>
     );
 };
+
+function getDrawerContentStyles(colors, FONTS) {
+    return StyleSheet.create({
+        root: { flex: 1 },
+        drawerHeader: {
+            paddingTop: 20,
+            paddingBottom: 16,
+            paddingHorizontal: 20,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border.color,
+            alignItems: 'center',
+        },
+        logoIconWrap: {
+            width: 52,
+            height: 52,
+            borderRadius: 14,
+            backgroundColor: 'rgba(99, 102, 241, 0.15)',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 10,
+            borderWidth: 1,
+            borderColor: 'rgba(99, 102, 241, 0.28)',
+        },
+        appTitle: {
+            fontFamily: FONTS.bold,
+            fontSize: 20,
+            color: colors.text.primary,
+            letterSpacing: 0.3,
+        },
+        appSubtitle: {
+            fontFamily: FONTS.regular,
+            fontSize: 12,
+            color: colors.text.secondary,
+            marginTop: 4,
+            textAlign: 'center',
+        },
+        scroll: { flex: 1 },
+        scrollContent: { paddingTop: 8, flexGrow: 1 },
+        drawerFooter: {
+            paddingHorizontal: 14,
+            paddingTop: 12,
+            borderTopWidth: 1,
+            borderTopColor: colors.border.color,
+        },
+        adCard: {
+            borderRadius: 14,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            backgroundColor: colors.background.primary,
+            borderWidth: 1,
+            borderColor: colors.border.color,
+        },
+        adHeading: {
+            fontFamily: FONTS.bold,
+            fontSize: 12,
+            color: colors.text.primary,
+            letterSpacing: 0.4,
+            marginBottom: 8,
+            textAlign: 'center',
+        },
+        adBody: {
+            fontFamily: FONTS.regular,
+            fontSize: 11,
+            color: colors.text.secondary,
+            textAlign: 'center',
+            lineHeight: 16,
+            marginBottom: 6,
+        },
+        adAccentInfo: { fontFamily: FONTS.semibold, color: colors.accent.secondary },
+        adAccentOk: { fontFamily: FONTS.semibold, color: colors.status.success },
+        adTagline: {
+            fontFamily: FONTS.regular,
+            fontSize: 10,
+            color: colors.text.muted,
+            textAlign: 'center',
+            lineHeight: 14,
+        },
+    });
+}
 
 export default function AppNavigator() {
     const { token, isLoading, setAuth, setLoading } = useAuthStore();
