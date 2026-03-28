@@ -51,11 +51,11 @@ export default function BuyersScreen() {
         (b.phone || '').includes(search)
     ), [buyers, search]);
 
-    const totalDue = useMemo(() =>
-        buyers.reduce((sum, b) =>
+    const filteredPending = useMemo(() =>
+        filtered.reduce((sum, b) =>
             sum + (b.buyer_transactions || []).reduce((s, t) =>
                 s + Math.max(0, Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0), 0),
-        [buyers]);
+        [filtered]);
 
     const computeDue = (txns = []) => txns.reduce((s, t) => s + Math.max(0, Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0);
     const computePaid = (txns = []) => txns.reduce((s, t) => s + Number(t.paid_amount || 0), 0);
@@ -121,12 +121,14 @@ export default function BuyersScreen() {
                 {/* Card Header */}
                 <View style={styles.cardHeader}>
                     <View style={styles.cardIconWrap}>
-                        <Icon name="person" size={20} color={colors.accent.primary} />
+                        <Icon name="person" size={22} color={colors.accent.primary} />
                     </View>
                     <View style={{ flex: 1 }}>
                         <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
                         <Text style={styles.itemSub} numberOfLines={1}>
-                            {item.company_name ? `🏢 ${item.company_name}` : item.phone || 'No phone'}
+                            {item.company_name
+                                ? `${item.company_name}${item.phone ? ` · ${item.phone}` : ''}`
+                                : item.phone || 'No phone'}
                         </Text>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
@@ -135,7 +137,7 @@ export default function BuyersScreen() {
                         </Text>
                         <Text style={styles.totalLabel}>Total: Rs. {total.toLocaleString()}</Text>
                     </View>
-                    <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.text.secondary} style={{ marginLeft: 6 }} />
+                    <Icon name={isExpanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.text.muted || colors.text.secondary} style={{ marginLeft: 8 }} />
                 </View>
 
                 {/* Expanded Content */}
@@ -210,21 +212,21 @@ export default function BuyersScreen() {
                 )}
             </View>
 
-            {/* Summary bar */}
-            {totalDue > 0 && (
-                <View style={styles.summaryBar}>
-                    <Icon name="warning-outline" size={14} color="#f59e0b" style={{ marginRight: 6 }} />
-                    <Text style={styles.summaryBarText}>
-                        Total Pending Dues: <Text style={{ color: colors.status.danger, fontFamily: FONTS.bold }}>Rs. {totalDue.toLocaleString()}</Text>
+            {/* Summary bar (Companies-style: count + pending for current list) */}
+            <View style={styles.summaryBar}>
+                <Text style={styles.summaryBarText}>
+                    {filtered.length} customers •{' '}
+                    <Text style={{ color: colors.status.danger }}>
+                        Rs. {filteredPending.toLocaleString()} pending
                     </Text>
-                </View>
-            )}
+                </Text>
+            </View>
 
             <FlatList
                 data={filtered}
                 keyExtractor={item => item.id.toString()}
                 renderItem={renderBuyer}
-                contentContainerStyle={styles.listContent}
+                contentContainerStyle={[styles.listContent, SW > 768 && { paddingHorizontal: 32 }]}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
                 ListEmptyComponent={
                     <View style={styles.emptyWrap}>
@@ -298,7 +300,7 @@ const getStyles = (colors, FONTS, SW) => StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
 
     headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8 },
-    headerTitle: { fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold },
+    headerTitle: { fontSize: Math.min(24, SW * 0.063), color: colors.text.primary, fontFamily: FONTS.bold },
     addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.accent.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, shadowColor: colors.accent.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4 },
     addBtnTxt: { color: '#fff', fontFamily: FONTS.bold, fontSize: 13 },
 
@@ -313,7 +315,7 @@ const getStyles = (colors, FONTS, SW) => StyleSheet.create({
     card: { backgroundColor: colors.background.secondary, borderRadius: 16, marginBottom: 14, borderWidth: 1, borderColor: colors.border.color || 'rgba(255,255,255,0.05)', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.12, shadowRadius: 8, elevation: 4, overflow: 'hidden' },
     cardAlert: { borderColor: 'rgba(239,68,68,0.3)' },
     cardHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 },
-    cardIconWrap: { width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(99,102,241,0.15)', justifyContent: 'center', alignItems: 'center' },
+    cardIconWrap: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(99,102,241,0.15)', justifyContent: 'center', alignItems: 'center' },
     itemName: { color: colors.text.primary, fontFamily: FONTS.bold, fontSize: Math.min(15, SW * 0.038) },
     itemSub: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 1 },
     dueLabel: { fontFamily: FONTS.bold, fontSize: Math.min(14, SW * 0.035) },

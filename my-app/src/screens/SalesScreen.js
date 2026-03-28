@@ -161,27 +161,46 @@ export default function SalesScreen() {
                 contentContainerStyle={[styles.listContainer, isTablet && { paddingHorizontal: 32 }]}
                 ListHeaderComponent={<ListHeader />}
                 renderItem={({ item }) => {
-                    const remaining = Number(item.total_amount || 0) - Number(item.paid_amount || 0);
+                    const total = Number(item.total_amount || 0);
+                    const paid = Number(item.paid_amount || 0);
+                    const remaining = total - paid;
+                    const hasBalance = remaining > 0;
                     return (
                         <ExpandableItem
                             title={item.products?.name || 'Unknown Product'}
-                            subtitle={null}
-                            rightText={`Rs. ${item.total_amount}`}
+                            subtitle={item.buyers?.name ? `Buyer · ${item.buyers.name}` : 'Walk-in'}
+                            rightText={hasBalance ? `Rs. ${remaining.toLocaleString()}` : '✓ Clear'}
+                            rightSubText={`Total: Rs. ${total.toLocaleString()}`}
+                            rightTextColor={hasBalance ? colors.status.danger : colors.status.success}
+                            summaryBoxes={[
+                                { label: 'Total Sale', value: `Rs. ${total.toLocaleString()}` },
+                                {
+                                    label: 'Paid',
+                                    value: `Rs. ${paid.toLocaleString()}`,
+                                    valueColor: colors.status.success,
+                                    borderColor: colors.status.success,
+                                },
+                                {
+                                    label: 'Balance',
+                                    value: hasBalance ? `Rs. ${remaining.toLocaleString()}` : '—',
+                                    valueColor: hasBalance ? colors.status.danger : colors.status.success,
+                                    borderColor: hasBalance ? colors.status.danger : colors.status.success,
+                                },
+                            ]}
                             iconName="receipt-outline"
+                            containerStyle={hasBalance ? { borderColor: 'rgba(239,68,68,0.3)' } : undefined}
                             detailsData={{
                                 'Txn ID': `#${item.id}`,
                                 'Product ID': formatProductId(item.product_id),
                                 'Buyer': item.buyers?.name || 'Walk-in',
                                 'Quantity': `${item.quantity} ${item.quantity_unit ? `(${item.quantity_unit})` : ''}`,
                                 'Price/Unit': `Rs. ${item.products?.price || '-'}`,
-                                'Paid Amount': `Rs. ${item.paid_amount || 0}`,
-                                'Remaining': remaining > 0 ? `Rs. ${remaining}` : '✓ Fully Paid',
                                 'Date': new Date(item.purchase_date).toLocaleDateString()
                             }}
                             renderActions={() => (
-                                <View style={{ flexDirection: 'row', paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border.color || 'rgba(255,255,255,0.05)', marginTop: 8 }}>
-                                    <TouchableOpacity 
-                                        style={[styles.actionBtn, styles.actionBtnDanger, { flex: 1, justifyContent: 'center' }]} 
+                                <View style={{ flexDirection: 'row', flex: 1, minWidth: '100%' }}>
+                                    <TouchableOpacity
+                                        style={[styles.actionBtn, styles.actionBtnDanger, { flex: 1, justifyContent: 'center' }]}
                                         onPress={() => handleUndoSale(item.id)}
                                     >
                                         <Icon name="arrow-undo-outline" size={18} color={colors.status.danger} />

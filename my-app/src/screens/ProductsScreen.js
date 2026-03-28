@@ -344,23 +344,37 @@ export default function ProductsScreen() {
                         containerStyle = { borderColor: 'rgba(234, 179, 8, 0.3)' };
                     }
 
+                    const stockBorder =
+                        isZero ? colors.status.danger : isLow ? colors.status.warning : colors.border.color;
+                    const stockColor =
+                        isZero ? colors.status.danger : isLow ? colors.status.warning : colors.status.success;
+
                     return (
                         <ExpandableItem
                             title={item.name}
-                            subtitle={null}
+                            subtitle={item.category || item.purchased_from || null}
                             rightText={`Rs. ${item.price}`}
+                            rightSubText={`Stock: ${remaining}${isZero ? ' · Out' : isLow ? ' · Low' : ''}`}
+                            summaryBoxes={[
+                                { label: 'Sale Price', value: `Rs. ${item.price}` },
+                                {
+                                    label: 'In Stock',
+                                    value: String(remaining),
+                                    valueColor: stockColor,
+                                    borderColor: stockBorder,
+                                },
+                                { label: 'Category', value: item.category || '—' },
+                            ]}
                             iconName="cube-outline"
                             containerStyle={containerStyle}
                             detailsData={{
                                 'Product ID': formatProductId(item.id),
-                                'Category': item.category || 'N/A',
                                 'Supplier': item.purchased_from || 'N/A',
-                                'Sale Price': `Rs. ${item.price}`,
                                 'Purchase Price': showPurchaseRates ? `Rs. ${item.purchase_rate || '-'}` : '***',
                                 'Unit': item.quantity_unit || 'Per Piece',
                                 'Max Discount': `Rs. ${item.max_discount || 0}`,
-                                'Total Qty': item.total_quantity,
-                                'Remaining Qty': `${remaining}${isZero ? ' ❌ (Out of Stock)' : isLow ? ' ⚠️' : ''}`,
+                                'Total Qty': String(item.total_quantity),
+                                'Remaining Qty': `${remaining}${isZero ? ' (Out of Stock)' : isLow ? ' (Low)' : ''}`,
                                 'Purchase Date': item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : '-',
                                 'Added': new Date(item.created_at).toLocaleDateString()
                             }}

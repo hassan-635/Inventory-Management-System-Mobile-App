@@ -122,9 +122,19 @@ export default function SuppliersScreen() {
     const computePaid = (txns) =>
         (txns || []).reduce((acc, t) => acc + Number(t.paid_amount || 0), 0);
 
-    const filteredSuppliers = useMemo(() => suppliers.filter(s =>
-        (s.name || '').toLowerCase().includes(search.toLowerCase())
-    ), [suppliers, search]);
+    const filteredSuppliers = useMemo(() => suppliers.filter(s => {
+        const q = search.toLowerCase();
+        return (
+            (s.name || '').toLowerCase().includes(q) ||
+            (s.company_name || '').toLowerCase().includes(q) ||
+            (s.phone || '').includes(search)
+        );
+    }), [suppliers, search]);
+
+    const filteredPending = useMemo(
+        () => filteredSuppliers.reduce((sum, s) => sum + computeDue(s.supplier_transactions), 0),
+        [filteredSuppliers]
+    );
 
     if (loading && !refreshing) {
         return (
@@ -142,11 +152,20 @@ export default function SuppliersScreen() {
                 <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Search suppliers..."
+                    placeholder="Search name, company, phone..."
                     placeholderTextColor={colors.text.muted}
                     value={search}
                     onChangeText={setSearch}
                 />
+            </View>
+
+            <View style={styles.summaryBar}>
+                <Text style={styles.summaryBarText}>
+                    {filteredSuppliers.length} suppliers •{' '}
+                    <Text style={{ color: colors.status.danger }}>
+                        Rs. {filteredPending.toLocaleString()} pending
+                    </Text>
+                </Text>
             </View>
 
             <FlatList
@@ -157,17 +176,36 @@ export default function SuppliersScreen() {
                 renderItem={({ item }) => {
                     const due = computeDue(item.supplier_transactions);
                     const paid = computePaid(item.supplier_transactions);
+                    const txns = item.supplier_transactions || [];
+                    const totalVol = txns.reduce((s, t) => s + Number(t.total_amount || 0), 0);
+                    const hasDue = due > 0;
                     return (
                         <ExpandableItem
                             title={item.name}
                             subtitle={item.company_name || item.phone || null}
-                            rightText={due > 0 ? `Due: Rs. ${due.toLocaleString()}` : '✓ Cleared'}
-                            iconName="business-outline"
+                            rightText={hasDue ? `Rs. ${due.toLocaleString()}` : '✓ Clear'}
+                            rightSubText={`Total: Rs. ${totalVol.toLocaleString()}`}
+                            rightTextColor={hasDue ? colors.status.danger : colors.status.success}
+                            summaryBoxes={[
+                                { label: 'Purchases', value: `Rs. ${totalVol.toLocaleString()}` },
+                                {
+                                    label: 'Paid',
+                                    value: `Rs. ${paid.toLocaleString()}`,
+                                    valueColor: colors.status.success,
+                                    borderColor: colors.status.success,
+                                },
+                                {
+                                    label: 'Pending',
+                                    value: `Rs. ${due.toLocaleString()}`,
+                                    valueColor: hasDue ? colors.status.danger : colors.status.success,
+                                    borderColor: hasDue ? colors.status.danger : colors.status.success,
+                                },
+                            ]}
+                            iconName="storefront-outline"
+                            containerStyle={hasDue ? { borderColor: 'rgba(239,68,68,0.3)' } : undefined}
                             detailsData={{
                                 'Phone': item.phone || 'N/A',
                                 'Company': item.company_name || 'N/A',
-                                'Total Paid': `Rs. ${paid.toLocaleString()}`,
-                                'Remaining Due': `Rs. ${due.toLocaleString()}`,
                             }}
                             renderExtra={() => (
                                 <>
@@ -317,6 +355,17 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         borderWidth: 1, borderColor: colors.border.color,
     },
     searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    summaryBar: {
+        marginHorizontal: 16,
+        marginBottom: 10,
+        backgroundColor: 'rgba(239,68,68,0.08)',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(239,68,68,0.2)',
+    },
+    summaryBarText: { color: colors.text.secondary, fontFamily: FONTS.medium, fontSize: 13 },
     listContainer: { padding: 16, paddingBottom: 100 },
     emptyText: { color: colors.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
     
