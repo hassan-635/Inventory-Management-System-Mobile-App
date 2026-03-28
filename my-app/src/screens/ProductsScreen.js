@@ -116,6 +116,7 @@ export default function ProductsScreen() {
     const [search, setSearch] = useState('');
     const [lowStockLimit, setLowStockLimit] = useState(10);
     const [showPurchaseRates, setShowPurchaseRates] = useState(false);
+    const [showSortPicker, setShowSortPicker] = useState(false);
 
     // Picker State
     const [showUnitPicker, setShowUnitPicker] = useState(false);
@@ -164,6 +165,13 @@ export default function ProductsScreen() {
         const supps = suppliers.map(s => s.name).filter(Boolean);
         return [...new Set(supps)];
     }, [suppliers]);
+
+    const sortLabel = useMemo(
+        () => SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? 'Default',
+        [sortBy]
+    );
+
+    const sortModalStyles = useMemo(() => getModalStyles(colors, FONTS), [colors, FONTS]);
 
     const openModal = async (product = null) => {
         setAddPaymentAmount('');
@@ -309,38 +317,71 @@ export default function ProductsScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Search */}
-            <View style={styles.searchRow}>
-                <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search by name or ID (e.g. AB05)..."
-                    placeholderTextColor={colors.text.muted || colors.text.secondary}
-                    value={search}
-                    onChangeText={setSearch}
-                />
+            {/* Search (70%) + Arrange by (30%) — one row */}
+            <View style={styles.searchSortRow}>
+                <View style={styles.searchRow}>
+                    <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search name or ID…"
+                        placeholderTextColor={colors.text.muted || colors.text.secondary}
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
+                <TouchableOpacity
+                    style={styles.sortDropdown}
+                    onPress={() => setShowSortPicker(true)}
+                    activeOpacity={0.85}
+                    accessibilityLabel={`Arrange by: ${sortLabel}`}
+                >
+                    <Text style={styles.sortDropdownText} numberOfLines={1} ellipsizeMode="tail">
+                        {sortLabel}
+                    </Text>
+                    <Icon name="chevron-down" size={18} color={colors.text.secondary} />
+                </TouchableOpacity>
             </View>
 
-            {/* Arrange by — same options as web Products */}
-            <View style={styles.sortSection}>
-                <Text style={styles.sortSectionLabel}>Arrange by</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortChipsRow}>
-                    {SORT_OPTIONS.map((opt) => {
-                        const active = sortBy === opt.key;
-                        return (
-                            <TouchableOpacity
-                                key={opt.key}
-                                style={[styles.sortChip, active && styles.sortChipActive]}
-                                onPress={() => setSortBy(opt.key)}
-                            >
-                                <Text style={[styles.sortChipText, active && styles.sortChipTextActive]} numberOfLines={1}>
-                                    {opt.label}
-                                </Text>
+            <Modal visible={showSortPicker} animationType="slide" transparent>
+                <View style={sortModalStyles.overlay}>
+                    <View style={[sortModalStyles.sheet, { paddingBottom: 24 }]}>
+                        <View style={sortModalStyles.header}>
+                            <Text style={sortModalStyles.title}>Arrange by</Text>
+                            <TouchableOpacity onPress={() => setShowSortPicker(false)} accessibilityRole="button">
+                                <Icon name="close" size={22} color={colors.text.secondary} />
                             </TouchableOpacity>
-                        );
-                    })}
-                </ScrollView>
-            </View>
+                        </View>
+                        <FlatList
+                            data={SORT_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            keyboardShouldPersistTaps="handled"
+                            renderItem={({ item }) => {
+                                const selected = sortBy === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[
+                                            sortModalStyles.item,
+                                            styles.sortPickerItemRow,
+                                            selected && { backgroundColor: colors.background.primary },
+                                        ]}
+                                        onPress={() => {
+                                            setSortBy(item.key);
+                                            setShowSortPicker(false);
+                                        }}
+                                    >
+                                        <Text style={sortModalStyles.itemName} numberOfLines={2}>
+                                            {item.label}
+                                        </Text>
+                                        {selected ? (
+                                            <Icon name="checkmark-circle" size={22} color={colors.accent.primary} />
+                                        ) : null}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
 
             {/* Filter Tabs */}
             <View style={styles.filterWrapper}>
@@ -648,38 +689,48 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold,
         paddingHorizontal: 16, paddingTop: 16, paddingBottom: 8,
     },
+    searchSortRow: {
+        flexDirection: 'row',
+        alignItems: 'stretch',
+        marginHorizontal: 16,
+        marginBottom: 10,
+        gap: 8,
+    },
     searchRow: {
-        flexDirection: 'row', alignItems: 'center',
-        marginHorizontal: 16, marginBottom: 10,
+        flex: 7,
+        minWidth: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
         backgroundColor: colors.background.secondary,
-        borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-        borderWidth: 1, borderColor: colors.border.color,
-    },
-    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
-    sortSection: { marginBottom: 6 },
-    sortSectionLabel: {
-        marginLeft: 16,
-        marginBottom: 6,
-        fontSize: 12,
-        color: colors.text.secondary,
-        fontFamily: FONTS.medium,
-    },
-    sortChipsRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center', flexDirection: 'row' },
-    sortChip: {
+        borderRadius: 10,
         paddingHorizontal: 12,
-        paddingVertical: 7,
-        borderRadius: 20,
+        paddingVertical: 8,
         borderWidth: 1,
         borderColor: colors.border.color,
+    },
+    searchInput: { flex: 1, minWidth: 0, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    sortDropdown: {
+        flex: 3,
+        minWidth: 0,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
         backgroundColor: colors.background.secondary,
-        maxWidth: 280,
+        borderRadius: 10,
+        paddingHorizontal: 10,
+        paddingVertical: 8,
+        borderWidth: 1,
+        borderColor: colors.border.color,
     },
-    sortChipActive: {
-        backgroundColor: colors.accent.primary,
-        borderColor: colors.accent.primary,
+    sortDropdownText: {
+        flex: 1,
+        minWidth: 0,
+        marginRight: 6,
+        color: colors.text.primary,
+        fontFamily: FONTS.medium,
+        fontSize: 12,
     },
-    sortChipText: { fontSize: 12, fontFamily: FONTS.medium, color: colors.text.secondary },
-    sortChipTextActive: { color: '#fff', fontFamily: FONTS.bold },
+    sortPickerItemRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
     filterWrapper: { height: 45, marginBottom: 8 },
     filterRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
     filterBtn: {
