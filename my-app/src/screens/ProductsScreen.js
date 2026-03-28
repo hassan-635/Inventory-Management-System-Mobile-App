@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, ScrollView, Modal, Alert, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TouchableOpacity, TextInput, ScrollView, Modal, Alert, useWindowDimensions, Platform } from 'react-native';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { productsService } from '../api/products';
 import { purchasesService } from '../api/purchases';
 import { suppliersService } from '../api/suppliers';
@@ -134,6 +135,7 @@ export default function ProductsScreen() {
     });
     const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
+    const [showRestockDatePicker, setShowRestockDatePicker] = useState(false);
 
     const fetchProductsAndSuppliers = async () => {
         try {
@@ -176,6 +178,7 @@ export default function ProductsScreen() {
     const openModal = async (product = null) => {
         setAddPaymentAmount('');
         setSupplierTxnInfo(null);
+        setShowRestockDatePicker(false);
         if (product) {
             setFormItem({
                 id: product.id,
@@ -187,10 +190,14 @@ export default function ProductsScreen() {
                 quantity_unit: product.quantity_unit || 'Per Piece',
                 max_discount: product.max_discount?.toString() || '0',
                 total_quantity: product.total_quantity?.toString() || '0',
+                remaining_display: String(product.remaining_quantity ?? 0),
                 purchase_date: product.purchase_date ? new Date(product.purchase_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
                 paid_amount: '0',
                 supplier_phone: '',
-                supplier_company_name: ''
+                supplier_company_name: '',
+                add_quantity: '',
+                restock_paid_amount: '',
+                restock_purchase_date: new Date(),
             });
 
             try {
@@ -207,8 +214,10 @@ export default function ProductsScreen() {
             setFormItem({ 
                 id: null, name: '', category: 'Hardware', price: '', 
                 purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece', 
-                max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
-                supplier_phone: '', supplier_company_name: ''
+                max_discount: '0', total_quantity: '0', remaining_display: '',
+                purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
+                supplier_phone: '', supplier_company_name: '',
+                add_quantity: '', restock_paid_amount: '', restock_purchase_date: new Date(),
             });
         }
         setModalVisible(true);
@@ -221,31 +230,74 @@ export default function ProductsScreen() {
         }
         setIsSaving(true);
         try {
-            const payload = {
-                ...formItem,
-                price: Number(formItem.price),
-                purchase_rate: Number(formItem.purchase_rate),
-                max_discount: Number(formItem.max_discount),
-                total_quantity: Number(formItem.total_quantity),
-                purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
-                paid_amount: Number(formItem.paid_amount || 0)
-            };
-
             if (formItem.id) {
+                const addQ = Number(formItem.add_quantity);
+                const hasRestock = formItem.add_quantity != null && String(formItem.add_quantity).trim() !== '' && Number.isFinite(addQ) && addQ > 0;
+                if (hasRestock) {
+                    if (!formItem.purchased_from?.trim()) {
+                        useToastStore.getState().showToast('Error', 'Supplier zaroori hai jab naya maal add ho.', 'error');
+                        setIsSaving(false);
+                        return;
+                    }
+                    const rate = Number(formItem.purchase_rate || 0);
+                    const batchTotal = rate * addQ;
+                    const paidRestock = Number(formItem.restock_paid_amount || 0);
+                    if (paidRestock < 0 || paidRestock > batchTotal) {
+                        useToastStore.getState().showToast('Error', `Is batch ki max payment Rs. ${batchTotal.toLocaleString()} ho sakti hai.`, 'error');
+                        setIsSaving(false);
+                        return;
+                    }
+                }
+
+                const payload = {
+                    name: formItem.name.trim(),
+                    category: formItem.category,
+                    price: Number(formItem.price),
+                    purchase_rate: Number(formItem.purchase_rate || 0),
+                    max_discount: Number(formItem.max_discount || 0),
+                    purchased_from: formItem.purchased_from?.trim() || '',
+                    purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
+                    quantity_unit: formItem.quantity_unit || 'Per Piece',
+                    supplier_phone: formItem.supplier_phone,
+                    supplier_company_name: formItem.supplier_company_name,
+                };
+                if (hasRestock) {
+                    payload.add_quantity = addQ;
+                    payload.restock_paid_amount = Number(formItem.restock_paid_amount || 0);
+                    payload.restock_purchase_date = formItem.restock_purchase_date instanceof Date
+                        ? formItem.restock_purchase_date.toISOString().split('T')[0]
+                        : String(formItem.restock_purchase_date || '').split('T')[0] || new Date().toISOString().split('T')[0];
+                }
+
                 await productsService.update(formItem.id, payload);
                 if (addPaymentAmount && Number(addPaymentAmount) > 0 && supplierTxnInfo?.txn_id) {
                     const payAmt = Number(addPaymentAmount);
                     if (payAmt > supplierTxnInfo.remaining) {
                         useToastStore.getState().showToast('Error', `Payment cannot exceed remaining amount: Rs. ${supplierTxnInfo.remaining}`, 'error');
+                        setIsSaving(false);
                         return;
                     }
                     await purchasesService.updatePayment(supplierTxnInfo.txn_id, payAmt);
                 }
             } else {
+                const payload = {
+                    name: formItem.name.trim(),
+                    category: formItem.category,
+                    price: Number(formItem.price),
+                    purchase_rate: Number(formItem.purchase_rate),
+                    max_discount: Number(formItem.max_discount),
+                    purchased_from: formItem.purchased_from,
+                    total_quantity: Number(formItem.total_quantity),
+                    purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
+                    paid_amount: Number(formItem.paid_amount || 0),
+                    quantity_unit: formItem.quantity_unit,
+                    supplier_phone: formItem.supplier_phone,
+                    supplier_company_name: formItem.supplier_company_name,
+                };
                 await productsService.create(payload);
             }
             setModalVisible(false);
-            useToastStore.getState().showToast('Saved', 'Product saved successfully!', 'success');
+            useToastStore.getState().showToast('Saved', formItem.id ? 'Product update ho gaya.' : 'Product save ho gaya.', 'success');
             fetchProductsAndSuppliers();
         } catch (error) {
             console.error("Save product error", error);
@@ -488,8 +540,8 @@ export default function ProductsScreen() {
                             renderActions={() => (
                                 <>
                                     <TouchableOpacity style={styles.actionBtn} onPress={() => openModal(item)}>
-                                        <Icon name="create-outline" size={18} color={colors.text.primary} />
-                                        <Text style={styles.actionBtnTxt}>Edit</Text>
+                                        <Icon name="refresh-outline" size={18} color={colors.text.primary} />
+                                        <Text style={styles.actionBtnTxt}>Update</Text>
                                     </TouchableOpacity>
                                     <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger]} onPress={() => confirmDelete(item.id)}>
                                         <Icon name="trash-outline" size={18} color={colors.status.danger} />
@@ -513,7 +565,7 @@ export default function ProductsScreen() {
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalContent, isTablet && { width: '70%', alignSelf: 'center' }]}>
                         <View style={styles.modalHeader}>
-                            <Text style={styles.modalTitle}>{formItem.id ? 'Edit Product' : 'Add Product'}</Text>
+                            <Text style={styles.modalTitle}>{formItem.id ? 'Update Product' : 'Add Product'}</Text>
                             <TouchableOpacity onPress={() => setModalVisible(false)}>
                                 <Icon name="close" size={24} color={colors.text.secondary} />
                             </TouchableOpacity>
@@ -533,9 +585,10 @@ export default function ProductsScreen() {
                                 </View>
                             </View>
 
+                            {!formItem.id ? (
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                    <Text style={styles.inputLabel}>Total Qty (Stock){formItem.id ? <Text style={{ color: colors.text.muted, fontSize: 11 }}>{' '}— edit adjusts remaining by the change</Text> : null}</Text>
+                                    <Text style={styles.inputLabel}>Total Qty (Stock)</Text>
                                     <TextInput style={styles.input} value={formItem.total_quantity} onChangeText={t => setFormItem({...formItem, total_quantity: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                 </View>
                                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
@@ -548,6 +601,76 @@ export default function ProductsScreen() {
                                     </TouchableOpacity>
                                 </View>
                             </View>
+                            ) : (
+                            <>
+                                <View style={styles.row}>
+                                    <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                                        <Text style={styles.inputLabel}>Abhi total stock (DB)</Text>
+                                        <View style={[styles.input, { justifyContent: 'center' }]}>
+                                            <Text style={{ color: colors.text.secondary, fontFamily: FONTS.medium }}>{formItem.total_quantity}</Text>
+                                        </View>
+                                    </View>
+                                    <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                                        <Text style={styles.inputLabel}>Abhi baqi (remaining)</Text>
+                                        <View style={[styles.input, { justifyContent: 'center' }]}>
+                                            <Text style={{ color: colors.text.secondary, fontFamily: FONTS.medium }}>{formItem.remaining_display}</Text>
+                                        </View>
+                                    </View>
+                                </View>
+                                <View style={styles.row}>
+                                    <View style={[styles.inputGroup, { flex: 1 }]}>
+                                        <Text style={styles.inputLabel}>Unit</Text>
+                                        <TouchableOpacity style={styles.input} onPress={() => setShowUnitPicker(true)}>
+                                            <Text style={[{color: colors.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.quantity_unit && {color: colors.text.muted}]} numberOfLines={1}>
+                                                {formItem.quantity_unit || 'Select Unit...'}
+                                            </Text>
+                                            <Icon name="chevron-down" size={18} color={colors.text.secondary} />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                                <View style={{ backgroundColor: 'rgba(56,189,248,0.08)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.25)', borderRadius: 12, padding: 14, marginBottom: 12 }}>
+                                    <Text style={[styles.inputLabel, { color: colors.accent.primary, marginBottom: 10 }]}>Naya maal (restock)</Text>
+                                    <Text style={styles.inputLabel}>Kitni quantity add honi hai *</Text>
+                                    <TextInput style={styles.input} value={formItem.add_quantity} onChangeText={t => setFormItem({...formItem, add_quantity: t})} keyboardType="numeric" placeholder="0 chhor dein agar sirf details badalni hon" placeholderTextColor={colors.text.muted} />
+                                    <Text style={styles.inputLabel}>Is batch par supplier ko kitna pay kiya (Rs)</Text>
+                                    <TextInput style={styles.input} value={formItem.restock_paid_amount} onChangeText={t => setFormItem({...formItem, restock_paid_amount: t})} keyboardType="numeric" placeholder="0 = poora udhaar is batch par" placeholderTextColor={colors.text.muted} />
+                                    <Text style={styles.inputLabel}>Mal ki date / khata date</Text>
+                                    <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowRestockDatePicker(true)}>
+                                        <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>
+                                            {(formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()).toLocaleDateString()}
+                                        </Text>
+                                        <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
+                                    </TouchableOpacity>
+                                    {showRestockDatePicker ? (
+                                        <DateTimePicker
+                                            value={formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(e, d) => {
+                                                setShowRestockDatePicker(Platform.OS === 'ios');
+                                                if (d) setFormItem({ ...formItem, restock_purchase_date: d });
+                                            }}
+                                        />
+                                    ) : null}
+                                    {(() => {
+                                        const aq = Number(formItem.add_quantity || 0);
+                                        const rate = Number(formItem.purchase_rate || 0);
+                                        if (aq > 0 && rate > 0) {
+                                            const bt = aq * rate;
+                                            const paid = Number(formItem.restock_paid_amount || 0);
+                                            const ud = Math.max(0, bt - paid);
+                                            return (
+                                                <View style={{ marginTop: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border.color }}>
+                                                    <Text style={{ color: colors.text.secondary, fontSize: 12 }}>Is batch bill: Rs. {bt.toLocaleString()} · is batch par baqi udhaar: Rs. {ud.toLocaleString()}</Text>
+                                                    <Text style={{ color: colors.text.muted, fontSize: 11, marginTop: 4 }}>Har dafa alag supplier transaction banega — Suppliers screen par date-wise alag dikhega.</Text>
+                                                </View>
+                                            );
+                                        }
+                                        return null;
+                                    })()}
+                                </View>
+                            </>
+                            )}
 
                             {/* Auto-calculated total to pay supplier - only for new products */}
                             {!formItem.id && (() => {
@@ -640,7 +763,7 @@ export default function ProductsScreen() {
                                 <Text style={styles.cancelBtnText}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={isSaving}>
-                                {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>Save</Text>}
+                                {isSaving ? <ActivityIndicator color="#fff" /> : <Text style={styles.saveBtnText}>{formItem.id ? 'Update' : 'Save'}</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>
