@@ -2,6 +2,18 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { formatProductId } from './formatProductId';
 
+/** Readable, filesystem-safe piece for PDF names (customer name, period label, etc.) */
+function pdfNamePart(raw, maxLen = 40) {
+    const s = String(raw ?? 'Unknown')
+        .trim()
+        .replace(/[/\\?%*:|"<>]+/g, '-')
+        .replace(/\s+/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '');
+    const cut = s.slice(0, maxLen);
+    return cut || 'Unknown';
+}
+
 // Extracted from Reports.css and Expenses.css (.pdf-mode-active classes)
 const PDF_CSS = `
     body {
@@ -193,10 +205,15 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
         </html>
     `;
 
-    return sharePdf(htmlContent, `Daily_Report_${reportDate}.pdf`);
+    const dayLabel = pdfNamePart(reportDate, 12);
+    return sharePdf(htmlContent, `InventoryPro_DailySummary_${dayLabel}.pdf`);
 };
 
-export const generateInvoicePdf = async (transactionInfo, cartItems, customerName, totalBill, discount, finalAmount, customPaymentDate) => {
+/**
+ * @param {object} [fileMeta]
+ * @param {'quotation'|'cash_invoice'|'udhaar_invoice'} [fileMeta.kind]
+ */
+export const generateInvoicePdf = async (transactionInfo, cartItems, customerName, totalBill, discount, finalAmount, customPaymentDate, fileMeta = {}) => {
     let htmlContent = `
         <html>
         <head>
@@ -267,7 +284,13 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
         </html>
     `;
 
-    return sharePdf(htmlContent, `Invoice_${customerName || 'WalkIn'}_${new Date().toISOString().split('T')[0]}.pdf`);
+    const kind = fileMeta.kind || 'cash_invoice';
+    const typeLabel =
+        kind === 'quotation' ? 'Quotation' : kind === 'udhaar_invoice' ? 'UdhaarInvoice' : 'SalesInvoice';
+    const dateStr = new Date().toISOString().split('T')[0];
+    const cust = pdfNamePart(customerName || 'Walk-in', 32);
+    const fileName = `InventoryPro_${typeLabel}_${cust}_${dateStr}.pdf`;
+    return sharePdf(htmlContent, fileName);
 };
 
 export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYear, isDailySummary) => {
@@ -439,12 +462,11 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
         </html>
     `;
 
-    return sharePdf(
-        htmlContent,
-        isDailySummary
-            ? `Monthly_Report_DailySummary_${filterYear}_${filterMonth}.pdf`
-            : `Monthly_Report_Overview_${filterYear}_${filterMonth}.pdf`
-    );
+    const yyyymm = `${filterYear}-${String(filterMonth).padStart(2, '0')}`;
+    const fileName = isDailySummary
+        ? `InventoryPro_MonthlyFinancial_DayByDay_${yyyymm}.pdf`
+        : `InventoryPro_MonthlyFinancial_Overview_${yyyymm}.pdf`;
+    return sharePdf(htmlContent, fileName);
 };
 
 function escapeHtmlSales(s) {
@@ -696,7 +718,9 @@ export async function generateSalesAnalyticsPdf(filteredSales, periodLabel, acti
     }
     const analytics = computeSalesAnalytics(filteredSales);
     const inner = salesAnalyticsInnerHtml(filteredSales, analytics, periodLabel);
-    const safeKey = String(activeFilterKey || 'period').replace(/[^a-z0-9_-]/gi, '_');
+    const periodSeg = pdfNamePart(periodLabel || activeFilterKey || 'All', 28);
+    const exportedOn = new Date().toISOString().split('T')[0];
+    const fileName = `InventoryPro_SalesReport_${periodSeg}_${exportedOn}.pdf`;
     const htmlContent = `
         <html>
         <head>
@@ -709,5 +733,5 @@ export async function generateSalesAnalyticsPdf(filteredSales, periodLabel, acti
         </body>
         </html>
     `;
-    return sharePdf(htmlContent, `Sales_Report_${safeKey}.pdf`);
+    return sharePdf(htmlContent, fileName);
 }

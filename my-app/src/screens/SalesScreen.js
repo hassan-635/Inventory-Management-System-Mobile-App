@@ -123,18 +123,18 @@ export default function SalesScreen() {
 
     const handleFullUndo = (sale) => {
         Alert.alert(
-            'Poori sale undo',
-            'Stock poori quantity wapas mile gi aur is line ka udhaar / payments clear ho jaye ga.',
+            'Full return',
+            'Poori sold quantity wapas stock mein aaye gi aur is line ka udhaar / payments clear ho jaye ga.',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Undo',
+                    text: 'Full return',
                     style: 'destructive',
                     onPress: async () => {
                         try {
                             setLoading(true);
                             await salesService.delete(sale.id);
-                            useToastStore.getState().showToast('Reversed', 'Sale undo ho gayi.', 'success');
+                            useToastStore.getState().showToast('Done', 'Full return ho gaya.', 'success');
                             useDataRefreshStore.getState().bumpInventory();
                             await fetchSales();
                         } catch (err) {
@@ -306,7 +306,7 @@ export default function SalesScreen() {
                                     >
                                         <Icon name="arrow-undo-outline" size={18} color={colors.status.danger} />
                                         <Text style={[styles.actionBtnTxt, { color: colors.status.danger, fontSize: 12 }]} numberOfLines={2}>
-                                            Full undo
+                                            Full return
                                         </Text>
                                     </TouchableOpacity>
                                 </View>

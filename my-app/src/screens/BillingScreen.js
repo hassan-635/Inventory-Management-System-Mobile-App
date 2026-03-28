@@ -234,7 +234,8 @@ export default function BillingScreen() {
                     totalAmount,
                     0,
                     totalAmount,
-                    null
+                    null,
+                    { kind: 'quotation' },
                 );
             } catch (e) {
                 useToastStore.getState().showToast('Quotation', 'PDF generation failed, please try again.', 'error');
@@ -311,7 +312,8 @@ export default function BillingScreen() {
                 totalBill: totalAmount,
                 discount: 0,
                 finalAmount: totalAmount,
-                customPaymentDate: null
+                customPaymentDate: null,
+                invoiceKind: isCreditBill ? 'udhaar_invoice' : 'cash_invoice',
             });
             
             resetForm();
@@ -606,7 +608,8 @@ export default function BillingScreen() {
                                 lastSaleData.totalBill,
                                 lastSaleData.discount,
                                 lastSaleData.finalAmount,
-                                lastSaleData.customPaymentDate
+                                lastSaleData.customPaymentDate,
+                                { kind: lastSaleData.invoiceKind || 'cash_invoice' },
                             );
                         } catch(e) { Alert.alert('Error', 'Could not generate PDF.'); }
                     }}

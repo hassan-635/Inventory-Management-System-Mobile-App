@@ -17,8 +17,9 @@ export default function SettingsScreen() {
     const isTablet = width > 768;
     const styles = useMemo(() => getStyles(colors, FONTS, isTablet), [colors, FONTS, isTablet]);
 
-    const { theme, toggleTheme } = useThemeStore();
-    const isDark = theme === 'dark';
+    const isDarkMode = useThemeStore((state) => state.isDarkMode);
+    const toggleTheme = useThemeStore((state) => state.toggleTheme);
+    const isDark = isDarkMode;
 
     const [stockLimit, setStockLimit] = useState('10');
     const [notificationTimes, setNotificationTimes] = useState([]);
