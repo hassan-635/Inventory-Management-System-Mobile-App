@@ -381,7 +381,7 @@ export default function BillingScreen() {
                                 </TouchableOpacity>
                             ))}
                             {filteredBuyers.length === 0 && (
-                                <Text style={styles.dropdownEmpty}>Will auto-create as new buyer</Text>
+                                <Text style={styles.dropdownEmpty}>Will auto-create as new customer</Text>
                             )}
                         </View>
                     )}

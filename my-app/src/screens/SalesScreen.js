@@ -134,7 +134,7 @@ export default function SalesScreen() {
                 <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Search by product or buyer..."
+                    placeholder="Search by product or customer..."
                     placeholderTextColor={colors.text.muted}
                     value={search}
                     onChangeText={setSearch}
@@ -168,7 +168,7 @@ export default function SalesScreen() {
                     return (
                         <ExpandableItem
                             title={item.products?.name || 'Unknown Product'}
-                            subtitle={item.buyers?.name ? `Buyer · ${item.buyers.name}` : 'Walk-in'}
+                            subtitle={item.buyers?.name ? `Customer · ${item.buyers.name}` : 'Walk-in'}
                             rightText={hasBalance ? `Rs. ${remaining.toLocaleString()}` : '✓ Clear'}
                             rightSubText={`Total: Rs. ${total.toLocaleString()}`}
                             rightTextColor={hasBalance ? colors.status.danger : colors.status.success}
@@ -192,7 +192,7 @@ export default function SalesScreen() {
                             detailsData={{
                                 'Txn ID': `#${item.id}`,
                                 'Product ID': formatProductId(item.product_id),
-                                'Buyer': item.buyers?.name || 'Walk-in',
+                                'Customer': item.buyers?.name || 'Walk-in',
                                 'Quantity': `${item.quantity} ${item.quantity_unit ? `(${item.quantity_unit})` : ''}`,
                                 'Price/Unit': `Rs. ${item.products?.price || '-'}`,
                                 'Date': new Date(item.purchase_date).toLocaleDateString()

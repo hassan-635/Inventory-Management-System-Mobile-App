@@ -299,7 +299,7 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                 </div>
 
                 <div class="stat-card-premium purple">
-                    <div class="stat-header"><div class="stat-icon-wrapper">D</div><h3 class="stat-title">Pending Buyer Dues</h3></div>
+                    <div class="stat-header"><div class="stat-icon-wrapper">D</div><h3 class="stat-title">Pending Customer Dues</h3></div>
                     <div class="stat-row highlight"><span>All-Time:</span><span class="stat-value">Rs. ${(summary.total_all_time_dues_from_buyers || 0).toLocaleString()}</span></div>
                 </div>
             </div>
@@ -376,9 +376,9 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
             
             ${activity_lists?.all_time_buyers_with_dues?.length > 0 ? `
             <div class="premium-table-wrap" style="border-color:#eab308;">
-                <h3 style="background:#fefce8; color:#ca8a04;">⚠️ Buyers with Outstanding Dues (All-Time)</h3>
+                <h3 style="background:#fefce8; color:#ca8a04;">⚠️ Customers with Outstanding Dues (All-Time)</h3>
                 <table class="premium-table">
-                    <thead><tr><th>Buyer Name</th><th>Phone Number</th><th style="text-align:right;">Total Remaining Amount to Recover</th></tr></thead>
+                    <thead><tr><th>Customer Name</th><th>Phone Number</th><th style="text-align:right;">Total Remaining Amount to Recover</th></tr></thead>
                     <tbody>
                         ${activity_lists?.all_time_buyers_with_dues?.map(b => `
                             <tr>

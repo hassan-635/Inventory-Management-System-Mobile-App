@@ -35,7 +35,7 @@ const DRAWER_ICON_SIZE = Math.min(22, SCREEN_WIDTH * 0.058);
 const ICON_MAP = {
     Billing: { focused: 'document-text', outline: 'document-text-outline' },
     Products: { focused: 'cube', outline: 'cube-outline' },
-    Buyers: { focused: 'people', outline: 'people-outline' },
+    Customers: { focused: 'people', outline: 'people-outline' },
     Suppliers: { focused: 'business', outline: 'business-outline' },
     Sales: { focused: 'receipt', outline: 'receipt-outline' },
     Companies: { focused: 'briefcase', outline: 'briefcase-outline' },
@@ -183,7 +183,7 @@ const DrawerNavigator = () => {
         >
             <Drawer.Screen name="Billing" component={BillingScreen} />
             <Drawer.Screen name="Products" component={ProductsScreen} />
-            <Drawer.Screen name="Buyers" component={BuyersScreen} />
+            <Drawer.Screen name="Customers" component={BuyersScreen} />
             <Drawer.Screen name="Suppliers" component={SuppliersScreen} />
             <Drawer.Screen name="Sales" component={SalesScreen} />
             <Drawer.Screen name="Companies" component={CompaniesScreen} />

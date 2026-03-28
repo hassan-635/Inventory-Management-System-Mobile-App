@@ -35,7 +35,7 @@ export default function BuyersScreen() {
             const data = await buyersService.getAll();
             setBuyers(data);
         } catch (e) {
-            console.error('Failed to fetch buyers:', e);
+            console.error('Failed to fetch customers:', e);
         } finally {
             setLoading(false);
             setRefreshing(false);
