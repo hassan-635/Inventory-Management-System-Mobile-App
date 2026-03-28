@@ -673,8 +673,15 @@ function salesAnalyticsInnerHtml(sales, analytics, periodLabel) {
                 <tbody>${detailRows || '<tr><td colspan="10" style="padding:12px;text-align:center;">—</td></tr>'}</tbody>
             </table>
 
-            <div class="footer" style="margin-top:24px;">
-                <p style="margin:0;font-size:10px;color:#94a3b8;text-align:center;">Inventory Pro — Sales report</p>
+            <div class="footer" style="margin-top:36px;padding-top:18px;border-top:2px solid #e2e8f0;">
+                <h3 style="margin:0 0 8px;font-size:13px;font-weight:700;color:#0f172a;">Software Developed by Hassan Ali Abrar</h3>
+                <p style="margin:0 0 6px;font-size:11px;color:#475569;">
+                    Instagram: <strong style="color:#7c3aed;">hassan.secure</strong>
+                    <span style="margin:0 10px;color:#cbd5e1;">|</span>
+                    WhatsApp: <strong style="color:#059669;">+92 348 5055098</strong>
+                </p>
+                <p style="margin:0;font-size:10px;color:#64748b;">Contact for custom software development &amp; business automation</p>
+                <p style="margin:10px 0 0;font-size:10px;color:#94a3b8;">Inventory Pro — Sales report</p>
             </div>
         </div>
     `;
@@ -697,10 +704,6 @@ export async function generateSalesAnalyticsPdf(filteredSales, periodLabel, acti
         </head>
         <body>
             ${inner}
-            <div class="footer">
-                <h3 style="margin-bottom: 4px;">Software Developed by Hassan Ali Abrar</h3>
-                <p style="margin: 0;">Instagram: <strong>hassan.secure</strong> | WhatsApp: <strong>+92 348 5055098</strong></p>
-            </div>
         </body>
         </html>
     `;
