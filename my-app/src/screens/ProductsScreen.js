@@ -9,6 +9,7 @@ import { useToastStore } from '../store/toastStore';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { formatProductId } from '../utils/formatProductId';
 
 const FILTERS = [
     { key: 'all', label: 'All' },
@@ -30,11 +31,6 @@ const SORT_OPTIONS = [
 const UNIT_OPTIONS = ['Per Piece', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
 const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware'];
 
-const formatProductId = (id) => {
-    if (!id) return '';
-    return `AB${String(id).padStart(2, '0')}`;
-};
-
 function productMatchesSearch(product, searchRaw) {
     const q = (searchRaw || '').trim();
     if (!q) return true;
@@ -42,9 +38,9 @@ function productMatchesSearch(product, searchRaw) {
     if ((product.name || '').toLowerCase().includes(qLower)) return true;
     const idStr = String(product.id ?? '');
     if (idStr.includes(q) || idStr.toLowerCase().includes(qLower)) return true;
-    const fmt = formatProductId(product.id).toLowerCase();
+    const idUpper = String(product.id ?? '').toUpperCase();
     const qCompact = qLower.replace(/\s/g, '');
-    if (fmt.includes(qCompact)) return true;
+    if (idUpper.toLowerCase().includes(qCompact)) return true;
     return false;
 }
 

@@ -6,6 +6,7 @@ import { useToastStore } from '../store/toastStore';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { generateSalesAnalyticsPdf } from '../utils/pdfGenerator';
+import { formatProductId } from '../utils/formatProductId';
 
 const TIME_FILTERS = [
     { key: '1d', label: '1D' },
@@ -25,11 +26,6 @@ const TIME_FILTER_LABELS = {
     '1y': 'Last Year',
     '5y': 'Last 5 Years',
     'all': 'All time',
-};
-
-const formatProductId = (id) => {
-    if (!id) return '';
-    return `AB${String(id).padStart(2, '0')}`;
 };
 
 const getDateThreshold = (key) => {

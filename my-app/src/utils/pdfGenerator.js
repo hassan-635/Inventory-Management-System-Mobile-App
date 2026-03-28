@@ -1,5 +1,6 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { formatProductId } from './formatProductId';
 
 // Extracted from Reports.css and Expenses.css (.pdf-mode-active classes)
 const PDF_CSS = `
@@ -449,11 +450,6 @@ function escapeHtmlSales(s) {
         .replace(/"/g, '&quot;');
 }
 
-const formatProductIdAb = (id) => {
-    if (!id) return '';
-    return `AB${String(id).padStart(2, '0')}`;
-};
-
 /** Same rollup logic as web salesAnalyticsPdf.js */
 export function computeSalesAnalytics(sales) {
     const byProduct = new Map();
@@ -579,7 +575,7 @@ function salesAnalyticsInnerHtml(sales, analytics, periodLabel) {
         .sort((a, b) => b.totalRevenue - a.totalRevenue)
         .map(
             (r) => `<tr>
-                <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${escapeHtmlSales(r.name)} <span style="color:#64748b;font-size:11px;">(${escapeHtmlSales(formatProductIdAb(r.productId))})</span></td>
+                <td style="padding:8px;border-bottom:1px solid #f1f5f9;">${escapeHtmlSales(r.name)} <span style="color:#64748b;font-size:11px;">(${escapeHtmlSales(formatProductId(r.productId))})</span></td>
                 <td style="padding:8px;border-bottom:1px solid #f1f5f9;text-align:right;">${r.totalQty}</td>
                 <td style="padding:8px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmtRs(r.totalRevenue)}</td>
                 <td style="padding:8px;border-bottom:1px solid #f1f5f9;text-align:right;">${fmtRs(r.totalCost)}</td>

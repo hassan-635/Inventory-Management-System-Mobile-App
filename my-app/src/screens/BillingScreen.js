@@ -10,17 +10,13 @@ import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { generateInvoicePdf } from '../utils/pdfGenerator';
+import { formatProductId } from '../utils/formatProductId';
 
 const BILL_TYPES = [
     { key: 'QUOTATION', label: '📋 Quotation' },
     { key: 'REAL', label: '✅ Original' },
     { key: 'CREDIT', label: '💳 Udhaar' },
 ];
-
-const formatProductId = (id) => {
-    if (!id) return '';
-    return `AB${String(id).padStart(2, '0')}`;
-};
 
 const UNIT_OPTIONS = ['Per Piece', 'Per Dozen', 'Per Box', 'Per Kg', 'Per Liter', 'Per Meter', 'Per Roll', 'Per Pack', 'Per Case'];
 
