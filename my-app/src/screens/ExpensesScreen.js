@@ -5,6 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { flatListPerformanceProps } from '../utils/listPerf';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
@@ -207,6 +208,7 @@ export default function ExpensesScreen() {
             </View>
 
             <FlatList
+                {...flatListPerformanceProps}
                 data={expenses}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderExpenseItem}

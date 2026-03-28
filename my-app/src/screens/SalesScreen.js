@@ -7,6 +7,7 @@ import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { generateSalesAnalyticsPdf } from '../utils/pdfGenerator';
 import { formatProductId } from '../utils/formatProductId';
+import { flatListPerformanceProps } from '../utils/listPerf';
 
 const TIME_FILTERS = [
     { key: '1d', label: '1D' },
@@ -195,8 +196,9 @@ export default function SalesScreen() {
         <View style={styles.container}>
             <Text style={styles.headerTitle}>Recent Sales</Text>
             <FlatList
+                {...flatListPerformanceProps}
                 data={filteredSales}
-                keyExtractor={(item, index) => (item.id || index).toString()}
+                keyExtractor={(item, index) => (item.id != null ? String(item.id) : `s-${index}`)}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
                 contentContainerStyle={[styles.listContainer, isTablet && { paddingHorizontal: 32 }]}
                 ListHeaderComponent={<ListHeader />}

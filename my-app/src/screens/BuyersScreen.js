@@ -9,6 +9,7 @@ import { buyersService } from '../api/buyers';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { flatListPerformanceProps } from '../utils/listPerf';
 
 export default function BuyersScreen() {
     const { colors, FONTS } = useAppTheme();
@@ -239,6 +240,7 @@ export default function BuyersScreen() {
             </View>
 
             <FlatList
+                {...flatListPerformanceProps}
                 data={filtered}
                 keyExtractor={item => item.id.toString()}
                 renderItem={renderBuyer}

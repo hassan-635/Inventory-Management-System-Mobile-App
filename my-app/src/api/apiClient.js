@@ -17,11 +17,25 @@ const api = axios.create({
     },
 });
 
+/** undefined = not loaded yet; avoids AsyncStorage on every request after first read */
+let authTokenCache = undefined;
+
+export function primeAuthToken(token) {
+    authTokenCache = token ? String(token) : null;
+}
+
+export function clearAuthTokenCache() {
+    authTokenCache = undefined;
+}
+
 api.interceptors.request.use(
     async (config) => {
-        const token = await tokenStorage.getItemAsync('token');
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        if (authTokenCache === undefined) {
+            const t = await tokenStorage.getItemAsync('token');
+            authTokenCache = t ? String(t) : null;
+        }
+        if (authTokenCache) {
+            config.headers.Authorization = `Bearer ${authTokenCache}`;
         }
         return config;
     },
@@ -38,6 +52,7 @@ api.interceptors.response.use(
     async (error) => {
         if (error.response && error.response.status === 401) {
             console.warn("Unauthorized request detected (401). Forcing logout.");
+            authTokenCache = null;
             await tokenStorage.deleteItemAsync('token');
             useAuthStore.getState().logout();
         }

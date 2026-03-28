@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Platform, Switch, useWindowDimensions } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { tokenStorage } from '../utils/tokenStorage';
+import { clearAuthTokenCache } from '../api/apiClient';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useThemeStore } from '../store/themeStore';
 import { useAuthStore } from '../store/authStore';
@@ -106,6 +107,7 @@ export default function SettingsScreen() {
 
     const handleLogout = async () => {
         await tokenStorage.deleteItemAsync('token');
+        clearAuthTokenCache();
         logout();
     };
 

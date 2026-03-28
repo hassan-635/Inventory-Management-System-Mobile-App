@@ -4,6 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { suppliersService } from '../api/suppliers';
 import { useAppTheme } from '../theme/useAppTheme';
 import ExpandableItem from '../components/ExpandableItem';
+import { flatListPerformanceProps } from '../utils/listPerf';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -59,24 +60,34 @@ export default function SuppliersScreen() {
     };
 
     const handleSave = async () => {
-        if (!formItem.name) {
-            useToastStore.getState().showToast("Error", "Supplier name is required.", "error");
-            return;
-        }
-        
-        const payload = { ...formItem };
-        if (formItem.id && formItem.payment_amount) {
-            const payAmt = Number(formItem.payment_amount);
+        const payStr = formItem.payment_amount != null ? String(formItem.payment_amount).trim() : '';
+        const isPaymentOnlySave = !!formItem.id && payStr !== '';
+
+        let payload;
+        if (isPaymentOnlySave) {
+            const payAmt = Number(payStr);
+            if (!Number.isFinite(payAmt) || payAmt <= 0) {
+                useToastStore.getState().showToast('Error', 'Enter a valid payment amount.', 'error');
+                return;
+            }
             if (payAmt > formItem.txn_due) {
                 useToastStore.getState().showToast('Error', 'Payment cannot exceed remaining amount: Rs. ' + formItem.txn_due, 'error');
                 return;
             }
-            if (payAmt < 0) {
-                useToastStore.getState().showToast('Error', 'Payment amount cannot be negative.', 'error');
+            payload = {
+                payment_amount: payAmt,
+                date: formItem.payment_date.toISOString().split('T')[0],
+            };
+        } else {
+            if (!formItem.name || !String(formItem.name).trim()) {
+                useToastStore.getState().showToast("Error", "Supplier name is required.", "error");
                 return;
             }
-            payload.payment_amount = payAmt;
-            payload.date = formItem.payment_date.toISOString().split('T')[0];
+            payload = {
+                name: String(formItem.name).trim(),
+                phone: formItem.phone != null ? String(formItem.phone).trim() : '',
+                company_name: formItem.company_name != null ? String(formItem.company_name).trim() : '',
+            };
         }
 
         setIsSaving(true);
@@ -169,8 +180,9 @@ export default function SuppliersScreen() {
             </View>
 
             <FlatList
+                {...flatListPerformanceProps}
                 data={filteredSuppliers}
-                keyExtractor={(item, index) => (item.id || index).toString()}
+                keyExtractor={(item) => String(item.id)}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
                 contentContainerStyle={[styles.listContainer, isTablet && { paddingHorizontal: 32 }]}
                 renderItem={({ item }) => {

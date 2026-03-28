@@ -10,6 +10,7 @@ import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatProductId } from '../utils/formatProductId';
+import { flatListPerformanceProps } from '../utils/listPerf';
 
 const FILTERS = [
     { key: 'all', label: 'All' },
@@ -470,8 +471,9 @@ export default function ProductsScreen() {
             </View>
 
             <FlatList
+                {...flatListPerformanceProps}
                 data={filteredProducts}
-                keyExtractor={(item, index) => (item.id || index).toString()}
+                keyExtractor={(item, index) => (item.id != null ? String(item.id) : `p-${index}`)}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
                 contentContainerStyle={[styles.listContainer, isTablet && { paddingHorizontal: 32 }]}
                 renderItem={({ item }) => {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import {
     View,
     Text,
@@ -19,7 +19,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 /**
  * Companies-style expandable card: icon row, primary/secondary right column, optional 3 summary boxes, then detail rows.
  */
-const ExpandableItem = ({
+const ExpandableItem = memo(function ExpandableItem({
     title,
     subtitle,
     rightText,
@@ -32,7 +32,7 @@ const ExpandableItem = ({
     containerStyle,
     renderActions,
     renderExtra,
-}) => {
+}) {
     const { colors, FONTS } = useAppTheme();
     const { width: SCREEN_WIDTH } = useWindowDimensions();
     const styles = useMemo(() => getStyles(colors, FONTS, SCREEN_WIDTH), [colors, FONTS, SCREEN_WIDTH]);
@@ -120,7 +120,7 @@ const ExpandableItem = ({
             )}
         </View>
     );
-};
+});
 
 const getStyles = (colors, FONTS, SCREEN_WIDTH) =>
     StyleSheet.create({

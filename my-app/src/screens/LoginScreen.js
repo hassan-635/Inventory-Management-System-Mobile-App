@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator,
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../api/auth';
 import { tokenStorage } from '../utils/tokenStorage';
+import { primeAuthToken } from '../api/apiClient';
 import { COLORS, FONTS } from '../theme/theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -23,6 +24,7 @@ export default function LoginScreen() {
             const data = await authService.login(email, password);
             // Save token securely (encrypted) instead of plain-text AsyncStorage
             await tokenStorage.setItemAsync('token', data.token);
+            primeAuthToken(data.token);
             // Backend returns flat object: { _id, name, email, role, token }
             const user = { id: data._id, name: data.name, email: data.email, role: data.role };
             setAuth(user, data.token);

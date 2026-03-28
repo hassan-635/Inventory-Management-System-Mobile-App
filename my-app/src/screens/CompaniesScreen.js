@@ -8,6 +8,7 @@ import api from '../api/apiClient';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { flatListPerformanceProps } from '../utils/listPerf';
 
 export default function CompaniesScreen() {
     const { colors, FONTS } = useAppTheme();
@@ -211,6 +212,7 @@ export default function CompaniesScreen() {
             </View>
 
             <FlatList
+                {...flatListPerformanceProps}
                 data={filtered}
                 keyExtractor={(item) => item.company_name}
                 renderItem={renderCompany}

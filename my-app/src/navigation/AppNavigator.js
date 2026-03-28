@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { tokenStorage } from '../utils/tokenStorage';
+import { primeAuthToken, clearAuthTokenCache } from '../api/apiClient';
 import { ActivityIndicator, View, Text, Dimensions, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -283,6 +284,7 @@ export default function AppNavigator() {
             try {
                 const storedToken = await tokenStorage.getItemAsync('token');
                 if (storedToken) {
+                    primeAuthToken(storedToken);
                     setAuth(null, storedToken);
                 } else {
                     setLoading(false);
