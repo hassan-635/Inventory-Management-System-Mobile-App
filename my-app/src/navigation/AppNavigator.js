@@ -41,7 +41,7 @@ const ICON_MAP = {
     Sales: { focused: 'receipt', outline: 'receipt-outline' },
     Companies: { focused: 'briefcase', outline: 'briefcase-outline' },
     Expenses: { focused: 'cash', outline: 'cash-outline' },
-    Report: { focused: 'pie-chart', outline: 'pie-chart-outline' },
+    'Monthly Report': { focused: 'pie-chart', outline: 'pie-chart-outline' },
     'Daily Report': { focused: 'calendar', outline: 'calendar-outline' },
     Settings: { focused: 'settings', outline: 'settings-outline' },
 };
@@ -189,7 +189,7 @@ const DrawerNavigator = () => {
             <Drawer.Screen name="Sales" component={SalesScreen} />
             <Drawer.Screen name="Companies" component={CompaniesScreen} />
             <Drawer.Screen name="Expenses" component={ExpensesScreen} />
-            <Drawer.Screen name="Report" component={MonthlyReportScreen} />
+            <Drawer.Screen name="Monthly Report" component={MonthlyReportScreen} />
             <Drawer.Screen name="Daily Report" component={DailyReportScreen} />
             <Drawer.Screen name="Settings" component={SettingsScreen} />
         </Drawer.Navigator>

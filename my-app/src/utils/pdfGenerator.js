@@ -425,8 +425,9 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
             <style>${PDF_CSS} .pdf-mode-active { zoom: 0.8; }</style>
         </head>
         <body class="pdf-mode-active">
-            <h1>${isDailySummary ? 'Day-by-Day Monthly Summary' : 'Monthly Summary'}</h1>
+            <h1>${isDailySummary ? 'Day-by-Day Monthly Summary' : 'Monthly Financial Overview'}</h1>
             <p style="text-align:center; font-size:14px; margin-top:-5px; color:#475569;">Period: <strong>${filterMonth}/${filterYear}</strong></p>
+            <p style="text-align:center; font-size:12px; margin-top:4px; color:#64748b;">${isDailySummary ? 'Daily roll-up table only (mobile Daily Summaries tab).' : 'Full month overview: income, payables, expenses, company summary (mobile Overview tab).'}</p>
 
             ${isDailySummary ? dailySummaryHtml : overviewHtml}
 
@@ -438,7 +439,12 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
         </html>
     `;
 
-    return sharePdf(htmlContent, `Monthly_Report_${filterYear}_${filterMonth}_${isDailySummary ? 'Daily' : 'Overview'}.pdf`);
+    return sharePdf(
+        htmlContent,
+        isDailySummary
+            ? `Monthly_Report_DailySummary_${filterYear}_${filterMonth}.pdf`
+            : `Monthly_Report_Overview_${filterYear}_${filterMonth}.pdf`
+    );
 };
 
 function escapeHtmlSales(s) {

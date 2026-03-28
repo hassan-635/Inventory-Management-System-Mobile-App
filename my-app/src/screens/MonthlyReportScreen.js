@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     View, Text, StyleSheet, ScrollView, ActivityIndicator,
-    TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions
+    TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions,
 } from 'react-native';
 import axios from 'axios';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -61,7 +61,12 @@ export default function MonthlyReportScreen() {
         setGeneratingPdf(true);
         try {
             const formattedMonth = selectedMonth.toString().padStart(2, '0');
-            await generateMonthlyReportPdf(reportData, formattedMonth, selectedYear, viewMode === 'daily_summary');
+            await generateMonthlyReportPdf(
+                reportData,
+                formattedMonth,
+                selectedYear,
+                viewMode === 'daily_summary',
+            );
         } catch (e) {
             Alert.alert('Error', 'Could not generate PDF. Please try again.');
         } finally {
@@ -104,7 +109,16 @@ export default function MonthlyReportScreen() {
         <View style={styles.container}>
             {/* Header */}
             <View style={styles.header}>
-                <Text style={styles.headerTitle}>Financial Report</Text>
+                <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={styles.headerTitle}>
+                        {viewMode === 'overview' ? 'Monthly Report' : 'Day-by-Day Summary'}
+                    </Text>
+                    <Text style={styles.headerSubtitle}>
+                        {viewMode === 'overview'
+                            ? 'Poora mahina — income, expenses, company summary'
+                            : 'Roz ka chhota hisaab (overview jaisi detail yahan nahi)'}
+                    </Text>
+                </View>
                 <TouchableOpacity
                     style={[styles.pdfBtn, generatingPdf && { opacity: 0.6 }]}
                     onPress={handleDownloadPdf}
@@ -114,7 +128,13 @@ export default function MonthlyReportScreen() {
                         ? <ActivityIndicator size="small" color="#fff" />
                         : <Icon name="download-outline" size={16} color="#fff" />
                     }
-                    <Text style={styles.pdfBtnText}>{generatingPdf ? 'Generating...' : 'Download PDF'}</Text>
+                    <Text style={styles.pdfBtnText}>
+                        {generatingPdf
+                            ? 'Generating...'
+                            : viewMode === 'daily_summary'
+                                ? 'Daily PDF'
+                                : 'Overview PDF'}
+                    </Text>
                 </TouchableOpacity>
             </View>
 
@@ -145,7 +165,7 @@ export default function MonthlyReportScreen() {
                     onPress={() => setViewMode('daily_summary')}
                 >
                     <Icon name="calendar-outline" size={14} color={viewMode === 'daily_summary' ? '#fff' : colors.text.secondary} />
-                    <Text style={[styles.toggleBtnText, viewMode === 'daily_summary' && { color: '#fff' }]}>Daily Summary</Text>
+                    <Text style={[styles.toggleBtnText, viewMode === 'daily_summary' && { color: '#fff' }]}>Daily Summaries</Text>
                 </TouchableOpacity>
             </View>
 
@@ -154,6 +174,8 @@ export default function MonthlyReportScreen() {
                 contentContainerStyle={{ paddingBottom: 40 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
             >
+                {viewMode === 'overview' && (
+                <>
                 {/* Key Metrics */}
                 <View style={styles.statsGrid}>
                     <View style={[styles.statCard, { borderLeftColor: summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444', borderLeftWidth: 4 }]}>
@@ -322,7 +344,7 @@ export default function MonthlyReportScreen() {
                 )}
 
                 {/* Company-Wise Summary */}
-                {viewMode === 'overview' && companySummary.length > 0 && (
+                {companySummary.length > 0 && (
                     <View style={styles.whiteCard}>
                         <View style={styles.cardHeaderRow}>
                             <Icon name="business" size={18} color="#38bdf8" />
@@ -358,63 +380,90 @@ export default function MonthlyReportScreen() {
                         </View>
                     </View>
                 )}
+                </>
+                )}
 
-                {/* Daily Summary View */}
+                {/* Daily summaries only — same columns as web + PDF */}
                 {viewMode === 'daily_summary' && (
                     <View style={styles.whiteCard}>
                         <View style={styles.cardHeaderRow}>
                             <Icon name="calendar-outline" size={18} color={colors.accent.primary} />
-                            <Text style={[styles.cardHeader, { color: colors.accent.primary }]}>Day-by-Day Breakdown</Text>
+                            <Text style={[styles.cardHeader, { color: colors.accent.primary }]}>Month day-by-day breakdown</Text>
                         </View>
+                        <Text style={styles.dailyHelperText}>
+                            Har din: sales count, total invoice value, cash received, new udhaar, returns, expenses — frontend jaisa.
+                        </Text>
                         {(!reportData.daily_breakdown || reportData.daily_breakdown.length === 0) ? (
                             <View style={{ alignItems: 'center', paddingVertical: 30 }}>
                                 <Icon name="calendar-outline" size={36} color={colors.text.secondary} />
                                 <Text style={{ color: colors.text.secondary, marginTop: 10, fontFamily: FONTS.regular }}>No activity recorded this month.</Text>
                             </View>
                         ) : (
-                            <>
-                                <View style={[styles.tableRow, styles.tableHeaderRow]}>
-                                    <Text style={[styles.tableHeaderText, { flex: 1.2 }]}>Date</Text>
-                                    <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'right' }]}>Sales</Text>
-                                    <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Cash In</Text>
-                                    <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Udhaar</Text>
-                                    <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Expenses</Text>
-                                </View>
-                                {reportData.daily_breakdown.map((day, idx) => (
-                                    <View key={idx} style={styles.tableRow}>
-                                        <Text style={[styles.tableCell, { flex: 1.2, fontFamily: FONTS.medium }]}>
-                                            {new Date(day.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                            <ScrollView
+                                horizontal
+                                nestedScrollEnabled
+                                showsHorizontalScrollIndicator
+                                style={styles.dailyTableScroll}
+                                contentContainerStyle={styles.dailyTableScrollContent}
+                            >
+                                <View style={{ minWidth: Math.max(width - 32, 720) }}>
+                                    <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColDate]}>Date</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColNum]}>Sales #</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Total sale</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Cash in</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Udhaar</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Returns</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Expenses</Text>
+                                    </View>
+                                    {reportData.daily_breakdown.map((day, idx) => (
+                                        <View key={idx} style={styles.tableRow}>
+                                            <Text style={[styles.tableCell, styles.dailyColDate, { fontFamily: FONTS.medium }]}>
+                                                {new Date(day.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                            </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColNum, { textAlign: 'right', color: colors.text.secondary }]}>
+                                                {day.num_new_sales > 0 ? day.num_new_sales : '-'}
+                                            </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: '#38bdf8' }]}>
+                                                {Number(day.total_sales || 0) > 0 ? `Rs.${Number(day.total_sales).toLocaleString()}` : '-'}
+                                            </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: '#22c55e' }]}>
+                                                {day.cash_in > 0 ? `Rs.${day.cash_in.toLocaleString()}` : '-'}
+                                            </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: day.udhaar_given > 0 ? '#f59e0b' : colors.text.secondary }]}>
+                                                {day.udhaar_given > 0 ? `Rs.${day.udhaar_given.toLocaleString()}` : '-'}
+                                            </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: Number(day.returned_sales_value || 0) > 0 ? '#ef4444' : colors.text.secondary }]}>
+                                                {Number(day.returned_sales_value || 0) > 0 ? `Rs.${Number(day.returned_sales_value).toLocaleString()}` : '-'}
+                                            </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: day.expenses > 0 ? '#ef4444' : colors.text.secondary }]}>
+                                                {day.expenses > 0 ? `Rs.${day.expenses.toLocaleString()}` : '-'}
+                                            </Text>
+                                        </View>
+                                    ))}
+                                    <View style={[styles.tableRow, styles.dailyTotalRow]}>
+                                        <Text style={[styles.totalText, styles.dailyColDate]}>Month total</Text>
+                                        <Text style={[styles.totalText, styles.dailyColNum, { textAlign: 'right' }]}>
+                                            {reportData.daily_breakdown.reduce((s, d) => s + d.num_new_sales, 0)}
                                         </Text>
-                                        <Text style={[styles.tableCell, { flex: 1, textAlign: 'right', color: colors.text.secondary }]}>
-                                            {day.num_new_sales > 0 ? day.num_new_sales : '-'}
+                                        <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#38bdf8' }]}>
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + Number(d.total_sales || 0), 0).toLocaleString()}
                                         </Text>
-                                        <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: '#22c55e' }]}>
-                                            {day.cash_in > 0 ? `Rs.${day.cash_in.toLocaleString()}` : '-'}
+                                        <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#22c55e' }]}>
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.cash_in, 0).toLocaleString()}
                                         </Text>
-                                        <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: day.udhaar_given > 0 ? '#f59e0b' : colors.text.secondary }]}>
-                                            {day.udhaar_given > 0 ? `Rs.${day.udhaar_given.toLocaleString()}` : '-'}
+                                        <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#f59e0b' }]}>
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.udhaar_given, 0).toLocaleString()}
                                         </Text>
-                                        <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: day.expenses > 0 ? '#ef4444' : colors.text.secondary }]}>
-                                            {day.expenses > 0 ? `Rs.${day.expenses.toLocaleString()}` : '-'}
+                                        <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#ef4444' }]}>
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + Number(d.returned_sales_value || 0), 0).toLocaleString()}
+                                        </Text>
+                                        <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#ef4444' }]}>
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.expenses, 0).toLocaleString()}
                                         </Text>
                                     </View>
-                                ))}
-                                <View style={[styles.tableRow, { borderTopWidth: 1.5, borderTopColor: colors.border.color || 'rgba(255,255,255,0.15)', borderBottomWidth: 0, marginTop: 4 }]}>
-                                    <Text style={[styles.totalText, { flex: 1.2 }]}>Total</Text>
-                                    <Text style={[styles.totalText, { flex: 1, textAlign: 'right' }]}>
-                                        {reportData.daily_breakdown.reduce((s, d) => s + d.num_new_sales, 0)}
-                                    </Text>
-                                    <Text style={[styles.totalText, { flex: 1.5, textAlign: 'right', color: '#22c55e' }]}>
-                                        Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.cash_in, 0).toLocaleString()}
-                                    </Text>
-                                    <Text style={[styles.totalText, { flex: 1.5, textAlign: 'right', color: '#f59e0b' }]}>
-                                        Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.udhaar_given, 0).toLocaleString()}
-                                    </Text>
-                                    <Text style={[styles.totalText, { flex: 1.5, textAlign: 'right', color: '#ef4444' }]}>
-                                        Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.expenses, 0).toLocaleString()}
-                                    </Text>
                                 </View>
-                            </>
+                            </ScrollView>
                         )}
                     </View>
                 )}
@@ -465,8 +514,22 @@ export default function MonthlyReportScreen() {
 const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
     container: { flex: 1, backgroundColor: colors.background.primary },
     centerContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background.primary },
-    header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, paddingBottom: 5 },
-    headerTitle: { fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold },
+    header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', padding: 16, paddingBottom: 5 },
+    headerTitle: { fontSize: 22, color: colors.text.primary, fontFamily: FONTS.bold },
+    headerSubtitle: { fontSize: 12, color: colors.text.secondary, fontFamily: FONTS.regular, marginTop: 4, maxWidth: 260 },
+    dailyHelperText: { fontSize: 12, color: colors.text.muted, fontFamily: FONTS.regular, marginBottom: 12, lineHeight: 18 },
+    dailyTableScroll: { marginHorizontal: -4 },
+    dailyTableScrollContent: { paddingBottom: 8 },
+    dailyColDate: { width: 76, flexShrink: 0, fontSize: 12 },
+    dailyColNum: { width: 48, flexShrink: 0, fontSize: 12 },
+    dailyColMoney: { width: 88, flexShrink: 0, fontSize: 11 },
+    dailyTotalRow: {
+        borderTopWidth: 2,
+        borderTopColor: colors.border.color || 'rgba(255,255,255,0.15)',
+        borderBottomWidth: 0,
+        marginTop: 6,
+        paddingTop: 10,
+    },
 
     pdfBtn: {
         flexDirection: 'row', alignItems: 'center', gap: 6,
