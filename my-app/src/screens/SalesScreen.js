@@ -5,6 +5,7 @@ import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
+import { generateSalesAnalyticsPdf } from '../utils/pdfGenerator';
 
 const TIME_FILTERS = [
     { key: '1d', label: '1D' },
@@ -15,6 +16,16 @@ const TIME_FILTERS = [
     { key: '5y', label: '5Y' },
     { key: 'all', label: 'All' },
 ];
+
+const TIME_FILTER_LABELS = {
+    '1d': 'Last Day',
+    '1w': 'Last Week',
+    '1m': 'Last Month',
+    '6m': 'Last 6 Months',
+    '1y': 'Last Year',
+    '5y': 'Last 5 Years',
+    'all': 'All time',
+};
 
 const formatProductId = (id) => {
     if (!id) return '';
@@ -45,6 +56,9 @@ export default function SalesScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState('1m');
     const [search, setSearch] = useState('');
+    const [pdfLoading, setPdfLoading] = useState(false);
+
+    const periodLabel = TIME_FILTER_LABELS[activeFilter] || activeFilter;
 
     const fetchSales = async () => {
         try {
@@ -101,6 +115,23 @@ export default function SalesScreen() {
 
     const totalRevenue = filteredSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
 
+    const handleDownloadPdf = async () => {
+        if (!filteredSales.length) {
+            useToastStore.getState().showToast('Nothing to export', 'No sales in this period.', 'error');
+            return;
+        }
+        setPdfLoading(true);
+        try {
+            await generateSalesAnalyticsPdf(filteredSales, periodLabel, activeFilter);
+            useToastStore.getState().showToast('PDF ready', 'Share or save the sales report.', 'success');
+        } catch (e) {
+            console.error(e);
+            useToastStore.getState().showToast('PDF failed', e?.message || 'Could not create PDF.', 'error');
+        } finally {
+            setPdfLoading(false);
+        }
+    };
+
     const ListHeader = () => (
         <View>
             {/* Summary Card */}
@@ -140,6 +171,19 @@ export default function SalesScreen() {
                     onChangeText={setSearch}
                 />
             </View>
+
+            <TouchableOpacity
+                style={[styles.pdfBtn, { opacity: pdfLoading || !filteredSales.length ? 0.55 : 1 }]}
+                onPress={handleDownloadPdf}
+                disabled={pdfLoading || !filteredSales.length}
+            >
+                {pdfLoading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                    <Icon name="download-outline" size={20} color="#fff" />
+                )}
+                <Text style={styles.pdfBtnText}>Download PDF report</Text>
+            </TouchableOpacity>
         </View>
     );
 
@@ -251,6 +295,19 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         borderWidth: 1, borderColor: colors.border.color,
     },
     searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    pdfBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        marginHorizontal: 16,
+        marginBottom: 12,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        backgroundColor: colors.accent.primary,
+    },
+    pdfBtnText: { color: '#fff', fontFamily: FONTS.bold, fontSize: 14 },
     listContainer: { paddingHorizontal: 16, paddingBottom: 40 },
     emptyText: { color: colors.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
 
