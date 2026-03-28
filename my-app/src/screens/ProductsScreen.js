@@ -235,7 +235,7 @@ export default function ProductsScreen() {
                 const hasRestock = formItem.add_quantity != null && String(formItem.add_quantity).trim() !== '' && Number.isFinite(addQ) && addQ > 0;
                 if (hasRestock) {
                     if (!formItem.purchased_from?.trim()) {
-                        useToastStore.getState().showToast('Error', 'Supplier zaroori hai jab naya maal add ho.', 'error');
+                        useToastStore.getState().showToast('Error', 'Supplier is required when adding stock.', 'error');
                         setIsSaving(false);
                         return;
                     }
@@ -243,7 +243,7 @@ export default function ProductsScreen() {
                     const batchTotal = rate * addQ;
                     const paidRestock = Number(formItem.restock_paid_amount || 0);
                     if (paidRestock < 0 || paidRestock > batchTotal) {
-                        useToastStore.getState().showToast('Error', `Is batch ki max payment Rs. ${batchTotal.toLocaleString()} ho sakti hai.`, 'error');
+                        useToastStore.getState().showToast('Error', `Payment cannot exceed this batch total (Rs. ${batchTotal.toLocaleString()}).`, 'error');
                         setIsSaving(false);
                         return;
                     }
@@ -297,7 +297,7 @@ export default function ProductsScreen() {
                 await productsService.create(payload);
             }
             setModalVisible(false);
-            useToastStore.getState().showToast('Saved', formItem.id ? 'Product update ho gaya.' : 'Product save ho gaya.', 'success');
+            useToastStore.getState().showToast('Saved', formItem.id ? 'Product updated successfully.' : 'Product saved successfully.', 'success');
             fetchProductsAndSuppliers();
         } catch (error) {
             console.error("Save product error", error);
@@ -605,13 +605,13 @@ export default function ProductsScreen() {
                             <>
                                 <View style={styles.row}>
                                     <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                        <Text style={styles.inputLabel}>Abhi total stock (DB)</Text>
+                                        <Text style={styles.inputLabel}>Total qty</Text>
                                         <View style={[styles.input, { justifyContent: 'center' }]}>
                                             <Text style={{ color: colors.text.secondary, fontFamily: FONTS.medium }}>{formItem.total_quantity}</Text>
                                         </View>
                                     </View>
                                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                        <Text style={styles.inputLabel}>Abhi baqi (remaining)</Text>
+                                        <Text style={styles.inputLabel}>Remaining</Text>
                                         <View style={[styles.input, { justifyContent: 'center' }]}>
                                             <Text style={{ color: colors.text.secondary, fontFamily: FONTS.medium }}>{formItem.remaining_display}</Text>
                                         </View>
@@ -628,13 +628,43 @@ export default function ProductsScreen() {
                                         </TouchableOpacity>
                                     </View>
                                 </View>
-                                <View style={{ backgroundColor: 'rgba(56,189,248,0.08)', borderWidth: 1, borderColor: 'rgba(56,189,248,0.25)', borderRadius: 12, padding: 14, marginBottom: 12 }}>
-                                    <Text style={[styles.inputLabel, { color: colors.accent.primary, marginBottom: 10 }]}>Naya maal (restock)</Text>
-                                    <Text style={styles.inputLabel}>Kitni quantity add honi hai *</Text>
-                                    <TextInput style={styles.input} value={formItem.add_quantity} onChangeText={t => setFormItem({...formItem, add_quantity: t})} keyboardType="numeric" placeholder="0 chhor dein agar sirf details badalni hon" placeholderTextColor={colors.text.muted} />
-                                    <Text style={styles.inputLabel}>Is batch par supplier ko kitna pay kiya (Rs)</Text>
-                                    <TextInput style={styles.input} value={formItem.restock_paid_amount} onChangeText={t => setFormItem({...formItem, restock_paid_amount: t})} keyboardType="numeric" placeholder="0 = poora udhaar is batch par" placeholderTextColor={colors.text.muted} />
-                                    <Text style={styles.inputLabel}>Mal ki date / khata date</Text>
+                                <View style={{ backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color, borderRadius: 12, padding: 14, marginBottom: 12 }}>
+                                    <Text style={[styles.inputLabel, { marginBottom: 10 }]}>Restock</Text>
+                                    <Text style={styles.inputLabel}>Add qty</Text>
+                                    <TextInput style={styles.input} value={formItem.add_quantity} onChangeText={t => setFormItem({...formItem, add_quantity: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                    {(() => {
+                                        const aq = Number(formItem.add_quantity || 0);
+                                        const rate = Number(formItem.purchase_rate || 0);
+                                        if (!(aq > 0)) return null;
+                                        const supplierDue = rate * aq;
+                                        const paidRaw = Number(formItem.restock_paid_amount || 0);
+                                        const paid = Math.min(Math.max(0, paidRaw), supplierDue);
+                                        const balance = Math.max(0, supplierDue - paid);
+                                        return (
+                                            <View style={{ marginBottom: 12, paddingVertical: 12, paddingHorizontal: 12, backgroundColor: colors.background.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.color }}>
+                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <Text style={{ color: colors.text.secondary, fontSize: 13, fontFamily: FONTS.medium }}>Supplier due</Text>
+                                                    <Text style={{ fontFamily: FONTS.bold, fontSize: 17, color: colors.text.primary }}>Rs. {supplierDue.toLocaleString()}</Text>
+                                                </View>
+                                                {rate > 0 ? (
+                                                    <Text style={{ color: colors.text.muted, fontSize: 12, marginTop: 6 }}>{aq} × Rs. {rate} purchase rate</Text>
+                                                ) : (
+                                                    <Text style={{ color: colors.status.warning, fontSize: 12, marginTop: 6 }}>Set purchase price above to calculate</Text>
+                                                )}
+                                                {supplierDue > 0 && paidRaw > 0 ? (
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                                                        <Text style={{ color: colors.text.muted, fontSize: 12 }}>Balance</Text>
+                                                        <Text style={{ fontSize: 13, fontFamily: FONTS.bold, color: balance > 0 ? colors.status.danger : colors.status.success }}>
+                                                            Rs. {balance.toLocaleString()}
+                                                        </Text>
+                                                    </View>
+                                                ) : null}
+                                            </View>
+                                        );
+                                    })()}
+                                    <Text style={styles.inputLabel}>Paid (Rs)</Text>
+                                    <TextInput style={styles.input} value={formItem.restock_paid_amount} onChangeText={t => setFormItem({...formItem, restock_paid_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                    <Text style={styles.inputLabel}>Batch date</Text>
                                     <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowRestockDatePicker(true)}>
                                         <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>
                                             {(formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()).toLocaleDateString()}
@@ -652,22 +682,6 @@ export default function ProductsScreen() {
                                             }}
                                         />
                                     ) : null}
-                                    {(() => {
-                                        const aq = Number(formItem.add_quantity || 0);
-                                        const rate = Number(formItem.purchase_rate || 0);
-                                        if (aq > 0 && rate > 0) {
-                                            const bt = aq * rate;
-                                            const paid = Number(formItem.restock_paid_amount || 0);
-                                            const ud = Math.max(0, bt - paid);
-                                            return (
-                                                <View style={{ marginTop: 6, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border.color }}>
-                                                    <Text style={{ color: colors.text.secondary, fontSize: 12 }}>Is batch bill: Rs. {bt.toLocaleString()} · is batch par baqi udhaar: Rs. {ud.toLocaleString()}</Text>
-                                                    <Text style={{ color: colors.text.muted, fontSize: 11, marginTop: 4 }}>Har dafa alag supplier transaction banega — Suppliers screen par date-wise alag dikhega.</Text>
-                                                </View>
-                                            );
-                                        }
-                                        return null;
-                                    })()}
                                 </View>
                             </>
                             )}
@@ -723,7 +737,7 @@ export default function ProductsScreen() {
                             {/* Show Paid Amount only for NEW products */}
                             {!formItem.id && (
                                 <>
-                                    <Text style={styles.inputLabel}>Paid Amount (Rs) <Text style={{color: colors.text.muted, fontSize: 12}}>(0 = udhaar / credit)</Text></Text>
+                                    <Text style={styles.inputLabel}>Paid Amount (Rs) <Text style={{color: colors.text.muted, fontSize: 12}}>(0 = credit only)</Text></Text>
                                     <TextInput style={styles.input} value={formItem.paid_amount} onChangeText={t => setFormItem({...formItem, paid_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                 </>
                             )}
@@ -747,7 +761,7 @@ export default function ProductsScreen() {
                                             </View>
                                         </View>
                                     </View>
-                                    <Text style={styles.inputLabel}>Remaining / Udhaar (Rs)</Text>
+                                    <Text style={styles.inputLabel}>Remaining owed (Rs)</Text>
                                     <View style={[styles.input, { backgroundColor: colors.background.secondary }]}>
                                         <Text style={{ color: supplierTxnInfo.remaining > 0 ? colors.status.danger : colors.status.success, fontFamily: FONTS.bold }}>Rs. {supplierTxnInfo.remaining.toLocaleString()}</Text>
                                     </View>
