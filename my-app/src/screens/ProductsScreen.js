@@ -574,6 +574,7 @@ export default function ProductsScreen() {
                             <Text style={styles.inputLabel}>Product Name *</Text>
                             <TextInput style={styles.input} value={formItem.name} onChangeText={t => setFormItem({...formItem, name: t})} placeholder="Enter product name" placeholderTextColor={colors.text.muted} />
 
+                            {!formItem.id ? (
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
                                     <Text style={styles.inputLabel}>Sale Price *</Text>
@@ -584,6 +585,7 @@ export default function ProductsScreen() {
                                     <TextInput style={styles.input} value={formItem.purchase_rate} onChangeText={t => setFormItem({...formItem, purchase_rate: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                 </View>
                             </View>
+                            ) : null}
 
                             {!formItem.id ? (
                             <View style={styles.row}>
@@ -630,6 +632,16 @@ export default function ProductsScreen() {
                                 </View>
                                 <View style={{ backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color, borderRadius: 12, padding: 14, marginBottom: 12 }}>
                                     <Text style={[styles.inputLabel, { marginBottom: 10 }]}>Restock</Text>
+                                    <View style={styles.row}>
+                                        <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                                            <Text style={styles.inputLabel}>Sale price *</Text>
+                                            <TextInput style={styles.input} value={formItem.price} onChangeText={t => setFormItem({...formItem, price: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                        </View>
+                                        <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                                            <Text style={styles.inputLabel}>Purchase rate</Text>
+                                            <TextInput style={styles.input} value={formItem.purchase_rate} onChangeText={t => setFormItem({...formItem, purchase_rate: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                        </View>
+                                    </View>
                                     <Text style={styles.inputLabel}>Add qty</Text>
                                     <TextInput style={styles.input} value={formItem.add_quantity} onChangeText={t => setFormItem({...formItem, add_quantity: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                     {(() => {
@@ -649,7 +661,7 @@ export default function ProductsScreen() {
                                                 {rate > 0 ? (
                                                     <Text style={{ color: colors.text.muted, fontSize: 12, marginTop: 6 }}>{aq} × Rs. {rate} purchase rate</Text>
                                                 ) : (
-                                                    <Text style={{ color: colors.status.warning, fontSize: 12, marginTop: 6 }}>Set purchase price above to calculate</Text>
+                                                    <Text style={{ color: colors.status.warning, fontSize: 12, marginTop: 6 }}>Enter purchase rate</Text>
                                                 )}
                                                 {supplierDue > 0 && paidRaw > 0 ? (
                                                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
