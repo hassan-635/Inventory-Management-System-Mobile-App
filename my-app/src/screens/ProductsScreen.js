@@ -18,6 +18,14 @@ const FILTERS = [
     { key: 'out', label: '❌ Out of Stock' },
 ];
 
+/** Same options as web Products.jsx `CustomDropdown` arrange-by */
+const SORT_OPTIONS = [
+    { key: 'default', label: 'Default' },
+    { key: 'nameAsc', label: 'Name (A-Z)' },
+    { key: 'priceAsc', label: 'Price (Low to High)' },
+    { key: 'stockAsc', label: 'Stock (Low to High)' },
+];
+
 const UNIT_OPTIONS = ['Per Piece', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
 const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware'];
 
@@ -25,6 +33,19 @@ const formatProductId = (id) => {
     if (!id) return '';
     return `AB${String(id).padStart(2, '0')}`;
 };
+
+function productMatchesSearch(product, searchRaw) {
+    const q = (searchRaw || '').trim();
+    if (!q) return true;
+    const qLower = q.toLowerCase();
+    if ((product.name || '').toLowerCase().includes(qLower)) return true;
+    const idStr = String(product.id ?? '');
+    if (idStr.includes(q) || idStr.toLowerCase().includes(qLower)) return true;
+    const fmt = formatProductId(product.id).toLowerCase();
+    const qCompact = qLower.replace(/\s/g, '');
+    if (fmt.includes(qCompact)) return true;
+    return false;
+}
 
 // A searchable modal picker for Dropdowns
 const PickerModal = ({ visible, onClose, items, onSelect, title, allowCustom = false, customValue = '', onCustomChange = null, colors, FONTS }) => {
@@ -91,6 +112,7 @@ export default function ProductsScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('default');
     const [search, setSearch] = useState('');
     const [lowStockLimit, setLowStockLimit] = useState(10);
     const [showPurchaseRates, setShowPurchaseRates] = useState(false);
@@ -124,8 +146,7 @@ export default function ProductsScreen() {
                 setLowStockLimit(Number(limitStr));
             }
 
-            const sorted = [...prodData].sort((a, b) => Number(b.remaining_quantity || 0) - Number(a.remaining_quantity || 0));
-            setProducts(sorted);
+            setProducts(prodData);
             setSuppliers(suppData);
         } catch (error) {
             console.error('Failed to fetch data:', error);
@@ -245,20 +266,31 @@ export default function ProductsScreen() {
         ]);
     };
 
-    const filteredProducts = products.filter(p => {
-        if (search && !p.name?.toLowerCase().includes(search.toLowerCase())) return false;
-        
-        const remaining = Number(p.remaining_quantity || 0);
+    const filteredProducts = useMemo(() => {
+        const list = products.filter((p) => {
+            if (!productMatchesSearch(p, search)) return false;
 
-        if (activeFilter === 'low') {
-            return remaining > 0 && remaining <= lowStockLimit;
-        } else if (activeFilter === 'out') {
-            return remaining === 0;
-        } else if (activeFilter !== 'all') {
-            return p.category === activeFilter || p.name?.toLowerCase().includes(activeFilter.toLowerCase());
-        }
-        return true;
-    });
+            const remaining = Number(p.remaining_quantity || 0);
+
+            if (activeFilter === 'low') {
+                return remaining > 0 && remaining <= lowStockLimit;
+            }
+            if (activeFilter === 'out') {
+                return remaining === 0;
+            }
+            if (activeFilter !== 'all') {
+                return p.category === activeFilter || p.name?.toLowerCase().includes(activeFilter.toLowerCase());
+            }
+            return true;
+        });
+
+        return [...list].sort((a, b) => {
+            if (sortBy === 'nameAsc') return (a.name || '').localeCompare(b.name || '');
+            if (sortBy === 'priceAsc') return Number(a.price || 0) - Number(b.price || 0);
+            if (sortBy === 'stockAsc') return Number(a.remaining_quantity || 0) - Number(b.remaining_quantity || 0);
+            return 0;
+        });
+    }, [products, search, activeFilter, lowStockLimit, sortBy]);
 
     if (loading && !refreshing) {
         return (
@@ -282,11 +314,32 @@ export default function ProductsScreen() {
                 <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
                 <TextInput
                     style={styles.searchInput}
-                    placeholder="Search products..."
+                    placeholder="Search by name or ID (e.g. AB05)..."
                     placeholderTextColor={colors.text.muted || colors.text.secondary}
                     value={search}
                     onChangeText={setSearch}
                 />
+            </View>
+
+            {/* Arrange by — same options as web Products */}
+            <View style={styles.sortSection}>
+                <Text style={styles.sortSectionLabel}>Arrange by</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortChipsRow}>
+                    {SORT_OPTIONS.map((opt) => {
+                        const active = sortBy === opt.key;
+                        return (
+                            <TouchableOpacity
+                                key={opt.key}
+                                style={[styles.sortChip, active && styles.sortChipActive]}
+                                onPress={() => setSortBy(opt.key)}
+                            >
+                                <Text style={[styles.sortChipText, active && styles.sortChipTextActive]} numberOfLines={1}>
+                                    {opt.label}
+                                </Text>
+                            </TouchableOpacity>
+                        );
+                    })}
+                </ScrollView>
             </View>
 
             {/* Filter Tabs */}
@@ -603,6 +656,30 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         borderWidth: 1, borderColor: colors.border.color,
     },
     searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    sortSection: { marginBottom: 6 },
+    sortSectionLabel: {
+        marginLeft: 16,
+        marginBottom: 6,
+        fontSize: 12,
+        color: colors.text.secondary,
+        fontFamily: FONTS.medium,
+    },
+    sortChipsRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center', flexDirection: 'row' },
+    sortChip: {
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        borderRadius: 20,
+        borderWidth: 1,
+        borderColor: colors.border.color,
+        backgroundColor: colors.background.secondary,
+        maxWidth: 280,
+    },
+    sortChipActive: {
+        backgroundColor: colors.accent.primary,
+        borderColor: colors.accent.primary,
+    },
+    sortChipText: { fontSize: 12, fontFamily: FONTS.medium, color: colors.text.secondary },
+    sortChipTextActive: { color: '#fff', fontFamily: FONTS.bold },
     filterWrapper: { height: 45, marginBottom: 8 },
     filterRow: { paddingHorizontal: 16, gap: 8, alignItems: 'center' },
     filterBtn: {
