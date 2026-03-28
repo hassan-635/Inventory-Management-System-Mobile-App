@@ -72,17 +72,33 @@ export default function BuyersScreen() {
 
     const handleSave = async () => {
         if (!formItem.name) { useToastStore.getState().showToast('Error', 'Customer name is required.', 'error'); return; }
-        const payload = { ...formItem };
-        if (formItem.id && formItem.payment_amount) {
-            const payAmt = Number(formItem.payment_amount);
-            if (payAmt > formItem.txn_due) { useToastStore.getState().showToast('Error', 'Payment cannot exceed Rs. ' + formItem.txn_due, 'error'); return; }
-            if (payAmt < 0) { useToastStore.getState().showToast('Error', 'Payment cannot be negative.', 'error'); return; }
-            payload.payment_amount = payAmt;
-            payload.date = formItem.payment_date.toISOString().split('T')[0];
+        const payload = {
+            name: formItem.name.trim(),
+            phone: formItem.phone?.trim() || '',
+            address: formItem.address?.trim() || '',
+            company_name: formItem.company_name?.trim() || null,
+        };
+        if (formItem.id) {
+            const rawPay = String(formItem.payment_amount ?? '').trim();
+            if (rawPay !== '') {
+                const payAmt = Number(rawPay);
+                if (Number.isNaN(payAmt) || payAmt < 0) {
+                    useToastStore.getState().showToast('Error', 'Invalid payment amount.', 'error');
+                    return;
+                }
+                if (payAmt > 0) {
+                    if (payAmt > formItem.txn_due) {
+                        useToastStore.getState().showToast('Error', 'Payment cannot exceed Rs. ' + formItem.txn_due, 'error');
+                        return;
+                    }
+                    payload.payment_amount = payAmt;
+                    payload.date = formItem.payment_date.toISOString().split('T')[0];
+                }
+            }
         }
         setIsSaving(true);
         try {
-            if (formItem.id) { await buyersService.update(formItem.id, payload); useToastStore.getState().showToast('Updated!', 'Customer updated.', 'success'); }
+            if (formItem.id) { await buyersService.update(formItem.id, payload); useToastStore.getState().showToast('Updated!', payload.payment_amount ? 'Payment recorded; profile updated.' : 'Customer updated.', 'success'); }
             else { await buyersService.create(payload); useToastStore.getState().showToast('Added!', 'Customer added.', 'success'); }
             setModalVisible(false);
             fetchBuyers();
@@ -212,12 +228,12 @@ export default function BuyersScreen() {
                 )}
             </View>
 
-            {/* Summary bar (Companies-style: count + pending for current list) */}
+            {/* Summary — customers owe you (you receive payment from them) */}
             <View style={styles.summaryBar}>
                 <Text style={styles.summaryBarText}>
-                    {filtered.length} customers •{' '}
+                    {filtered.length} customers • they owe you{' '}
                     <Text style={{ color: colors.status.danger }}>
-                        Rs. {filteredPending.toLocaleString()} pending
+                        Rs. {filteredPending.toLocaleString()}
                     </Text>
                 </Text>
             </View>
@@ -263,7 +279,8 @@ export default function BuyersScreen() {
                                 <>
                                     <View style={{ height: 1, backgroundColor: colors.border.color, marginVertical: 12 }} />
                                     <Text style={[styles.inputLabel, { color: colors.accent.primary, fontFamily: FONTS.bold }]}>
-                                        Make Payment  <Text style={{ color: colors.text.muted, fontSize: 11, fontFamily: FONTS.regular }}>(max: Rs. {formItem.txn_due})</Text>
+                                        Receive payment (they pay you){' '}
+                                        <Text style={{ color: colors.text.muted, fontSize: 11, fontFamily: FONTS.regular }}>(max: Rs. {formItem.txn_due})</Text>
                                     </Text>
                                     <TextInput style={styles.input} value={formItem.payment_amount} onChangeText={t => setFormItem({ ...formItem, payment_amount: t })} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={colors.text.muted} />
 

@@ -13,4 +13,9 @@ export const salesService = {
         const response = await api.delete(`/sales/${id}`);
         return response.data;
     },
+    /** Partial or full return: body { quantity } — udhaar reduced in proportion for this line only */
+    returnQty: async (id, quantity) => {
+        const response = await api.post(`/sales/${id}/return`, { quantity });
+        return response.data;
+    },
 };

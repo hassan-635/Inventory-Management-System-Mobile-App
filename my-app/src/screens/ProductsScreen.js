@@ -535,8 +535,8 @@ export default function ProductsScreen() {
 
                             <View style={styles.row}>
                                 <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                    <Text style={styles.inputLabel}>Total Qty (Stock)</Text>
-                                    <TextInput style={styles.input} value={formItem.total_quantity} onChangeText={t => setFormItem({...formItem, total_quantity: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} editable={!formItem.id} />
+                                    <Text style={styles.inputLabel}>Total Qty (Stock){formItem.id ? <Text style={{ color: colors.text.muted, fontSize: 11 }}>{' '}— edit adjusts remaining by the change</Text> : null}</Text>
+                                    <TextInput style={styles.input} value={formItem.total_quantity} onChangeText={t => setFormItem({...formItem, total_quantity: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                 </View>
                                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
                                     <Text style={styles.inputLabel}>Unit</Text>

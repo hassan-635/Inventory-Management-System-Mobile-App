@@ -50,7 +50,7 @@ export default function CompaniesScreen() {
         }
         const company = payModal.company;
         if (amount > company.total_remaining) {
-            Alert.alert('Zyada Amount', `Max payable: Rs. ${company.total_remaining}`);
+            Alert.alert('Zyada amount', `Company max Rs. ${company.total_remaining} aap ko dena baqi hai (ye receive kren).`);
             return;
         }
         setPaying(true);
@@ -175,7 +175,7 @@ export default function CompaniesScreen() {
                                 onPress={() => setPayModal({ visible: true, company: item })}
                             >
                                 <Icon name="cash-outline" size={16} color="#fff" />
-                                <Text style={styles.payBtnText}>Make Payment</Text>
+                                <Text style={styles.payBtnText}>Receive payment</Text>
                             </TouchableOpacity>
                         )}
                     </View>
@@ -186,7 +186,7 @@ export default function CompaniesScreen() {
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Companies Ledger</Text>
+            <Text style={styles.title}>Companies (customers owe you)</Text>
 
             {/* Search */}
             <View style={styles.searchRow}>
@@ -203,9 +203,9 @@ export default function CompaniesScreen() {
             {/* Summary Bar */}
             <View style={styles.summaryBar}>
                 <Text style={styles.summaryBarText}>
-                    {filtered.length} companies •{' '}
+                    {filtered.length} companies • customers owe you{' '}
                     <Text style={{ color: colors.status.danger }}>
-                        Rs. {filtered.reduce((s, c) => s + c.total_remaining, 0).toLocaleString()} pending
+                        Rs. {filtered.reduce((s, c) => s + c.total_remaining, 0).toLocaleString()}
                     </Text>
                 </Text>
             </View>
@@ -228,9 +228,9 @@ export default function CompaniesScreen() {
             <Modal visible={payModal.visible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
                     <View style={[styles.modalBox, SCREEN_WIDTH > 768 && { width: '60%', alignSelf: 'center', borderTopLeftRadius: 16, borderTopRightRadius: 16 }]}>
-                        <Text style={styles.modalTitle}>Payment — {payModal.company?.company_name}</Text>
+                        <Text style={styles.modalTitle}>Receive payment — {payModal.company?.company_name}</Text>
                         <Text style={styles.modalSub}>
-                            Remaining: Rs. {payModal.company?.total_remaining?.toLocaleString()}
+                            Unpaid / udhaar (aap ko milna hai): Rs. {payModal.company?.total_remaining?.toLocaleString()}
                         </Text>
                         <TextInput
                             style={styles.modalInput}
@@ -248,7 +248,7 @@ export default function CompaniesScreen() {
                                 <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium }}>Cancel</Text>
                             </TouchableOpacity>
                             <TouchableOpacity style={[styles.modalBtn, styles.modalBtnPrimary]} onPress={handlePay} disabled={paying}>
-                                {paying ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontFamily: FONTS.bold }}>Pay</Text>}
+                                {paying ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontFamily: FONTS.bold }}>Record</Text>}
                             </TouchableOpacity>
                         </View>
                     </View>

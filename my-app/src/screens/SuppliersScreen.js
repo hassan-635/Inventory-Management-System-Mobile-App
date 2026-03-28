@@ -294,8 +294,8 @@ export default function SuppliersScreen() {
                             {!!formItem.id && formItem.txn_due > 0 && (
                                 <>
                                     <View style={{ height: 1, backgroundColor: colors.border.color, marginVertical: 10 }} />
-                                    <Text style={[styles.inputLabel, { color: colors.accent.primary, fontFamily: FONTS.bold }]}>Make Payment (Rs) <Text style={{color: colors.text.muted, fontSize: 12, fontFamily: FONTS.regular}}>(max: {formItem.txn_due})</Text></Text>
-                                    <Text style={{ fontSize: 11, color: colors.text.muted, marginBottom: 8 }}>Pay off oldest unpaid bills sequentially.</Text>
+                                    <Text style={[styles.inputLabel, { color: colors.accent.primary, fontFamily: FONTS.bold }]}>Pay supplier (Rs) <Text style={{color: colors.text.muted, fontSize: 12, fontFamily: FONTS.regular}}>(max: {formItem.txn_due})</Text></Text>
+                                    <Text style={{ fontSize: 11, color: colors.text.muted, marginBottom: 8 }}>Aap supplier ko pay karte hain — sab se purani unpaid entries pehle clear hoti hain.</Text>
                                     <TextInput style={styles.input} value={formItem.payment_amount} onChangeText={t => setFormItem({...formItem, payment_amount: t})} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={colors.text.muted} />
 
                                     <Text style={styles.inputLabel}>Payment Date</Text>
