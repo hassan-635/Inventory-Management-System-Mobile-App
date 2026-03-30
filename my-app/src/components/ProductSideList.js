@@ -77,67 +77,73 @@ const ProductSideList = ({
                                     <Text style={styles.emptySubtitle}>Add or delete products to see them here</Text>
                                 </View>
                             ) : (
-                                pendingItems.map((item, index) => (
-                                    <View key={index} style={[styles.itemCard, item.action === 'add' ? styles.addItemCard : styles.deleteItemCard]}>
-                                        <View style={styles.itemHeader}>
-                                            <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                                            <View style={[styles.actionBadge, item.action === 'add' ? styles.addBadge : styles.deleteBadge]}>
-                                                <Text style={[styles.actionText, item.action === 'add' ? styles.addText : styles.deleteText]}>
-                                                    {item.action === 'add' ? 'ADD' : 'DELETE'}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        
-                                        <View style={styles.itemDetails}>
-                                            {item.action === 'add' && item.data && (
-                                                <>
-                                                    <DetailRow label="Category" value={item.data.category || 'Uncategorized'} colors={colors} FONTS={FONTS} />
-                                                    <DetailRow label="Price" value={formatCurrency(item.data.price)} colors={colors} FONTS={FONTS} />
-                                                    <DetailRow label="Quantity" value={`${item.data.total_quantity} ${item.data.quantity_unit || 'pieces'}`} colors={colors} FONTS={FONTS} />
-                                                    {item.data.purchase_rate && (
-                                                        <DetailRow label="Purchase Rate" value={formatCurrency(item.data.purchase_rate)} colors={colors} FONTS={FONTS} />
-                                                    )}
-                                                    {item.data.purchased_from && (
-                                                        <DetailRow label="Supplier" value={item.data.purchased_from} colors={colors} FONTS={FONTS} />
-                                                    )}
-                                                    {item.data.purchase_date && (
-                                                        <DetailRow label="Purchase Date" value={formatDate(item.data.purchase_date)} colors={colors} FONTS={FONTS} />
-                                                    )}
-                                                </>
-                                            )}
-                                            
-                                            {item.action === 'delete' && item.data && (
-                                                <>
-                                                    <DetailRow label="ID" value={item.data.id} colors={colors} FONTS={FONTS} />
-                                                    <DetailRow label="Category" value={item.data.category || 'Uncategorized'} colors={colors} FONTS={FONTS} />
-                                                    <DetailRow label="Current Stock" value={`${item.data.remaining_quantity || 0} pieces`} colors={colors} FONTS={FONTS} />
-                                                    <DetailRow label="Price" value={formatCurrency(item.data.price)} colors={colors} FONTS={FONTS} />
-                                                </>
-                                            )}
-                                        </View>
-
-                                        <TouchableOpacity 
-                                            style={styles.removeBtn}
-                                            onPress={() => onRemoveItem(index)}
-                                        >
-                                            <Icon name="remove-circle-outline" size={16} color={colors.status.danger} />
-                                            <Text style={styles.removeBtnText}>Remove</Text>
-                                        </TouchableOpacity>
+                                <>
+                                    {/* Summary at top */}
+                                    <View style={styles.topSummary}>
+                                        <Text style={styles.summaryTitle}>Pending Changes</Text>
+                                        <Text style={styles.summaryText}>
+                                            {addCount > 0 && `${addCount} to add`} 
+                                            {addCount > 0 && deleteCount > 0 && ', '}
+                                            {deleteCount > 0 && `${deleteCount} to delete`}
+                                        </Text>
                                     </View>
-                                ))
+                                    
+                                    {/* List of all items */}
+                                    {pendingItems.map((item, index) => (
+                                        <View key={index} style={[styles.itemCard, item.action === 'add' ? styles.addItemCard : styles.deleteItemCard]}>
+                                            <View style={styles.itemHeader}>
+                                                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
+                                                <View style={[styles.actionBadge, item.action === 'add' ? styles.addBadge : styles.deleteBadge]}>
+                                                    <Text style={[styles.actionText, item.action === 'add' ? styles.addText : styles.deleteText]}>
+                                                        {item.action === 'add' ? 'ADD' : 'DELETE'}
+                                                    </Text>
+                                                </View>
+                                            </View>
+                                            
+                                            <View style={styles.itemDetails}>
+                                                {item.action === 'add' && item.data && (
+                                                    <>
+                                                        <DetailRow label="Category" value={item.data.category || 'Uncategorized'} colors={colors} FONTS={FONTS} />
+                                                        <DetailRow label="Price" value={formatCurrency(item.data.price)} colors={colors} FONTS={FONTS} />
+                                                        <DetailRow label="Quantity" value={`${item.data.total_quantity} ${item.data.quantity_unit || 'pieces'}`} colors={colors} FONTS={FONTS} />
+                                                        {item.data.purchase_rate && (
+                                                            <DetailRow label="Purchase Rate" value={formatCurrency(item.data.purchase_rate)} colors={colors} FONTS={FONTS} />
+                                                        )}
+                                                        {item.data.purchased_from && (
+                                                            <DetailRow label="Supplier" value={item.data.purchased_from} colors={colors} FONTS={FONTS} />
+                                                        )}
+                                                        {item.data.purchase_date && (
+                                                            <DetailRow label="Purchase Date" value={formatDate(item.data.purchase_date)} colors={colors} FONTS={FONTS} />
+                                                        )}
+                                                    </>
+                                                )}
+                                                
+                                                {item.action === 'delete' && item.data && (
+                                                    <>
+                                                        <DetailRow label="ID" value={item.data.id} colors={colors} FONTS={FONTS} />
+                                                        <DetailRow label="Category" value={item.data.category || 'Uncategorized'} colors={colors} FONTS={FONTS} />
+                                                        <DetailRow label="Current Stock" value={`${item.data.remaining_quantity || 0} pieces`} colors={colors} FONTS={FONTS} />
+                                                        <DetailRow label="Price" value={formatCurrency(item.data.price)} colors={colors} FONTS={FONTS} />
+                                                    </>
+                                                )}
+                                            </View>
+
+                                            <TouchableOpacity 
+                                                style={styles.removeBtn}
+                                                onPress={() => onRemoveItem(index)}
+                                            >
+                                                <Icon name="remove-circle-outline" size={16} color={colors.status.danger} />
+                                                <Text style={styles.removeBtnText}>Remove</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                    ))}
+                                </>
                             )}
                         </ScrollView>
 
-                        {/* Footer */}
+                        {/* Fixed Bottom Actions */}
                         {pendingItems.length > 0 && (
-                            <View style={styles.footer}>
-                                <View style={styles.summary}>
-                                    <Text style={styles.summaryText}>
-                                        {addCount > 0 && `${addCount} to add`} 
-                                        {addCount > 0 && deleteCount > 0 && ', '}
-                                        {deleteCount > 0 && `${deleteCount} to delete`}
-                                    </Text>
-                                </View>
+                            <View style={styles.fixedBottomActions}>
                                 <View style={styles.footerActions}>
                                     <TouchableOpacity 
                                         style={styles.clearBtn} 
@@ -245,6 +251,33 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     content: {
         flex: 1,
         paddingHorizontal: 20,
+        paddingBottom: 100, // Add padding for fixed bottom actions
+    },
+    topSummary: {
+        backgroundColor: colors.background.secondary,
+        padding: 16,
+        borderRadius: 12,
+        marginBottom: 12,
+        borderWidth: 1,
+        borderColor: colors.border.color,
+    },
+    summaryTitle: {
+        fontSize: 16,
+        fontFamily: FONTS.bold,
+        color: colors.text.primary,
+        marginBottom: 4,
+    },
+    fixedBottomActions: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        backgroundColor: colors.background.secondary,
+        borderTopWidth: 1,
+        borderTopColor: colors.border.color,
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        paddingBottom: 20, // Extra padding for safe area
     },
     emptyContainer: {
         alignItems: 'center',
@@ -329,21 +362,6 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         fontFamily: FONTS.medium,
         color: colors.status.danger,
         marginLeft: 4,
-    },
-    footer: {
-        paddingHorizontal: 20,
-        paddingVertical: 16,
-        borderTopWidth: 1,
-        borderTopColor: colors.border.color,
-        backgroundColor: colors.background.secondary,
-    },
-    summary: {
-        marginBottom: 16,
-    },
-    summaryText: {
-        fontSize: 14,
-        fontFamily: FONTS.medium,
-        color: colors.text.secondary,
     },
     footerActions: {
         flexDirection: 'row',
