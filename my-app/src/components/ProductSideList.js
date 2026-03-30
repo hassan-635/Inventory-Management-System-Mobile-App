@@ -94,7 +94,11 @@ const ProductSideList = ({
                                     
                                     {/* List of all items */}
                                     {pendingItems.map((item, index) => (
-                                        <View key={index} style={[styles.itemCard, item.action === 'add' ? styles.addItemCard : styles.deleteItemCard]}>
+                                        <View key={index} style={[
+                                            styles.itemCard, 
+                                            item.action === 'add' ? styles.addItemCard : styles.deleteItemCard,
+                                            index === pendingItems.length - 1 && styles.lastItemCard // Add extra margin to last item
+                                        ]}>
                                             <View style={styles.itemHeader}>
                                                 <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
                                                 <View style={[styles.actionBadge, item.action === 'add' ? styles.addBadge : styles.deleteBadge]}>
@@ -305,7 +309,7 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         backgroundColor: colors.background.secondary,
         borderRadius: 12,
         padding: 16,
-        marginBottom: 12,
+        marginBottom: 12, // Add proper spacing between items
         borderLeftWidth: 4,
     },
     addItemCard: {
@@ -313,6 +317,9 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     },
     deleteItemCard: {
         borderLeftColor: colors.status.danger,
+    },
+    lastItemCard: {
+        marginBottom: 100, // Extra margin for last item to avoid buttons
     },
     itemHeader: {
         flexDirection: 'row',
