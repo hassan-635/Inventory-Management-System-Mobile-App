@@ -59,10 +59,8 @@ const GenericSideList = ({
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Email" value={item.data.email || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Company" value={item.data.company_name || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Address" value={item.data.address || 'N/A'} colors={colors} FONTS={FONTS} />
-                            {item.data.balance !== undefined && (
-                                <DetailRow label="Balance" value={formatCurrency(item.data.balance)} colors={colors} FONTS={FONTS} />
-                            )}
                         </>
                     );
                 case 'supplier':
@@ -71,23 +69,21 @@ const GenericSideList = ({
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Company" value={item.data.company_name || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Email" value={item.data.email || 'N/A'} colors={colors} FONTS={FONTS} />
-                            {item.data.balance !== undefined && (
-                                <DetailRow label="Balance" value={formatCurrency(item.data.balance)} colors={colors} FONTS={FONTS} />
-                            )}
                         </>
                     );
                 case 'company':
                     return (
                         <>
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Contact" value={item.data.contact || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Email" value={item.data.email || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Address" value={item.data.address || 'N/A'} colors={colors} FONTS={FONTS} />
-                            {item.data.balance !== undefined && (
-                                <DetailRow label="Balance" value={formatCurrency(item.data.balance)} colors={colors} FONTS={FONTS} />
-                            )}
+                        </>
+                    );
+                case 'expense':
+                    return (
+                        <>
+                            <DetailRow label="Category" value={item.data.category || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Amount" value={formatCurrency(item.data.amount)} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Description" value={item.data.description || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Date" value={formatDate(item.data.date)} colors={colors} FONTS={FONTS} />
                         </>
                     );
                 default: // product
@@ -145,6 +141,15 @@ const GenericSideList = ({
                             {item.data.balance !== undefined && (
                                 <DetailRow label="Balance" value={formatCurrency(item.data.balance)} colors={colors} FONTS={FONTS} />
                             )}
+                        </>
+                    );
+                case 'expense':
+                    return (
+                        <>
+                            <DetailRow label="Category" value={item.data.category || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Amount" value={formatCurrency(item.data.amount)} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Description" value={item.data.description || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Date" value={formatDate(item.data.date)} colors={colors} FONTS={FONTS} />
                         </>
                     );
                 default: // product
