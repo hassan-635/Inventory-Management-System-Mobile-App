@@ -90,6 +90,35 @@ export default function SuppliersScreen() {
                 useToastStore.getState().showToast("Error", "Supplier name is required.", "error");
                 return;
             }
+            
+            if (!formItem.id) {
+                // Check if supplier with same name already exists in pending list
+                if (isSupplierIdInPendingList(formItem.name.trim())) {
+                    useToastStore.getState().showToast('Error', 'This supplier is already in the pending list.', 'error');
+                    return;
+                }
+                
+                // For new suppliers, add to pending list instead of direct save
+                payload = {
+                    name: String(formItem.name).trim(),
+                    phone: formItem.phone != null ? String(formItem.phone).trim() : '',
+                    company_name: formItem.company_name != null ? String(formItem.company_name).trim() : '',
+                };
+
+                const newItem = {
+                    action: 'add',
+                    name: formItem.name.trim(),
+                    data: payload
+                };
+                
+                setPendingItems(prev => [...prev, newItem]);
+                setIsSideListVisible(true);
+                setModalVisible(false);
+                useToastStore.getState().showToast('Added to Pending', 'Supplier added to pending list.', 'success');
+                return;
+            }
+            
+            // For existing suppliers (edit mode), keep original logic
             payload = {
                 name: String(formItem.name).trim(),
                 phone: formItem.phone != null ? String(formItem.phone).trim() : '',
@@ -101,12 +130,10 @@ export default function SuppliersScreen() {
         try {
             if (formItem.id) {
                 await suppliersService.update(formItem.id, payload);
-            } else {
-                await suppliersService.create(payload);
+                setModalVisible(false);
+                useToastStore.getState().showToast('Saved', 'Supplier saved successfully!', 'success');
+                fetchSuppliers();
             }
-            setModalVisible(false);
-            useToastStore.getState().showToast('Saved', 'Supplier saved successfully!', 'success');
-            fetchSuppliers();
         } catch (error) {
             console.error("Save supplier error", error);
             useToastStore.getState().showToast("Error", error.response?.data?.error || "Could not save supplier.", "error");
@@ -116,19 +143,30 @@ export default function SuppliersScreen() {
     };
 
     const confirmDelete = (id) => {
-        Alert.alert("Delete Supplier", "Are you sure you want to delete this supplier?", [
+        const supplier = suppliers.find(s => s.id === id);
+        if (!supplier) return;
+        
+        // Check if supplier is already in pending list
+        if (isSupplierIdInPendingList(id)) {
+            useToastStore.getState().showToast('Error', 'This supplier is already in the pending list.', 'error');
+            return;
+        }
+        
+        Alert.alert("Delete Supplier", `Add "${supplier.name}" to pending deletions?`, [
             { text: "Cancel", style: "cancel" },
             {
-                text: "Delete",
-                style: "destructive",
-                onPress: async () => {
-                    try {
-                        await suppliersService.delete(id);
-                        useToastStore.getState().showToast('Deleted', 'Supplier deleted successfully!', 'success');
-                        fetchSuppliers();
-                    } catch (err) {
-                        useToastStore.getState().showToast("Error", err.response?.data?.error || "Could not delete supplier. Make sure they have no linked transactions.", "error");
-                    }
+                text: "Add to Pending",
+                style: "default",
+                onPress: () => {
+                    const newItem = {
+                        action: 'delete',
+                        name: supplier.name,
+                        data: supplier
+                    };
+                    
+                    setPendingItems(prev => [...prev, newItem]);
+                    setIsSideListVisible(true);
+                    useToastStore.getState().showToast('Added to Pending', 'Supplier added to pending deletions.', 'success');
                 }
             }
         ]);
@@ -139,6 +177,89 @@ export default function SuppliersScreen() {
 
     const computePaid = (txns) =>
         (txns || []).reduce((acc, t) => acc + Number(t.paid_amount || 0), 0);
+
+    // Check if supplier ID already exists in pending list
+    const isSupplierIdInPendingList = (supplierId) => {
+        return pendingItems.some(item => {
+            if (item.action === 'add') {
+                // For new items, check by name
+                return item.name.toLowerCase().trim() === supplierId.toLowerCase().trim();
+            } else if (item.action === 'delete') {
+                // For deletions, check by actual ID
+                return item.data.id === supplierId;
+            }
+            return false;
+        });
+    };
+
+    // Side List Handlers
+    const handleRemovePendingItem = (index) => {
+        setPendingItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleClearAllPending = () => {
+        Alert.alert('Clear All', 'Clear all pending changes?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Clear All',
+                style: 'destructive',
+                onPress: () => setPendingItems([])
+            }
+        ]);
+    };
+
+    const handleProcessPendingItems = async () => {
+        if (pendingItems.length === 0) return;
+        
+        Alert.alert('Process Changes', `Process ${pendingItems.length} pending changes? This cannot be undone.`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Process',
+                style: 'default',
+                onPress: async () => {
+                    setIsProcessing(true);
+                    let successCount = 0;
+                    let errorCount = 0;
+                    const errors = [];
+
+                    try {
+                        // Process items in order
+                        for (const item of pendingItems) {
+                            try {
+                                if (item.action === 'add') {
+                                    await suppliersService.create(item.data);
+                                    successCount++;
+                                } else if (item.action === 'delete') {
+                                    await suppliersService.delete(item.data.id);
+                                    successCount++;
+                                }
+                            } catch (err) {
+                                errorCount++;
+                                errors.push(`${item.action === 'add' ? 'Adding' : 'Deleting'} "${item.name}": ${err.response?.data?.error || err.message}`);
+                            }
+                        }
+
+                        // Show results
+                        if (errorCount > 0) {
+                            Alert.alert('Partial Success', `Processed ${successCount} items successfully. ${errorCount} items failed:\n\n${errors.join('\n')}`);
+                        } else {
+                            useToastStore.getState().showToast('Success', `Successfully processed ${successCount} items!`, 'success');
+                        }
+
+                        // Clear pending items and refresh suppliers
+                        setPendingItems([]);
+                        setIsSideListVisible(false);
+                        fetchSuppliers();
+                    } catch (err) {
+                        console.error('Error processing pending items:', err);
+                        useToastStore.getState().showToast('Error', 'An unexpected error occurred while processing items.', 'error');
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                }
+            }
+        ]);
+    };
 
     const filteredSuppliers = useMemo(() => suppliers.filter(s => {
         const q = search.toLowerCase();
@@ -290,6 +411,19 @@ export default function SuppliersScreen() {
                 <Icon name="add" size={28} color="#fff" />
             </TouchableOpacity>
 
+            {/* Pending Items Indicator */}
+            {pendingItems.length > 0 && (
+                <TouchableOpacity 
+                    style={[styles.pendingIndicator, { backgroundColor: colors.accent.primary }]}
+                    onPress={() => setIsSideListVisible(true)}
+                >
+                    <Icon name="list-outline" size={20} color="#fff" />
+                    <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>{pendingItems.length}</Text>
+                    </View>
+                </TouchableOpacity>
+            )}
+
             {/* Add / Edit Modal */}
             <Modal visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
@@ -355,6 +489,20 @@ export default function SuppliersScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Supplier Side List */}
+            <GenericSideList
+                visible={isSideListVisible}
+                onClose={() => setIsSideListVisible(false)}
+                pendingItems={pendingItems}
+                onRemoveItem={handleRemovePendingItem}
+                onClearAll={handleClearAllPending}
+                onProcessItems={handleProcessPendingItems}
+                isProcessing={isProcessing}
+                colors={colors}
+                FONTS={FONTS}
+                entityType="supplier"
+            />
         </View>
     );
 }
@@ -393,6 +541,40 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     actionBtnTxt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
     
     fab: { position: 'absolute', bottom: 24, right: 24, width: 60, height: 60, borderRadius: 30, backgroundColor: colors.accent.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
+    
+    // Pending List Styles
+    pendingIndicator: { 
+        position: 'absolute', 
+        bottom: 24, 
+        left: 24, 
+        width: 50, 
+        height: 50, 
+        borderRadius: 25, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        elevation: 5, 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.3, 
+        shadowRadius: 4 
+    },
+    pendingBadge: { 
+        position: 'absolute', 
+        top: -4, 
+        right: -4, 
+        backgroundColor: colors.status.danger, 
+        borderRadius: 10, 
+        minWidth: 20, 
+        height: 20, 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+    },
+    pendingBadgeText: { 
+        color: '#fff', 
+        fontSize: 10, 
+        fontFamily: FONTS.bold, 
+        paddingHorizontal: 4 
+    },
     
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
     modalContent: { backgroundColor: colors.background.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' },
