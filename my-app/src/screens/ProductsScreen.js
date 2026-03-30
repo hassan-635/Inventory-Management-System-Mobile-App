@@ -7,6 +7,7 @@ import { suppliersService } from '../api/suppliers';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import ExpandableItem from '../components/ExpandableItem';
+import ProductSideList from '../components/ProductSideList';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatProductId } from '../utils/formatProductId';
@@ -136,6 +137,11 @@ export default function ProductsScreen() {
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
     const [showRestockDatePicker, setShowRestockDatePicker] = useState(false);
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
+    
+    // Side List State
+    const [isSideListVisible, setIsSideListVisible] = useState(false);
+    const [pendingItems, setPendingItems] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const fetchProductsAndSuppliers = useCallback(async () => {
         try {
@@ -233,76 +239,97 @@ export default function ProductsScreen() {
             useToastStore.getState().showToast("Error", "Name and Sale Price are required.", "error");
             return;
         }
+        
+        if (!formItem.id) {
+            // Check if product with same name already exists in pending list
+            if (isProductIdInPendingList(formItem.name.trim())) {
+                useToastStore.getState().showToast('Error', 'This product is already in the pending list.', 'error');
+                return;
+            }
+            
+            // For new products, add to pending list instead of direct save
+            const payload = {
+                name: formItem.name.trim(),
+                category: formItem.category,
+                price: Number(formItem.price),
+                purchase_rate: Number(formItem.purchase_rate),
+                max_discount: Number(formItem.max_discount),
+                purchased_from: formItem.purchased_from,
+                total_quantity: Number(formItem.total_quantity),
+                purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
+                paid_amount: Number(formItem.paid_amount || 0),
+                quantity_unit: formItem.quantity_unit,
+                supplier_phone: formItem.supplier_phone,
+                supplier_company_name: formItem.supplier_company_name,
+            };
+
+            const newItem = {
+                action: 'add',
+                name: formItem.name.trim(),
+                data: payload
+            };
+            
+            setPendingItems(prev => [...prev, newItem]);
+            setIsSideListVisible(true);
+            setModalVisible(false);
+            useToastStore.getState().showToast('Added to Pending', 'Product added to pending list.', 'success');
+            return;
+        }
+        
+        // For existing products (edit mode), keep the original logic
         setIsSaving(true);
         try {
-            if (formItem.id) {
-                const addQ = Number(formItem.add_quantity);
-                const hasRestock = formItem.add_quantity != null && String(formItem.add_quantity).trim() !== '' && Number.isFinite(addQ) && addQ > 0;
-                if (hasRestock) {
-                    if (!formItem.purchased_from?.trim()) {
-                        useToastStore.getState().showToast('Error', 'Supplier is required when adding stock.', 'error');
-                        setIsSaving(false);
-                        return;
-                    }
-                    const rate = Number(formItem.purchase_rate || 0);
-                    const batchTotal = rate * addQ;
-                    const paidRestock = Number(formItem.restock_paid_amount || 0);
-                    if (paidRestock < 0 || paidRestock > batchTotal) {
-                        useToastStore.getState().showToast('Error', `Payment cannot exceed this batch total (Rs. ${batchTotal.toLocaleString()}).`, 'error');
-                        setIsSaving(false);
-                        return;
-                    }
+            const addQ = Number(formItem.add_quantity);
+            const hasRestock = formItem.add_quantity != null && String(formItem.add_quantity).trim() !== '' && Number.isFinite(addQ) && addQ > 0;
+            if (hasRestock) {
+                if (!formItem.purchased_from?.trim()) {
+                    useToastStore.getState().showToast('Error', 'Supplier is required when adding stock.', 'error');
+                    setIsSaving(false);
+                    return;
                 }
-
-                const payload = {
-                    name: formItem.name.trim(),
-                    category: formItem.category,
-                    price: Number(formItem.price),
-                    purchase_rate: Number(formItem.purchase_rate || 0),
-                    max_discount: Number(formItem.max_discount || 0),
-                    purchased_from: formItem.purchased_from?.trim() || '',
-                    purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
-                    quantity_unit: formItem.quantity_unit || 'Per Piece',
-                    supplier_phone: formItem.supplier_phone,
-                    supplier_company_name: formItem.supplier_company_name,
-                };
-                if (hasRestock) {
-                    payload.add_quantity = addQ;
-                    payload.restock_paid_amount = Number(formItem.restock_paid_amount || 0);
-                    payload.restock_purchase_date = formItem.restock_purchase_date instanceof Date
-                        ? formItem.restock_purchase_date.toISOString().split('T')[0]
-                        : String(formItem.restock_purchase_date || '').split('T')[0] || new Date().toISOString().split('T')[0];
+                const rate = Number(formItem.purchase_rate || 0);
+                const batchTotal = rate * addQ;
+                const paidRestock = Number(formItem.restock_paid_amount || 0);
+                if (paidRestock < 0 || paidRestock > batchTotal) {
+                    useToastStore.getState().showToast('Error', `Payment cannot exceed this batch total (Rs. ${batchTotal.toLocaleString()}).`, 'error');
+                    setIsSaving(false);
+                    return;
                 }
-
-                await productsService.update(formItem.id, payload);
-                if (addPaymentAmount && Number(addPaymentAmount) > 0 && supplierTxnInfo?.txn_id) {
-                    const payAmt = Number(addPaymentAmount);
-                    if (payAmt > supplierTxnInfo.remaining) {
-                        useToastStore.getState().showToast('Error', `Payment cannot exceed remaining amount: Rs. ${supplierTxnInfo.remaining}`, 'error');
-                        setIsSaving(false);
-                        return;
-                    }
-                    await purchasesService.updatePayment(supplierTxnInfo.txn_id, payAmt);
-                }
-            } else {
-                const payload = {
-                    name: formItem.name.trim(),
-                    category: formItem.category,
-                    price: Number(formItem.price),
-                    purchase_rate: Number(formItem.purchase_rate),
-                    max_discount: Number(formItem.max_discount),
-                    purchased_from: formItem.purchased_from,
-                    total_quantity: Number(formItem.total_quantity),
-                    purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
-                    paid_amount: Number(formItem.paid_amount || 0),
-                    quantity_unit: formItem.quantity_unit,
-                    supplier_phone: formItem.supplier_phone,
-                    supplier_company_name: formItem.supplier_company_name,
-                };
-                await productsService.create(payload);
             }
+
+            const payload = {
+                name: formItem.name.trim(),
+                category: formItem.category,
+                price: Number(formItem.price),
+                purchase_rate: Number(formItem.purchase_rate || 0),
+                max_discount: Number(formItem.max_discount || 0),
+                purchased_from: formItem.purchased_from?.trim() || '',
+                purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
+                quantity_unit: formItem.quantity_unit || 'Per Piece',
+                supplier_phone: formItem.supplier_phone,
+                supplier_company_name: formItem.supplier_company_name,
+            };
+            if (hasRestock) {
+                payload.add_quantity = addQ;
+                payload.restock_paid_amount = Number(formItem.restock_paid_amount || 0);
+                payload.restock_purchase_date = formItem.restock_purchase_date instanceof Date
+                    ? formItem.restock_purchase_date.toISOString().split('T')[0]
+                    : String(formItem.restock_purchase_date || '').split('T')[0] || new Date().toISOString().split('T')[0];
+            }
+
+            await productsService.update(formItem.id, payload);
+            if (addPaymentAmount && Number(addPaymentAmount) > 0 && supplierTxnInfo?.txn_id) {
+                const payAmt = Number(addPaymentAmount);
+                if (payAmt > supplierTxnInfo.remaining) {
+                    useToastStore.getState().showToast('Error', `Payment cannot exceed remaining amount: Rs. ${supplierTxnInfo.remaining}`, 'error');
+                    setIsSaving(false);
+                    return;
+                }
+                await purchasesService.updatePayment(supplierTxnInfo.txn_id, payAmt);
+            }
+            
             setModalVisible(false);
-            useToastStore.getState().showToast('Saved', formItem.id ? 'Product updated successfully.' : 'Product saved successfully.', 'success');
+            useToastStore.getState().showToast('Saved', 'Product updated successfully.', 'success');
             useDataRefreshStore.getState().bumpInventory();
             fetchProductsAndSuppliers();
         } catch (error) {
@@ -314,19 +341,30 @@ export default function ProductsScreen() {
     };
 
     const confirmDelete = (id) => {
-        Alert.alert("Delete Product", "Are you sure you want to delete this product?", [
+        const product = products.find(p => p.id === id);
+        if (!product) return;
+        
+        // Check if product is already in pending list
+        if (isProductIdInPendingList(id)) {
+            useToastStore.getState().showToast('Error', 'This product is already in the pending list.', 'error');
+            return;
+        }
+        
+        Alert.alert("Delete Product", `Add "${product.name}" to pending deletions?`, [
             { text: "Cancel", style: "cancel" },
             {
-                text: "Delete",
-                style: "destructive",
-                onPress: async () => {
-                    try {
-                        await productsService.delete(id);
-                        useToastStore.getState().showToast('Deleted', 'Product deleted successfully!', 'success');
-                        fetchProductsAndSuppliers();
-                    } catch (err) {
-                        useToastStore.getState().showToast("Error", err.response?.data?.error || "Could not delete product", "error");
-                    }
+                text: "Add to Pending",
+                style: "default",
+                onPress: () => {
+                    const newItem = {
+                        action: 'delete',
+                        name: product.name,
+                        data: product
+                    };
+                    
+                    setPendingItems(prev => [...prev, newItem]);
+                    setIsSideListVisible(true);
+                    useToastStore.getState().showToast('Added to Pending', 'Product added to pending deletions.', 'success');
                 }
             }
         ]);
@@ -357,6 +395,90 @@ export default function ProductsScreen() {
             return 0;
         });
     }, [products, search, activeFilter, lowStockLimit, sortBy]);
+
+    // Side List Handlers
+    const handleRemovePendingItem = (index) => {
+        setPendingItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleClearAllPending = () => {
+        Alert.alert('Clear All', 'Clear all pending changes?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Clear All',
+                style: 'destructive',
+                onPress: () => setPendingItems([])
+            }
+        ]);
+    };
+
+    // Check if product ID already exists in pending list
+    const isProductIdInPendingList = (productId) => {
+        return pendingItems.some(item => {
+            if (item.action === 'add') {
+                // For new items, we don't have an ID yet, so check by name
+                return item.name.toLowerCase().trim() === productId.toLowerCase().trim();
+            } else if (item.action === 'delete') {
+                // For deletions, check by actual ID
+                return item.data.id === productId;
+            }
+            return false;
+        });
+    };
+
+    const handleProcessPendingItems = async () => {
+        if (pendingItems.length === 0) return;
+        
+        Alert.alert('Process Changes', `Process ${pendingItems.length} pending changes? This cannot be undone.`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Process',
+                style: 'default',
+                onPress: async () => {
+                    setIsProcessing(true);
+                    let successCount = 0;
+                    let errorCount = 0;
+                    const errors = [];
+
+                    try {
+                        // Process items in order
+                        for (const item of pendingItems) {
+                            try {
+                                if (item.action === 'add') {
+                                    await productsService.create(item.data);
+                                    successCount++;
+                                } else if (item.action === 'delete') {
+                                    await productsService.delete(item.data.id);
+                                    successCount++;
+                                }
+                            } catch (err) {
+                                errorCount++;
+                                errors.push(`${item.action === 'add' ? 'Adding' : 'Deleting'} "${item.name}": ${err.response?.data?.error || err.message}`);
+                            }
+                        }
+
+                        // Show results
+                        if (errorCount > 0) {
+                            Alert.alert('Partial Success', `Processed ${successCount} items successfully. ${errorCount} items failed:\n\n${errors.join('\n')}`);
+                        } else {
+                            useToastStore.getState().showToast('Success', `Successfully processed ${successCount} items!`, 'success');
+                        }
+
+                        // Clear pending items and refresh products
+                        setPendingItems([]);
+                        setIsSideListVisible(false);
+                        useDataRefreshStore.getState().bumpInventory();
+                        fetchProductsAndSuppliers();
+                    } catch (err) {
+                        console.error('Error processing pending items:', err);
+                        useToastStore.getState().showToast('Error', 'An unexpected error occurred while processing items.', 'error');
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                }
+            }
+        ]);
+    };
 
     if (loading && !refreshing) {
         return (
@@ -566,6 +688,19 @@ export default function ProductsScreen() {
             <TouchableOpacity style={styles.fab} onPress={() => openModal()}>
                 <Icon name="add" size={28} color="#fff" />
             </TouchableOpacity>
+
+            {/* Pending Items Indicator */}
+            {pendingItems.length > 0 && (
+                <TouchableOpacity 
+                    style={[styles.pendingIndicator, { backgroundColor: colors.accent.primary }]}
+                    onPress={() => setIsSideListVisible(true)}
+                >
+                    <Icon name="list-outline" size={20} color="#fff" />
+                    <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>{pendingItems.length}</Text>
+                    </View>
+                </TouchableOpacity>
+            )}
 
             {/* Add / Edit Modal */}
             <Modal visible={modalVisible} transparent animationType="slide">
@@ -834,6 +969,19 @@ export default function ProductsScreen() {
                 colors={colors}
                 FONTS={FONTS}
             />
+
+            {/* Product Side List */}
+            <ProductSideList
+                visible={isSideListVisible}
+                onClose={() => setIsSideListVisible(false)}
+                pendingItems={pendingItems}
+                onRemoveItem={handleRemovePendingItem}
+                onClearAll={handleClearAllPending}
+                onProcessItems={handleProcessPendingItems}
+                isProcessing={isProcessing}
+                colors={colors}
+                FONTS={FONTS}
+            />
         </View>
     );
 }
@@ -905,6 +1053,39 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     actionBtnTxt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
     
     fab: { position: 'absolute', bottom: 24, right: 24, width: 60, height: 60, borderRadius: 30, backgroundColor: colors.accent.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
+    
+    pendingIndicator: { 
+        position: 'absolute', 
+        bottom: 24, 
+        left: 24, 
+        width: 50, 
+        height: 50, 
+        borderRadius: 25, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        elevation: 5, 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.3, 
+        shadowRadius: 4 
+    },
+    pendingBadge: { 
+        position: 'absolute', 
+        top: -4, 
+        right: -4, 
+        backgroundColor: colors.status.danger, 
+        borderRadius: 10, 
+        minWidth: 20, 
+        height: 20, 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+    },
+    pendingBadgeText: { 
+        color: '#fff', 
+        fontSize: 10, 
+        fontFamily: FONTS.bold, 
+        paddingHorizontal: 4 
+    },
     
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
     modalContent: { backgroundColor: colors.background.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' },
