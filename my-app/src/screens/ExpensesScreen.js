@@ -7,6 +7,7 @@ import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
+import GenericSideList from '../components/GenericSideList';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
@@ -21,6 +22,11 @@ export default function ExpensesScreen() {
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+
+    // Side List State
+    const [isSideListVisible, setIsSideListVisible] = useState(false);
+    const [pendingItems, setPendingItems] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Modal state
     const [modalVisible, setModalVisible] = useState(false);
@@ -66,17 +72,32 @@ export default function ExpensesScreen() {
             return;
         }
 
+        // For new expenses, add to pending list instead of direct save
+        if (!formItem.id) {
+            // Check if expense with same category and amount already exists in pending list
+            if (isExpenseInPendingList(formItem.category, formItem.amount)) {
+                useToastStore.getState().showToast("Error", "This expense is already in the pending list.", "error");
+                return;
+            }
+            
+            const newItem = {
+                action: 'add',
+                name: `${formItem.category} - Rs.${formItem.amount}`,
+                data: formItem
+            };
+            
+            setPendingItems(prev => [...prev, newItem]);
+            setIsSideListVisible(true);
+            setModalVisible(false);
+            return;
+        }
+
+        // For existing expenses (edit mode), keep the original logic
         setIsSaving(true);
         try {
-            if (formItem.id) {
-                await axios.put(`${API_URL}/expenses/${formItem.id}`, formItem, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-            } else {
-                await axios.post(`${API_URL}/expenses`, formItem, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-            }
+            await axios.put(`${API_URL}/expenses/${formItem.id}`, formItem, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
             setModalVisible(false);
             useToastStore.getState().showToast('Saved', 'Expense saved successfully!', 'success');
             fetchExpenses();
@@ -89,25 +110,33 @@ export default function ExpensesScreen() {
     };
 
     const confirmDelete = (id) => {
-        Alert.alert("Delete Expense", "Are you sure you want to delete this expense?", [
+        const expense = expenses.find(e => e.id === id);
+        if (!expense) return;
+        
+        // Check if expense is already in pending list
+        if (isExpenseInPendingList(expense.category, expense.amount)) {
+            useToastStore.getState().showToast("Error", "This expense is already in the pending list.", "error");
+            return;
+        }
+        
+        Alert.alert("Delete Expense", `Add "${expense.category} - Rs.${expense.amount}" to pending deletions?`, [
             { text: "Cancel", style: "cancel" },
             {
-                text: "Delete",
-                style: "destructive",
-                onPress: async () => {
-                    try {
-                        await axios.delete(`${API_URL}/expenses/${id}`, {
-                            headers: { Authorization: `Bearer ${token}` }
-                        });
-                        useToastStore.getState().showToast('Deleted', 'Expense deleted successfully!', 'success');
-                        fetchExpenses();
-                    } catch (err) {
-                        useToastStore.getState().showToast("Error", "Could not delete expense", "error");
-                    }
+                text: "Add to Pending",
+                style: "default",
+                onPress: () => {
+                    const newItem = {
+                        action: 'delete',
+                        name: `${expense.category} - Rs.${expense.amount}`,
+                        data: expense
+                    };
+                    
+                    setPendingItems(prev => [...prev, newItem]);
+                    setIsSideListVisible(true);
                 }
             }
         ])
-    }
+    };
 
     const openModal = (exp = null) => {
         if (exp) {
@@ -116,6 +145,94 @@ export default function ExpensesScreen() {
             setFormItem({ id: null, category: 'Petrol', amount: '', description: '', date: new Date().toISOString().split('T')[0] });
         }
         setModalVisible(true);
+    };
+
+    // Check if expense already exists in pending list
+    const isExpenseInPendingList = (category, amount) => {
+        return pendingItems.some(item => {
+            if (item.action === 'add') {
+                // For new items, check by category and amount combination
+                const [itemCategory, itemAmount] = item.name.split(' - Rs.');
+                return itemCategory === category && itemAmount === amount;
+            } else if (item.action === 'delete') {
+                // For deletions, check by actual ID
+                return item.data.category === category && item.data.amount === amount;
+            }
+            return false;
+        });
+    };
+
+    // Side List Handlers
+    const handleRemovePendingItem = (index) => {
+        setPendingItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleClearAllPending = () => {
+        Alert.alert('Clear All', 'Clear all pending changes?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Clear',
+                style: 'destructive',
+                onPress: () => setPendingItems([])
+            }
+        ]);
+    };
+
+    const handleProcessPendingItems = async () => {
+        if (pendingItems.length === 0) return;
+        
+        Alert.alert('Process Changes', `Process ${pendingItems.length} pending changes? This cannot be undone.`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Process',
+                style: 'default',
+                onPress: async () => {
+                    setIsProcessing(true);
+                    let successCount = 0;
+                    let errorCount = 0;
+                    const errors = [];
+
+                    try {
+                        // Process items in order
+                        for (const item of pendingItems) {
+                            try {
+                                if (item.action === 'add') {
+                                    await axios.post(`${API_URL}/expenses`, item.data, {
+                                        headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    successCount++;
+                                } else if (item.action === 'delete') {
+                                    await axios.delete(`${API_URL}/expenses/${item.data.id}`, {
+                                        headers: { Authorization: `Bearer ${token}` }
+                                    });
+                                    successCount++;
+                                }
+                            } catch (err) {
+                                errorCount++;
+                                errors.push(`${item.action === 'add' ? 'Adding' : 'Deleting'} "${item.name}": ${err.response?.data?.error || err.message}`);
+                            }
+                        }
+
+                        // Show results
+                        if (errorCount > 0) {
+                            Alert.alert('Processing Complete', `Processed ${successCount} items successfully. ${errorCount} items failed:\n\n${errors.join('\n')}`);
+                        } else {
+                            Alert.alert('Success', `Successfully processed ${successCount} items!`);
+                        }
+
+                        // Clear pending items and refresh expenses
+                        setPendingItems([]);
+                        setIsSideListVisible(false);
+                        fetchExpenses();
+                    } catch (err) {
+                        console.error('Error processing pending items:', err);
+                        Alert.alert('Error', 'An unexpected error occurred while processing items.');
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                }
+            }
+        ]);
     };
 
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
@@ -285,6 +402,33 @@ export default function ExpensesScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Pending Items Indicator */}
+            {pendingItems.length > 0 && (
+                <TouchableOpacity 
+                    style={styles.pendingIndicator} 
+                    onPress={() => setIsSideListVisible(true)}
+                >
+                    <Icon name="list-outline" size={20} color="#fff" />
+                    <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>{pendingItems.length}</Text>
+                    </View>
+                </TouchableOpacity>
+            )}
+
+            {/* Expense Side List */}
+            <GenericSideList
+                visible={isSideListVisible}
+                onClose={() => setIsSideListVisible(false)}
+                pendingItems={pendingItems}
+                onRemoveItem={handleRemovePendingItem}
+                onClearAll={handleClearAllPending}
+                onProcessItems={handleProcessPendingItems}
+                isProcessing={isProcessing}
+                colors={colors}
+                FONTS={FONTS}
+                entityType="expense"
+            />
         </View>
     );
 }
@@ -361,4 +505,39 @@ const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
     cancelBtnText: { color: colors.text.secondary, fontFamily: FONTS.bold, fontSize: 16 },
     saveBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: colors.accent.primary, alignItems: 'center' },
     saveBtnText: { color: '#fff', fontFamily: FONTS.bold, fontSize: 16 },
+    
+    // Pending indicator styles
+    pendingIndicator: {
+        position: 'absolute',
+        bottom: 30,
+        right: 20,
+        backgroundColor: colors.accent.primary,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 6,
+        elevation: 8,
+        zIndex: 1000
+    },
+    pendingBadge: {
+        position: 'absolute',
+        top: -5,
+        right: -5,
+        backgroundColor: '#ef4444',
+        borderRadius: 10,
+        width: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center'
+    },
+    pendingBadgeText: {
+        color: '#fff',
+        fontSize: 11,
+        fontFamily: FONTS.bold
+    }
 });
