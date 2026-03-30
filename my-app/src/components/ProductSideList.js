@@ -68,7 +68,11 @@ const ProductSideList = ({
                         {/* Content */}
                         <ScrollView 
                             style={styles.content}
-                            showsVerticalScrollIndicator={false}
+                            showsVerticalScrollIndicator={true} // Show scrollbar for better UX
+                            nestedScrollEnabled={true} // Enable smooth scrolling
+                            momentum={true} // Enable momentum scrolling for mobile
+                            decelerationRate="normal" // Smooth deceleration
+                            snapToInterval={16} // Snap to intervals for better UX
                         >
                             {pendingItems.length === 0 ? (
                                 <View style={styles.emptyContainer}>
@@ -214,7 +218,7 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         backgroundColor: colors.background.primary,
         borderTopLeftRadius: 20,
         borderTopRightRadius: 20,
-        maxHeight: '80%',
+        height: '80%', // Changed from maxHeight to fixed height
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -2 },
         shadowOpacity: 0.1,
@@ -250,8 +254,8 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     },
     content: {
         flex: 1,
-        paddingHorizontal: 20,
-        paddingBottom: 100, // Add padding for fixed bottom actions
+        paddingHorizontal: 16, // Reduced from 20 for more space
+        paddingBottom: 80, // Reduced from 100 for better scrolling
     },
     topSummary: {
         backgroundColor: colors.background.secondary,
@@ -275,8 +279,8 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
         backgroundColor: colors.background.secondary,
         borderTopWidth: 1,
         borderTopColor: colors.border.color,
-        paddingHorizontal: 20,
-        paddingVertical: 16,
+        paddingHorizontal: 16, // Reduced from 20
+        paddingVertical: 12, // Reduced from 16
         paddingBottom: 20, // Extra padding for safe area
     },
     emptyContainer: {
