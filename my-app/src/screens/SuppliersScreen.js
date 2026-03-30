@@ -8,6 +8,7 @@ import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
+import GenericSideList from '../components/GenericSideList';
 
 export default function SuppliersScreen() {
     const { colors, FONTS } = useAppTheme();
@@ -19,6 +20,11 @@ export default function SuppliersScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
+
+    // Side List State
+    const [isSideListVisible, setIsSideListVisible] = useState(false);
+    const [pendingItems, setPendingItems] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // CRUD State
     const [modalVisible, setModalVisible] = useState(false);

@@ -11,6 +11,7 @@ import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
+import GenericSideList from '../components/GenericSideList';
 
 export default function BuyersScreen() {
     const { colors, FONTS } = useAppTheme();
@@ -22,6 +23,11 @@ export default function BuyersScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [expandedId, setExpandedId] = useState(null);
+
+    // Side List State
+    const [isSideListVisible, setIsSideListVisible] = useState(false);
+    const [pendingItems, setPendingItems] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Form modal
     const [modalVisible, setModalVisible] = useState(false);
@@ -74,12 +80,43 @@ export default function BuyersScreen() {
 
     const handleSave = async () => {
         if (!formItem.name) { useToastStore.getState().showToast('Error', 'Customer name is required.', 'error'); return; }
+        
+        if (!formItem.id) {
+            // Check if customer with same name already exists in pending list
+            if (isCustomerIdInPendingList(formItem.name.trim())) {
+                useToastStore.getState().showToast('Error', 'This customer is already in the pending list.', 'error');
+                return;
+            }
+            
+            // For new customers, add to pending list instead of direct save
+            const payload = {
+                name: formItem.name.trim(),
+                phone: formItem.phone?.trim() || '',
+                address: formItem.address?.trim() || '',
+                company_name: formItem.company_name?.trim() || null,
+            };
+
+            const newItem = {
+                action: 'add',
+                name: formItem.name.trim(),
+                data: payload
+            };
+            
+            setPendingItems(prev => [...prev, newItem]);
+            setIsSideListVisible(true);
+            setModalVisible(false);
+            useToastStore.getState().showToast('Added to Pending', 'Customer added to pending list.', 'success');
+            return;
+        }
+        
+        // For existing customers (edit mode), keep the original logic
         const payload = {
             name: formItem.name.trim(),
             phone: formItem.phone?.trim() || '',
             address: formItem.address?.trim() || '',
             company_name: formItem.company_name?.trim() || null,
         };
+        
         if (formItem.id) {
             const rawPay = String(formItem.payment_amount ?? '').trim();
             if (rawPay !== '') {
@@ -98,10 +135,13 @@ export default function BuyersScreen() {
                 }
             }
         }
+        
         setIsSaving(true);
         try {
-            if (formItem.id) { await buyersService.update(formItem.id, payload); useToastStore.getState().showToast('Updated!', payload.payment_amount ? 'Payment recorded; profile updated.' : 'Customer updated.', 'success'); }
-            else { await buyersService.create(payload); useToastStore.getState().showToast('Added!', 'Customer added.', 'success'); }
+            if (formItem.id) { 
+                await buyersService.update(formItem.id, payload); 
+                useToastStore.getState().showToast('Updated!', payload.payment_amount ? 'Payment recorded; profile updated.' : 'Customer updated.', 'success'); 
+            }
             setModalVisible(false);
             fetchBuyers();
         } catch (e) {
@@ -110,12 +150,115 @@ export default function BuyersScreen() {
     };
 
     const confirmDelete = (id) => {
-        Alert.alert('Delete Customer', 'Are you sure? This cannot be undone.', [
+        const buyer = buyers.find(b => b.id === id);
+        if (!buyer) return;
+        
+        // Check if customer is already in pending list
+        if (isCustomerIdInPendingList(id)) {
+            useToastStore.getState().showToast('Error', 'This customer is already in the pending list.', 'error');
+            return;
+        }
+        
+        Alert.alert('Delete Customer', `Add "${buyer.name}" to pending deletions?`, [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: async () => {
-                try { await buyersService.delete(id); fetchBuyers(); useToastStore.getState().showToast('Deleted', 'Customer removed.', 'success'); }
-                catch (e) { useToastStore.getState().showToast('Error', 'Failed to delete.', 'error'); }
-            }}
+            {
+                text: 'Add to Pending',
+                style: 'default',
+                onPress: () => {
+                    const newItem = {
+                        action: 'delete',
+                        name: buyer.name,
+                        data: buyer
+                    };
+                    
+                    setPendingItems(prev => [...prev, newItem]);
+                    setIsSideListVisible(true);
+                    useToastStore.getState().showToast('Added to Pending', 'Customer added to pending deletions.', 'success');
+                }
+            }
+        ]);
+    };
+
+    // Check if customer ID already exists in pending list
+    const isCustomerIdInPendingList = (customerId) => {
+        return pendingItems.some(item => {
+            if (item.action === 'add') {
+                // For new items, check by name
+                return item.name.toLowerCase().trim() === customerId.toLowerCase().trim();
+            } else if (item.action === 'delete') {
+                // For deletions, check by actual ID
+                return item.data.id === customerId;
+            }
+            return false;
+        });
+    };
+
+    // Side List Handlers
+    const handleRemovePendingItem = (index) => {
+        setPendingItems(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const handleClearAllPending = () => {
+        Alert.alert('Clear All', 'Clear all pending changes?', [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Clear All',
+                style: 'destructive',
+                onPress: () => setPendingItems([])
+            }
+        ]);
+    };
+
+    const handleProcessPendingItems = async () => {
+        if (pendingItems.length === 0) return;
+        
+        Alert.alert('Process Changes', `Process ${pendingItems.length} pending changes? This cannot be undone.`, [
+            { text: 'Cancel', style: 'cancel' },
+            {
+                text: 'Process',
+                style: 'default',
+                onPress: async () => {
+                    setIsProcessing(true);
+                    let successCount = 0;
+                    let errorCount = 0;
+                    const errors = [];
+
+                    try {
+                        // Process items in order
+                        for (const item of pendingItems) {
+                            try {
+                                if (item.action === 'add') {
+                                    await buyersService.create(item.data);
+                                    successCount++;
+                                } else if (item.action === 'delete') {
+                                    await buyersService.delete(item.data.id);
+                                    successCount++;
+                                }
+                            } catch (err) {
+                                errorCount++;
+                                errors.push(`${item.action === 'add' ? 'Adding' : 'Deleting'} "${item.name}": ${err.response?.data?.error || err.message}`);
+                            }
+                        }
+
+                        // Show results
+                        if (errorCount > 0) {
+                            Alert.alert('Partial Success', `Processed ${successCount} items successfully. ${errorCount} items failed:\n\n${errors.join('\n')}`);
+                        } else {
+                            useToastStore.getState().showToast('Success', `Successfully processed ${successCount} items!`, 'success');
+                        }
+
+                        // Clear pending items and refresh buyers
+                        setPendingItems([]);
+                        setIsSideListVisible(false);
+                        fetchBuyers();
+                    } catch (err) {
+                        console.error('Error processing pending items:', err);
+                        useToastStore.getState().showToast('Error', 'An unexpected error occurred while processing items.', 'error');
+                    } finally {
+                        setIsProcessing(false);
+                    }
+                }
+            }
         ]);
     };
 
@@ -255,6 +398,19 @@ export default function BuyersScreen() {
                 }
             />
 
+            {/* Pending Items Indicator */}
+            {pendingItems.length > 0 && (
+                <TouchableOpacity 
+                    style={[styles.pendingIndicator, { backgroundColor: colors.accent.primary }]}
+                    onPress={() => setIsSideListVisible(true)}
+                >
+                    <Icon name="list-outline" size={20} color="#fff" />
+                    <View style={styles.pendingBadge}>
+                        <Text style={styles.pendingBadgeText}>{pendingItems.length}</Text>
+                    </View>
+                </TouchableOpacity>
+            )}
+
             {/* Add/Edit Modal */}
             <Modal visible={modalVisible} transparent animationType="slide">
                 <View style={styles.modalOverlay}>
@@ -311,6 +467,20 @@ export default function BuyersScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* Customer Side List */}
+            <GenericSideList
+                visible={isSideListVisible}
+                onClose={() => setIsSideListVisible(false)}
+                pendingItems={pendingItems}
+                onRemoveItem={handleRemovePendingItem}
+                onClearAll={handleClearAllPending}
+                onProcessItems={handleProcessPendingItems}
+                isProcessing={isProcessing}
+                colors={colors}
+                FONTS={FONTS}
+                entityType="customer"
+            />
         </View>
     );
 }
@@ -372,4 +542,38 @@ const getStyles = (colors, FONTS, SW) => StyleSheet.create({
     cancelBtnTxt: { color: colors.text.secondary, fontFamily: FONTS.bold, fontSize: 15 },
     saveBtn: { flex: 1, padding: 14, borderRadius: 12, backgroundColor: colors.accent.primary, alignItems: 'center' },
     saveBtnTxt: { color: '#fff', fontFamily: FONTS.bold, fontSize: 15 },
+
+    // Pending List Styles
+    pendingIndicator: { 
+        position: 'absolute', 
+        bottom: 24, 
+        left: 24, 
+        width: 50, 
+        height: 50, 
+        borderRadius: 25, 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        elevation: 5, 
+        shadowColor: '#000', 
+        shadowOffset: { width: 0, height: 4 }, 
+        shadowOpacity: 0.3, 
+        shadowRadius: 4 
+    },
+    pendingBadge: { 
+        position: 'absolute', 
+        top: -4, 
+        right: -4, 
+        backgroundColor: colors.status.danger, 
+        borderRadius: 10, 
+        minWidth: 20, 
+        height: 20, 
+        justifyContent: 'center', 
+        alignItems: 'center' 
+    },
+    pendingBadgeText: { 
+        color: '#fff', 
+        fontSize: 10, 
+        fontFamily: FONTS.bold, 
+        paddingHorizontal: 4 
+    },
 });
