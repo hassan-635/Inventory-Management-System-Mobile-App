@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# npm
+package-lock.json
+package.json
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# logs
+*.log
