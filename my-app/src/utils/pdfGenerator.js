@@ -75,11 +75,16 @@ const PDF_CSS = `
 
 export const sharePdf = async (htmlContent, defaultFileName) => {
     try {
+        // Generate random filename for security
+        const randomId = Math.random().toString(36).substring(2, 15); // Random string
+        const timestamp = new Date().toISOString().split('T')[0]; // Date part
+        const randomFileName = `Report_${timestamp}_${randomId}.pdf`;
+        
         const { uri } = await Print.printToFileAsync({
             html: htmlContent,
             base64: false
         });
-        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: defaultFileName });
+        await Sharing.shareAsync(uri, { UTI: '.pdf', mimeType: 'application/pdf', dialogTitle: randomFileName });
     } catch (error) {
         console.error("PDF Generation Error: ", error);
         throw error;
