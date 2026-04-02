@@ -104,7 +104,7 @@ export default function MonthlyReportScreen() {
 
     const { summary, expense_breakdown, activity_lists, company_wise_summary } = reportData;
     const cashSalesList = activity_lists?.cash_sales_by_salesman || [];
-    const udhaarList = activity_lists?.udhaar_payments_received || [];
+    const creditList = activity_lists?.credit_payments_received || [];
     const supplierPayments = activity_lists?.payments_made_to_suppliers || [];
     const companySummary = company_wise_summary || [];
 
@@ -213,7 +213,7 @@ export default function MonthlyReportScreen() {
                             <Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(summary.total_cash_sales_this_month || 0).toLocaleString()}</Text>
                         </View>
                         <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>Udhaar Installments Received</Text>
+                            <Text style={styles.ledgerText}>Credit Installments Received</Text>
                             <Text style={[styles.ledgerAmt, { color: '#a78bfa' }]}>Rs. {summary.total_sales_collected_this_month.toLocaleString()}</Text>
                         </View>
                         <View style={[styles.ledgerRow, styles.ledgerRowBorder]}>
@@ -287,19 +287,19 @@ export default function MonthlyReportScreen() {
                     </View>
                 )}
 
-                {/* Udhaar Installments Received */}
-                {udhaarList.length > 0 && (
+                {/* Credit Installments Received */}
+                {creditList.length > 0 && (
                     <View style={styles.whiteCard}>
                         <View style={styles.cardHeaderRow}>
                             <Icon name="people" size={18} color="#a78bfa" />
-                            <Text style={[styles.cardHeader, { color: '#a78bfa' }]}>Udhaar Installments Received</Text>
+                            <Text style={[styles.cardHeader, { color: '#a78bfa' }]}>Credit Installments Received</Text>
                         </View>
                         <View style={[styles.tableRow, styles.tableHeaderRow]}>
                             <Text style={[styles.tableHeaderText, { flex: 2 }]}>Name</Text>
                             <Text style={[styles.tableHeaderText, { flex: 2 }]}>Phone</Text>
                             <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Received</Text>
                         </View>
-                        {udhaarList.map((b) => (
+                        {creditList.map((b) => (
                             <View key={b.id} style={styles.tableRow}>
                                 <Text style={[styles.tableCell, { flex: 2 }]} numberOfLines={1}>{b.name}</Text>
                                 <Text style={[styles.tableCell, { flex: 2, color: colors.text.muted }]} numberOfLines={1}>{b.phone}</Text>
@@ -394,7 +394,7 @@ export default function MonthlyReportScreen() {
                             <Text style={[styles.cardHeader, { color: colors.accent.primary }]}>Month day-by-day breakdown</Text>
                         </View>
                         <Text style={styles.dailyHelperText}>
-                            Har din: sales count, total invoice value, cash received, new udhaar, returns, expenses — frontend jaisa.
+                            Daily: sales count, total invoice value, cash received, new credit, returns, expenses.
                         </Text>
                         {(!reportData.daily_breakdown || reportData.daily_breakdown.length === 0) ? (
                             <View style={{ alignItems: 'center', paddingVertical: 30 }}>
@@ -415,7 +415,7 @@ export default function MonthlyReportScreen() {
                                         <Text style={[styles.tableHeaderText, styles.dailyColNum]}>Sales #</Text>
                                         <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Total sale</Text>
                                         <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Cash in</Text>
-                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Udhaar</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Credit</Text>
                                         <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Returns</Text>
                                         <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Expenses</Text>
                                     </View>
@@ -433,8 +433,8 @@ export default function MonthlyReportScreen() {
                                             <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: '#22c55e' }]}>
                                                 {day.cash_in > 0 ? `Rs.${day.cash_in.toLocaleString()}` : '-'}
                                             </Text>
-                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: day.udhaar_given > 0 ? '#f59e0b' : colors.text.secondary }]}>
-                                                {day.udhaar_given > 0 ? `Rs.${day.udhaar_given.toLocaleString()}` : '-'}
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: day.credit_given > 0 ? '#f59e0b' : colors.text.secondary }]}>
+                                                {day.credit_given > 0 ? `Rs.${day.credit_given.toLocaleString()}` : '-'}
                                             </Text>
                                             <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: Number(day.returned_sales_value || 0) > 0 ? '#ef4444' : colors.text.secondary }]}>
                                                 {Number(day.returned_sales_value || 0) > 0 ? `Rs.${Number(day.returned_sales_value).toLocaleString()}` : '-'}
@@ -456,7 +456,7 @@ export default function MonthlyReportScreen() {
                                             Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.cash_in, 0).toLocaleString()}
                                         </Text>
                                         <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#f59e0b' }]}>
-                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.udhaar_given, 0).toLocaleString()}
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.credit_given, 0).toLocaleString()}
                                         </Text>
                                         <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#ef4444' }]}>
                                             Rs.{reportData.daily_breakdown.reduce((s, d) => s + Number(d.returned_sales_value || 0), 0).toLocaleString()}

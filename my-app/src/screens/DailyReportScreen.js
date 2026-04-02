@@ -149,7 +149,7 @@ export default function DailyReportScreen() {
 
     const totalSales = sales.reduce((s, x) => s + Number(x.total_amount || 0), 0);
     const totalCash = sales.reduce((s, x) => s + Number(x.paid_amount || 0), 0);
-    const totalUdhaar = totalSales - totalCash;
+    const totalCredit = totalSales - totalCash;
     const totalReturns = returns.reduce((s, x) => s + Number(x.total_amount || 0), 0);
     const supplierTotal = supplierTxns.reduce((s, x) => s + Number(x.total_amount || 0), 0);
     const supplierPaid = supplierTxns.reduce((s, x) => s + Number(x.paid_amount || 0), 0);
@@ -212,8 +212,8 @@ export default function DailyReportScreen() {
                         <Icon name="cash-outline" size={20} color="#22c55e" style={styles.statIcon} />
                         <Text style={styles.statTitle}>Cash Received</Text>
                         <Text style={[styles.statValue, { color: '#22c55e' }]}>Rs. {totalCash.toLocaleString()}</Text>
-                        <Text style={[styles.statSub, { color: totalUdhaar > 0 ? '#ef4444' : colors.text.secondary }]}>
-                            Udhaar: Rs. {totalUdhaar.toLocaleString()}
+                        <Text style={[styles.statSub, { color: totalCredit > 0 ? '#ef4444' : colors.text.secondary }]}>
+                            Credit: Rs. {totalCredit.toLocaleString()}
                         </Text>
                     </View>
                 </View>
@@ -333,7 +333,7 @@ export default function DailyReportScreen() {
                                             Rs. {t.toLocaleString()}
                                         </Text>
                                         <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: u > 0 ? '#ef4444' : '#22c55e', fontFamily: FONTS.bold }]}>
-                                            {u > 0 ? `Udhaar` : '✓ Clear'}
+                                            {u > 0 ? `Credit` : '✓ Clear'}
                                         </Text>
                                     </View>
                                 );

@@ -52,7 +52,7 @@ export default function CompaniesScreen() {
         }
         const company = payModal.company;
         if (amount > company.total_remaining) {
-            Alert.alert('Zyada amount', `Company max Rs. ${company.total_remaining} aap ko dena baqi hai (ye receive kren).`);
+            Alert.alert('Excess Amount', `Company max Rs. ${company.total_remaining} is owed to you (please receive it).`);
             return;
         }
         setPaying(true);
@@ -233,7 +233,7 @@ export default function CompaniesScreen() {
                     <View style={[styles.modalBox, SCREEN_WIDTH > 768 && { width: '60%', alignSelf: 'center', borderTopLeftRadius: 16, borderTopRightRadius: 16 }]}>
                         <Text style={styles.modalTitle}>Receive payment — {payModal.company?.company_name}</Text>
                         <Text style={styles.modalSub}>
-                            Unpaid / udhaar (aap ko milna hai): Rs. {payModal.company?.total_remaining?.toLocaleString()}
+                            Unpaid / credit (you have to receive): Rs. {payModal.company?.total_remaining?.toLocaleString()}
                         </Text>
                         <TextInput
                             style={styles.modalInput}

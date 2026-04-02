@@ -94,14 +94,14 @@ export const sharePdf = async (htmlContent, defaultFileName) => {
 export const generateDailyReportPdf = async (reportDate, salesToday, returnsToday, productsToday, supplierTxns, buyersToday, suppliersToday) => {
     const totalSalesAmount = salesToday.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
     const totalCashPaid = salesToday.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
-    const totalUdhaarGiven = totalSalesAmount - totalCashPaid;
+    const totalCreditGiven = totalSalesAmount - totalCashPaid;
     
     const totalReturnsAmount = returnsToday.reduce((sum, r) => sum + Number(r.total_amount || 0), 0);
     const totalReturnsQty = returnsToday.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
     
     const supplierTotalAmount = supplierTxns.reduce((sum, t) => sum + Number(t.total_amount || 0), 0);
     const supplierTotalPaid = supplierTxns.reduce((sum, t) => sum + Number(t.paid_amount || 0), 0);
-    const totalUdhaarToSuppliers = supplierTotalAmount - supplierTotalPaid;
+    const totalCreditToSuppliers = supplierTotalAmount - supplierTotalPaid;
 
     const htmlContent = `
         <html>
@@ -121,7 +121,7 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
                     </div>
                     <div class="stat-row"><span>Total Selling Amount:</span><span class="stat-value">Rs. ${totalSalesAmount.toLocaleString()}</span></div>
                     <div class="stat-row"><span>Cash Received:</span><span class="stat-value text-success">Rs. ${totalCashPaid.toLocaleString()}</span></div>
-                    <div class="stat-row highlight"><span>Given on Udhaar:</span><span class="stat-value ${totalUdhaarGiven > 0 ? 'text-danger' : ''}">Rs. ${totalUdhaarGiven.toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>Given on Credit:</span><span class="stat-value ${totalCreditGiven > 0 ? 'text-danger' : ''}">Rs. ${totalCreditGiven.toLocaleString()}</span></div>
                 </div>
 
                 <div class="stat-card-premium purple">
@@ -131,7 +131,7 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
                     </div>
                     <div class="stat-row"><span>Total Bill (Purchases):</span><span class="stat-value">Rs. ${supplierTotalAmount.toLocaleString()}</span></div>
                     <div class="stat-row"><span>Cash Paid:</span><span class="stat-value text-success">Rs. ${supplierTotalPaid.toLocaleString()}</span></div>
-                    <div class="stat-row highlight"><span>Owed to Suppliers:</span><span class="stat-value ${totalUdhaarToSuppliers > 0 ? 'text-danger' : ''}">Rs. ${totalUdhaarToSuppliers.toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>Owed to Suppliers:</span><span class="stat-value ${totalCreditToSuppliers > 0 ? 'text-danger' : ''}">Rs. ${totalCreditToSuppliers.toLocaleString()}</span></div>
                 </div>
 
                 <div class="stat-card-premium red">
@@ -194,7 +194,7 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
                                 <td>${sale.quantity}</td>
                                 <td><strong>Rs. ${t.toLocaleString()}</strong></td>
                                 <td class="text-success"><strong>Rs. ${p.toLocaleString()}</strong></td>
-                                <td>${u > 0 ? '<span class="text-danger">Udhaar: Rs.' + u.toLocaleString() + '</span>' : '<span class="text-success">Clear</span>'}</td>
+                                <td>${u > 0 ? '<span class="text-danger">Credit: Rs.' + u.toLocaleString() + '</span>' : '<span class="text-success">Clear</span>'}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
@@ -216,7 +216,7 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
 
 /**
  * @param {object} [fileMeta]
- * @param {'quotation'|'cash_invoice'|'udhaar_invoice'} [fileMeta.kind]
+ * @param {'quotation'|'cash_invoice'|'credit_invoice'} [fileMeta.kind]
  */
 export const generateInvoicePdf = async (transactionInfo, cartItems, customerName, totalBill, discount, finalAmount, customPaymentDate, fileMeta = {}) => {
     let htmlContent = `
@@ -275,7 +275,7 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
                         <tr><td colspan="3" style="text-align:right; font-size:14px;"><strong>GRAND TOTAL:</strong></td><td style="text-align:right; font-size:14px;"><strong>Rs. ${finalAmount.toLocaleString()}</strong></td></tr>
                         <tr><td colspan="3" style="text-align:right; color:#16a34a;"><strong>PAID AMOUNT:</strong></td><td style="text-align:right; color:#16a34a;"><strong>Rs. ${Number(transactionInfo?.amount || 0).toLocaleString()}</strong></td></tr>
                         ${Number(finalAmount) - Number(transactionInfo?.amount || 0) > 0 ? `
-                            <tr><td colspan="3" style="text-align:right; color:#dc2626;"><strong>REMAINING (UDHAAR):</strong></td><td style="text-align:right; color:#dc2626;"><strong>Rs. ${(Number(finalAmount) - Number(transactionInfo?.amount || 0)).toLocaleString()}</strong></td></tr>
+                            <tr><td colspan="3" style="text-align:right; color:#dc2626;"><strong>REMAINING (CREDIT):</strong></td><td style="text-align:right; color:#dc2626;"><strong>Rs. ${(Number(finalAmount) - Number(transactionInfo?.amount || 0)).toLocaleString()}</strong></td></tr>
                         ` : ''}
                     </tfoot>
                 </table>
@@ -291,7 +291,7 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
 
     const kind = fileMeta.kind || 'cash_invoice';
     const typeLabel =
-        kind === 'quotation' ? 'Quotation' : kind === 'udhaar_invoice' ? 'UdhaarInvoice' : 'SalesInvoice';
+        kind === 'quotation' ? 'Quotation' : kind === 'credit_invoice' ? 'CreditInvoice' : 'SalesInvoice';
     const dateStr = new Date().toISOString().split('T')[0];
     const cust = pdfNamePart(customerName || 'Walk-in', 32);
     const fileName = `InventoryPro_${typeLabel}_${cust}_${dateStr}.pdf`;
@@ -339,7 +339,7 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                     <div class="premium-list-container">
                         <div class="stat-row"><span>Total Sales Invoices Made:</span><span class="stat-value">Rs. ${(summary.total_sales_created_value || 0).toLocaleString()}</span></div>
                         <div class="stat-row"><span>Cash Sales (Fully Paid):</span><span class="stat-value text-success">Rs. ${(summary.total_cash_sales_this_month || 0).toLocaleString()}</span></div>
-                        <div class="stat-row"><span>Udhaar Installments Received:</span><span class="stat-value" style="color:#0ea5e9;">Rs. ${(summary.total_sales_collected_this_month || 0).toLocaleString()}</span></div>
+                        <div class="stat-row"><span>Credit Installments Received:</span><span class="stat-value" style="color:#0ea5e9;">Rs. ${(summary.total_sales_collected_this_month || 0).toLocaleString()}</span></div>
                         <div class="stat-row highlight"><span>New Credit Given This Month:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_credit_given_this_month || 0).toLocaleString()}</span></div>
                     </div>
                     
@@ -426,7 +426,7 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
             <div class="premium-table-wrap">
                 <table class="premium-table">
                     <thead>
-                        <tr><th>Date</th><th style="text-align:right;">Sales (#)</th><th style="text-align:right;">Total Sale Value</th><th style="text-align:right;">Cash Received</th><th style="text-align:right;">New Udhaar</th><th style="text-align:right;">Returns Value</th><th style="text-align:right;">Expenses</th></tr>
+                        <tr><th>Date</th><th style="text-align:right;">Sales (#)</th><th style="text-align:right;">Total Sale Value</th><th style="text-align:right;">Cash Received</th><th style="text-align:right;">New Credit</th><th style="text-align:right;">Returns Value</th><th style="text-align:right;">Expenses</th></tr>
                     </thead>
                     <tbody>
                         ${daily_breakdown?.map(day => `
@@ -435,7 +435,7 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                                 <td style="text-align:right;">${day.num_new_sales || '-'}</td>
                                 <td style="text-align:right; color:#0ea5e9;">${day.total_sales ? 'Rs. ' + day.total_sales.toLocaleString() : '-'}</td>
                                 <td style="text-align:right;" class="text-success">${day.cash_in ? 'Rs. ' + day.cash_in.toLocaleString() : '-'}</td>
-                                <td style="text-align:right; color:#f59e0b;">${day.udhaar_given ? 'Rs. ' + day.udhaar_given.toLocaleString() : '-'}</td>
+                                <td style="text-align:right; color:#f59e0b;">${day.credit_given ? 'Rs. ' + day.credit_given.toLocaleString() : '-'}</td>
                                 <td style="text-align:right;" class="text-danger">${day.returned_sales_value ? 'Rs. ' + day.returned_sales_value.toLocaleString() : '-'}</td>
                                 <td style="text-align:right;" class="text-danger">${day.expenses ? 'Rs. ' + day.expenses.toLocaleString() : '-'}</td>
                             </tr>
@@ -655,7 +655,7 @@ function salesAnalyticsInnerHtml(sales, analytics, periodLabel) {
                     <div style="font-size:18px;font-weight:700;color:#6d28d9;">${fmtRs(totalPaid)}</div>
                 </div>
                 <div class="stat-card-premium red" style="flex:1;min-width:140px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;background:#fff;">
-                    <div style="font-size:10px;color:#64748b;font-weight:700;">PENDING (UDHAAR)</div>
+                    <div style="font-size:10px;color:#64748b;font-weight:700;">PENDING (CREDIT)</div>
                     <div style="font-size:18px;font-weight:700;color:#b91c1c;">${fmtRs(totalPending)}</div>
                 </div>
                 <div style="flex:1;min-width:140px;border:1px solid #e2e8f0;border-radius:8px;padding:12px;background:#fff;border-top:3px solid #3b82f6;">

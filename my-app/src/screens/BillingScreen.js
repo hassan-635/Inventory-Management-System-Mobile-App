@@ -17,7 +17,7 @@ import { useDataRefreshStore } from '../store/dataRefreshStore';
 const BILL_TYPES = [
     { key: 'QUOTATION', label: '📋 Quotation' },
     { key: 'REAL', label: '✅ Original' },
-    { key: 'CREDIT', label: '💳 Udhaar' },
+    { key: 'CREDIT', label: '💳 Credit' },
 ];
 
 const UNIT_OPTIONS = ['Per Piece', 'Per Dozen', 'Per Box', 'Per Kg', 'Per Liter', 'Per Meter', 'Per Roll', 'Per Pack', 'Per Case'];
@@ -104,7 +104,7 @@ export default function BillingScreen() {
     const [companyName, setCompanyName] = useState('');
     const [showCompanyDD, setShowCompanyDD] = useState(false);
 
-    // Udhaar State
+    // Credit State
     const [paidAmount, setPaidAmount] = useState('');
 
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
@@ -247,7 +247,7 @@ export default function BillingScreen() {
         const isCreditBill = billType === 'CREDIT';
 
         if (isCreditBill && (!buyerSearch.trim() || !buyerPhone.trim())) {
-            Alert.alert('Udhaar Validation Error', 'Udhaar bills require both Customer Name and Phone Number.');
+            Alert.alert('Credit Validation Error', 'Credit bills require both Customer Name and Phone Number.');
             return;
         }
 
@@ -255,7 +255,7 @@ export default function BillingScreen() {
             setSubmitting(true);
             let activeBuyerId = selectedBuyer?.id || null;
 
-            // Udhaar Auto-Create Buyer (Frontend Parity)
+            // Credit Auto-Create Buyer (Frontend Parity)
             if (isCreditBill && !activeBuyerId) {
                 const buyerPayload = {
                     name: buyerSearch.trim(),
@@ -267,7 +267,7 @@ export default function BillingScreen() {
                 activeBuyerId = buyerRes.data?.[0]?.id || buyerRes.data?.id || buyerRes.id;
                 
                 if (!activeBuyerId) {
-                    throw new Error("Failed to auto-create customer for Udhaar bill");
+                    throw new Error("Failed to auto-create customer for Credit bill");
                 }
             }
 
@@ -295,7 +295,7 @@ export default function BillingScreen() {
                 await salesService.create(payload);
             }
 
-            useToastStore.getState().showToast('Success', `${isCreditBill ? 'Udhaar' : 'Original'} Bill saved successfully!`, 'success');
+            useToastStore.getState().showToast('Success', `${isCreditBill ? 'Credit' : 'Original'} Bill saved successfully!`, 'success');
             useDataRefreshStore.getState().bumpInventory();
 
             // Save sale data for PDF download
@@ -313,7 +313,7 @@ export default function BillingScreen() {
                 discount: 0,
                 finalAmount: totalAmount,
                 customPaymentDate: null,
-                invoiceKind: isCreditBill ? 'udhaar_invoice' : 'cash_invoice',
+                invoiceKind: isCreditBill ? 'credit_invoice' : 'cash_invoice',
             });
             
             resetForm();
@@ -442,7 +442,7 @@ export default function BillingScreen() {
                     </View>
                 )}
 
-                {/* Udhaar Specific Fields */}
+                {/* Credit Specific Fields */}
                 {billType === 'CREDIT' && (
                     <View style={styles.row}>
                         <View style={[styles.inputGroup, { flex: 1, marginRight: 6 }]}>
@@ -567,7 +567,7 @@ export default function BillingScreen() {
                                 <Text style={styles.totalVal}>Rs. {Number(paidAmount || 0).toLocaleString()}</Text>
                             </View>
                             <View style={styles.totalRow}>
-                                <Text style={[styles.totalLabel, { color: colors.status.danger }]}>Remaining (Udhaar)</Text>
+                                <Text style={[styles.totalLabel, { color: colors.status.danger }]}>Remaining (Credit)</Text>
                                 <Text style={[styles.totalVal, { color: colors.status.danger, fontWeight: 'bold' }]}>Rs. {remaining.toLocaleString()}</Text>
                             </View>
                         </>

@@ -107,7 +107,7 @@ export default function SalesScreen() {
                 useToastStore.getState().showToast('Done', 'Poori line return / undo ho gayi.', 'success');
             } else {
                 await salesService.returnQty(returnModalSale.id, q);
-                useToastStore.getState().showToast('Done', `${q} wapas — stock aur udhaar proportion mein update.`, 'success');
+                useToastStore.getState().showToast('Done', `${q} returned — stock and credit proportionally updated.`, 'success');
             }
             useDataRefreshStore.getState().bumpInventory();
             setReturnModalSale(null);
@@ -124,7 +124,7 @@ export default function SalesScreen() {
     const handleFullUndo = (sale) => {
         Alert.alert(
             'Full return',
-            'Poori sold quantity wapas stock mein aaye gi aur is line ka udhaar / payments clear ho jaye ga.',
+            'The entire sold quantity will be returned to the stock, and this line's credit/payments will be cleared.',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -327,7 +327,7 @@ export default function SalesScreen() {
                             <Text style={{ color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 13, marginBottom: 12 }}>
                                 Max {returnModalSale.quantity} ({returnModalSale.products?.name || 'Product'})
                                 {'\n'}
-                                Kam qty = stock utni wapas; udhaar sirf is line ka ratio se kam.
+                                Partial quantity = proportionally returned to stock, and credit is reduced for this line.
                             </Text>
                         )}
                         <TextInput
