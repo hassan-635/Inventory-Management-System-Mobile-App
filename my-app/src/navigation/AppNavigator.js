@@ -23,6 +23,7 @@ import ExpensesScreen from '../screens/ExpensesScreen';
 import MonthlyReportScreen from '../screens/MonthlyReportScreen';
 import DailyReportScreen from '../screens/DailyReportScreen';
 import CompaniesScreen from '../screens/CompaniesScreen';
+import DatabaseExportScreen from '../screens/DatabaseExportScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -43,6 +44,7 @@ const ICON_MAP = {
     Expenses: { focused: 'cash', outline: 'cash-outline' },
     'Monthly Report': { focused: 'pie-chart', outline: 'pie-chart-outline' },
     'Daily Report': { focused: 'calendar', outline: 'calendar-outline' },
+    'Database Export': { focused: 'server', outline: 'server-outline' },
     Settings: { focused: 'settings', outline: 'settings-outline' },
 };
 
@@ -191,6 +193,7 @@ const DrawerNavigator = () => {
             <Drawer.Screen name="Expenses" component={ExpensesScreen} />
             <Drawer.Screen name="Monthly Report" component={MonthlyReportScreen} />
             <Drawer.Screen name="Daily Report" component={DailyReportScreen} />
+            <Drawer.Screen name="Database Export" component={DatabaseExportScreen} />
             <Drawer.Screen name="Settings" component={SettingsScreen} />
         </Drawer.Navigator>
     );

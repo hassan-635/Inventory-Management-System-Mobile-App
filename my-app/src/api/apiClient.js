@@ -50,7 +50,10 @@ import { useAuthStore } from '../store/authStore';
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        if (error.response && error.response.status === 401) {
+        // Skip auto-logout if the error comes from password verification
+        const isVerifyEndpoint = error.config && error.config.url && error.config.url.includes('/auth/verify-password');
+
+        if (error.response && error.response.status === 401 && !isVerifyEndpoint) {
             console.warn("Unauthorized request detected (401). Forcing logout.");
             authTokenCache = null;
             await tokenStorage.deleteItemAsync('token');
