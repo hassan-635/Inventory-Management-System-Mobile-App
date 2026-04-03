@@ -219,71 +219,261 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
  * @param {'quotation'|'cash_invoice'|'credit_invoice'} [fileMeta.kind]
  */
 export const generateInvoicePdf = async (transactionInfo, cartItems, customerName, totalBill, discount, finalAmount, customPaymentDate, fileMeta = {}) => {
-    let htmlContent = `
+    // Exact copy of frontend receipt structure with proper receipt styling
+    const htmlContent = `
         <html>
         <head>
             <meta charset="utf-8">
-            <style>${PDF_CSS}</style>
             <style>
-                .invoice-header { display: flex; justify-content: space-between; margin-bottom: 20px; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; }
-                .shop-details { flex: 1;}
-                .shop-name { font-size: 24px; font-weight: 900; color: #1e3a8a; margin: 0 0 5px 0;}
-                .invoice-details { text-align: right; }
-                .invoice-details p { margin: 2px 0; font-size: 13px; }
+                body {
+                    font-family: 'Segoe UI', Arial, sans-serif !important;
+                    font-size: 13px !important;
+                    background: white !important;
+                    color: black !important;
+                    margin: 0;
+                    padding: 0;
+                    line-height: 1.4;
+                }
+                * { box-shadow: none !important; }
+                
+                .receipt {
+                    width: 350px !important;
+                    min-height: 100vh;
+                    padding: 2rem 1.5rem;
+                    display: flex;
+                    flex-direction: column;
+                    background: white;
+                    position: relative;
+                    overflow: hidden;
+                    margin: 0 auto;
+                }
+                
+                .receipt-header {
+                    text-align: center;
+                    margin-bottom: 2rem;
+                }
+                
+                .receipt-logo {
+                    display: inline-flex;
+                    padding: 0.75rem;
+                    border-radius: 50%;
+                    background: transparent;
+                    color: black;
+                    margin-bottom: 1rem;
+                    border: 1px solid black;
+                    width: 24px;
+                    height: 24px;
+                    align-items: center;
+                    justify-content: center;
+                }
+                
+                .receipt-header h2 {
+                    font-size: 1.4rem !important;
+                    letter-spacing: 2px;
+                    margin-bottom: 0.25rem;
+                    font-weight: 700;
+                    line-height: 1.2;
+                }
+                
+                .receipt-address,
+                .receipt-contact {
+                    font-size: 0.8rem;
+                    color: #666;
+                    margin-bottom: 0.25rem;
+                }
+                
+                .receipt-type-badge {
+                    display: inline-block;
+                    margin-top: 1rem;
+                    padding: 0.4rem 1rem;
+                    border-radius: 4px;
+                    background: transparent;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    letter-spacing: 1px;
+                    color: #666;
+                    border: 1px solid #ccc;
+                }
+                
+                .receipt-meta {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                    margin-bottom: 2rem;
+                    padding-bottom: 1rem;
+                    border-bottom: 1px dashed #ccc;
+                }
+                
+                .meta-row {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 0.85rem;
+                    color: #666;
+                }
+                
+                .receipt-items-table {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                    margin-bottom: 2rem;
+                    flex: 1;
+                }
+                
+                .receipt-table-header {
+                    display: grid;
+                    grid-template-columns: 1fr 40px 80px;
+                    font-size: 0.8rem;
+                    font-weight: 600;
+                    color: #666;
+                    text-transform: uppercase;
+                    border-bottom: 1px solid #ccc;
+                    padding-bottom: 0.5rem;
+                }
+                
+                .receipt-table-row {
+                    display: grid;
+                    grid-template-columns: 1fr 40px 80px;
+                    font-size: 0.9rem;
+                    color: black;
+                }
+                
+                .item-name-col {
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    padding-right: 1rem;
+                }
+                
+                .receipt-table-row span:last-child,
+                .receipt-table-header span:last-child,
+                .receipt-table-row span:nth-child(2),
+                .receipt-table-header span:nth-child(2) {
+                    text-align: right;
+                }
+                
+                .receipt-summary {
+                    border-top: 1px dashed #ccc;
+                    padding-top: 1rem;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                    margin-bottom: 2rem;
+                }
+                
+                .summary-row {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 0.9rem;
+                    color: #666;
+                }
+                
+                .summary-row.total {
+                    font-size: 1.25rem;
+                    font-weight: 700;
+                    color: black;
+                    margin-top: 0.5rem;
+                    padding-top: 0.5rem;
+                    border-top: 1px solid #ccc;
+                }
+                
+                .footer {
+                    margin-top: 10px;
+                    padding-top: 15px;
+                    border-top: 1px dashed #ccc;
+                    text-align: center;
+                    font-size: 12px;
+                    color: black;
+                    page-break-inside: avoid;
+                }
             </style>
         </head>
         <body>
-            <div class="invoice-header">
-                <div class="shop-details">
-                    <h1 class="shop-name" style="text-align:left;">JELLANI HARDWARE, PAINT AND ELECTRIC STORE</h1>
-                    <p style="margin:2px 0; font-size:13px;">Main Kallar Syedan Road, Near DHA Phase 7 Gate 1</p>
-                    <p style="margin:2px 0; font-size:13px;">📞 0329-5749291</p>
+            <div class="receipt">
+                <div class="receipt-header">
+                    <div class="receipt-logo">🧮</div>
+                    <h2 style="font-size: 1.4rem;">Jellani Hardware, Paint<br />and Electric Store</h2>
+                    <p class="receipt-address">Main Kallar Syedan Road, Near DHA Phase 7 Gate 1</p>
+                    <p class="receipt-contact">Ph: 0329-5749291</p>
+                    
+                    <div class="receipt-type-badge">
+                        ${fileMeta.kind === 'quotation' ? 'QUOTATION / ESTIMATE' : fileMeta.kind === 'credit_invoice' ? 'CREDIT / CREDIT INVOICE' : 'TAX INVOICE'}
+                    </div>
                 </div>
-                <div class="invoice-details">
-                    <h2 style="margin:0 !important; font-size:20px !important; border:none !important;">INVOICE</h2>
-                    <p><strong>Date:</strong> ${new Date().toLocaleDateString('en-GB')}</p>
-                    <p><strong>Billed To:</strong> ${customerName || 'Walk-In Customer'}</p>
-                    ${customPaymentDate ? `<p><strong>Due Date:</strong> ${new Date(customPaymentDate).toLocaleDateString('en-GB')}</p>` : ''}
+
+                <div class="receipt-meta">
+                    <div class="meta-row">
+                        <span>Date:</span>
+                        <span>${new Date().toLocaleDateString()}</span>
+                    </div>
+                    <div class="meta-row">
+                        <span>Customer:</span>
+                        <span>${customerName || 'Cash Customer'}</span>
+                    </div>
+                    <div class="meta-row">
+                        <span>Invoice #:</span>
+                        <span>INV-${Math.floor(100000 + Math.random() * 900000)}</span>
+                    </div>
                 </div>
-            </div>
 
-            <div class="premium-table-wrap">
-                <table class="premium-table">
-                    <thead>
-                        <tr>
-                            <th>Item Name</th>
-                            <th style="text-align:center;">Qty</th>
-                            <th style="text-align:center;">Unit Price</th>
-                            <th style="text-align:right;">Line Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${cartItems.map(item => `
-                            <tr>
-                                <td>${item.name} <span class="text-muted">(${item.selectedUnit || 'Piece'})</span></td>
-                                <td style="text-align:center;">${item.quantity}</td>
-                                <td style="text-align:center;">Rs. ${item.unitPrice.toLocaleString()}</td>
-                                <td style="text-align:right;"><strong>Rs. ${(item.quantity * item.unitPrice).toLocaleString()}</strong></td>
-                            </tr>
-                        `).join('')}
-                    </tbody>
-                    <tfoot>
-                        ${discount > 0 ? `
-                        <tr><td colspan="3" style="text-align:right;">Subtotal:</td><td style="text-align:right;">Rs. ${totalBill.toLocaleString()}</td></tr>
-                        <tr><td colspan="3" style="text-align:right;">Discount:</td><td style="text-align:right; color:#dc2626;">- Rs. ${discount.toLocaleString()}</td></tr>
-                        ` : ''}
-                        <tr><td colspan="3" style="text-align:right; font-size:14px;"><strong>GRAND TOTAL:</strong></td><td style="text-align:right; font-size:14px;"><strong>Rs. ${finalAmount.toLocaleString()}</strong></td></tr>
-                        <tr><td colspan="3" style="text-align:right; color:#16a34a;"><strong>PAID AMOUNT:</strong></td><td style="text-align:right; color:#16a34a;"><strong>Rs. ${Number(transactionInfo?.amount || 0).toLocaleString()}</strong></td></tr>
-                        ${Number(finalAmount) - Number(transactionInfo?.amount || 0) > 0 ? `
-                            <tr><td colspan="3" style="text-align:right; color:#dc2626;"><strong>REMAINING (CREDIT):</strong></td><td style="text-align:right; color:#dc2626;"><strong>Rs. ${(Number(finalAmount) - Number(transactionInfo?.amount || 0)).toLocaleString()}</strong></td></tr>
-                        ` : ''}
-                    </tfoot>
-                </table>
-            </div>
+                <div class="receipt-items-table">
+                    <div class="receipt-table-header">
+                        <span>Item</span>
+                        <span>Qty</span>
+                        <span>Total</span>
+                    </div>
+                    ${cartItems.map(item => `
+                        <div class="receipt-table-row">
+                            <span class="item-name-col">
+                                <span style="font-weight: 600;">${item.name}</span>
+                                <div style="font-size: 0.75em; color: #666; margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center;">
+                                    <span>[${item.id || 'ID'}]</span>
+                                    <span>• ${item.selectedUnit || 'Piece'}</span>
+                                </div>
+                            </span>
+                            <span>${item.quantity} ${item.selectedUnit ? `(${item.selectedUnit.replace(/^Per\s+/i, '')})` : ''}</span>
+                            <span>Rs. ${(item.quantity * item.unitPrice).toLocaleString()}</span>
+                        </div>
+                    `).join('')}
+                </div>
 
-            <div class="footer">
-                <h3 style="margin-bottom: 4px;">Thank you for your business!</h3>
-                <p style="margin: 0;">Software Developed by Hassan Ali Abrar (Insta: hassan.secure | WhatsApp: +92 348 5055098)</p>
+                <div class="receipt-summary">
+                    <div class="summary-row">
+                        <span>Subtotal</span>
+                        <span>Rs. ${totalBill.toLocaleString()}</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>Total Amount</span>
+                        <span>Rs. ${finalAmount.toLocaleString()}</span>
+                    </div>
+
+                    ${fileMeta.kind !== 'quotation' ? `
+                        <div class="summary-row" style="margin-top: 10px;">
+                            <span>Method</span>
+                            <span style="font-weight: 600;">${fileMeta.kind === 'credit_invoice' ? 'Credit' : 'Cash'}</span>
+                        </div>
+                    ` : ''}
+
+                    ${fileMeta.kind === 'credit_invoice' ? `
+                        <div class="summary-row">
+                            <span>Paid Amount</span>
+                            <span>Rs. ${Number(transactionInfo?.amount || 0).toLocaleString()}</span>
+                        </div>
+                        <div class="summary-row total" style="color: #ef4444;">
+                            <span>Remaining (Credit)</span>
+                            <span>Rs. ${(Number(finalAmount) - Number(transactionInfo?.amount || 0)).toLocaleString()}</span>
+                        </div>
+                    ` : fileMeta.kind === 'cash_invoice' ? `
+                        <div class="summary-row">
+                            <span>Paid Amount</span>
+                            <span>Rs. ${Number(transactionInfo?.amount || finalAmount).toLocaleString()}</span>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="footer">
+                    <p style="margin: 0 0 5px; font-size: 0.8rem; font-weight: 600;">Software Developed by Hassan Ali Abrar</p>
+                    <p style="margin: 0; font-size: 0.75rem; color: #666;">Insta: <strong style="color: #38bdf8;">hassan.secure</strong> | WA: <strong style="color: #22c55e;">+92 348 5055098</strong></p>
+                </div>
             </div>
         </body>
         </html>
