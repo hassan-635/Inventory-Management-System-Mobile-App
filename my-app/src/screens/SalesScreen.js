@@ -286,6 +286,7 @@ export default function SalesScreen() {
                                 'Product ID': formatProductId(item.product_id),
                                 'Customer': item.buyers?.name || 'Walk-in',
                                 'Quantity': `${item.quantity} ${item.quantity_unit ? `(${item.quantity_unit})` : ''}`,
+                                'Method': item.payment_method === 'Split' ? `Split (C: ${item.cash_amount} | O: ${item.online_amount})` : (item.payment_method || 'Cash'),
                                 'Price/Unit': `Rs. ${item.products?.price || '-'}`,
                                 'Date': new Date(item.purchase_date).toLocaleDateString()
                             }}

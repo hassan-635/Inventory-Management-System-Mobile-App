@@ -88,6 +88,8 @@ export default function BillingScreen() {
 
     // Form state
     const [billType, setBillType] = useState('REAL');
+    const [paymentMethod, setPaymentMethod] = useState('Cash');
+    const [splitCash, setSplitCash] = useState('');
     
     // Cart State
     const [cart, setCart] = useState([]);
@@ -254,6 +256,20 @@ export default function BillingScreen() {
             return;
         }
 
+        const activePaymentAmt = isCreditBill ? Number(paidAmount || 0) : totalAmount;
+
+        if (paymentMethod === 'Split') {
+            const parsedCash = Number(splitCash);
+            if (!splitCash || isNaN(parsedCash) || parsedCash <= 0) {
+                useToastStore.getState().showToast('Validation Error', 'Please enter a valid Cash Amount for the split.', 'error');
+                return;
+            }
+            if (parsedCash >= activePaymentAmt) {
+                useToastStore.getState().showToast('Validation Error', 'Cash Amount must be less than the total paid amount for a split.', 'error');
+                return;
+            }
+        }
+
         try {
             setSubmitting(true);
             let activeBuyerId = selectedBuyer?.id || null;
@@ -279,9 +295,33 @@ export default function BillingScreen() {
             const userPaid = isCreditBill ? Number(paidAmount || 0) : null;
             const bName = buyerSearch.trim() || 'Walk-in Customer';
 
+            const activePaymentAmt = isCreditBill ? Number(paidAmount || 0) : totalAmount;
+            const derivedSplitOnline = paymentMethod === 'Split' ? Math.max(0, activePaymentAmt - Number(splitCash || 0)) : 0;
+
             // Submit each cart item individually to match backend constraints
             for (const item of cart) {
                 const itemTotal = item.price * item.quantity;
+                
+                // Proportion logic for split payment
+                let proportion = 1;
+                if (paymentMethod === 'Split' && activePaymentAmt > 0) {
+                    proportion = isCreditBill ? (itemTotal / totalAmount) : (itemTotal / activePaymentAmt);
+                    if (!isCreditBill) proportion = itemTotal / activePaymentAmt;
+                } else if (paymentMethod === 'Split' && activePaymentAmt > 0 && isCreditBill) {
+                     proportion = itemTotal / totalAmount; // Actually, paid proportionally to item total's share of grand total
+                }
+                
+                let proportionRatio = 1;
+                if (activePaymentAmt > 0) {
+                     // For both real and credit, the proportion of this item's contribution to the total
+                     proportionRatio = itemTotal / totalAmount;
+                }
+                
+                const currentItemPaid = isCreditBill ? activePaymentAmt * proportionRatio : itemTotal;
+                
+                const itemCashAmount = paymentMethod === 'Split' ? Math.round(Number(splitCash || 0) * proportionRatio * 100) / 100 : (paymentMethod === 'Cash' ? currentItemPaid : 0);
+                const itemOnlineAmount = paymentMethod === 'Split' ? Math.round(derivedSplitOnline * proportionRatio * 100) / 100 : (paymentMethod === 'Online' ? currentItemPaid : 0);
+
                 const payload = {
                     product_id: item.id,
                     product_name: item.name,
@@ -291,8 +331,11 @@ export default function BillingScreen() {
                     buyer_id: activeBuyerId,
                     buyer_name: bName,
                     company_name: companyName.trim() || null,
-                    paid_amount: isCreditBill ? userPaid : itemTotal,
-                    quantity_unit: item.cart_unit
+                    paid_amount: currentItemPaid,
+                    quantity_unit: item.cart_unit,
+                    payment_method: paymentMethod,
+                    cash_amount: itemCashAmount,
+                    online_amount: itemOnlineAmount
                 };
                 
                 await salesService.create(payload);
@@ -351,6 +394,8 @@ export default function BillingScreen() {
         setSelectedUnit('Per Piece');
         setPaidAmount('');
         setBillType('REAL');
+        setPaymentMethod('Cash');
+        setSplitCash('');
     };
 
     if (loading && products.length === 0) {
@@ -451,6 +496,47 @@ export default function BillingScreen() {
                                 {filteredCompanies.length === 0 && !isNewCompany && (
                                     <Text style={[styles.dropdownEmpty, { padding: 12 }]}>No companies found</Text>
                                 )}
+                            </View>
+                        )}
+                    </View>
+                )}
+
+                {/* Payment Method */}
+                {billType !== 'QUOTATION' && (
+                    <View style={styles.inputGroup}>
+                        <Text style={styles.inputLabel}>Payment Method</Text>
+                        <View style={styles.billTypeRow}>
+                            {['Cash', 'Online', 'Split'].map(pm => (
+                                <TouchableOpacity
+                                    key={pm}
+                                    style={[styles.billTypeBtn, paymentMethod === pm && styles.billTypeBtnActive]}
+                                    onPress={() => setPaymentMethod(pm)}
+                                >
+                                    <Text style={[styles.billTypeTxt, paymentMethod === pm && styles.billTypeTxtActive]}>
+                                        {pm === 'Online' ? '📱 Online' : (pm === 'Cash' ? '💵 Cash' : '🔀 Split')}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        
+                        {paymentMethod === 'Split' && (
+                            <View style={[styles.row, { marginTop: 12 }]}>
+                                <View style={[styles.inputGroup, { flex: 1, marginRight: 6, marginBottom: 0 }]}>
+                                    <Text style={styles.inputLabel}>Cash Amount (Rs)</Text>
+                                    <TextInput 
+                                        style={styles.textInput} keyboardType="numeric" 
+                                        value={splitCash} onChangeText={setSplitCash} 
+                                        placeholder="0" placeholderTextColor={colors.text.muted} 
+                                    />
+                                </View>
+                                <View style={[styles.inputGroup, { flex: 1, marginLeft: 6, marginBottom: 0 }]}>
+                                    <Text style={styles.inputLabel}>Online Amount (Rs)</Text>
+                                    <TextInput 
+                                        style={[styles.textInput, { backgroundColor: colors.background.primary, color: colors.text.muted }]} 
+                                        value={String(Math.max(0, (billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount) - Number(splitCash || 0)))} 
+                                        editable={false}
+                                    />
+                                </View>
                             </View>
                         )}
                     </View>
