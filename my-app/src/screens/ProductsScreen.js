@@ -32,7 +32,7 @@ const SORT_OPTIONS = [
     { key: 'stockAsc', label: 'Stock (Low to High)' },
 ];
 
-const UNIT_OPTIONS = ['Per Piece', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter'];
+const UNIT_OPTIONS = ['Per Piece', 'Per Kilo', 'Per Dozen', 'Per Liter', 'Per Ft', 'Per Meter', 'Per Gallon', 'Per Bucket/Balti', 'Per 250 Gram', 'Per Kg', 'Per Gram', 'Per Inch', 'Per Millimeter', 'Per Pair', 'Per Set', 'Per Strip', 'Per Roll', 'Per Bag', 'Per Coil'];
 const CATEGORY_OPTIONS = ['Paint', 'Electric', 'Hardware'];
 
 function productMatchesSearch(product, searchRaw) {
@@ -130,7 +130,7 @@ export default function ProductsScreen() {
     const [formItem, setFormItem] = useState({ 
         id: null, name: '', category: 'Hardware', price: '', 
         purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece', 
-        max_discount: '0', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
+        color: '', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
         supplier_phone: '', supplier_company_name: ''
     });
     const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
@@ -199,7 +199,7 @@ export default function ProductsScreen() {
                 purchase_rate: product.purchase_rate?.toString() || '',
                 purchased_from: product.purchased_from || '',
                 quantity_unit: product.quantity_unit || 'Per Piece',
-                max_discount: product.max_discount?.toString() || '0',
+                color: product.color || '',
                 total_quantity: product.total_quantity?.toString() || '0',
                 remaining_display: String(product.remaining_quantity ?? 0),
                 purchase_date: product.purchase_date ? new Date(product.purchase_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
@@ -225,7 +225,7 @@ export default function ProductsScreen() {
             setFormItem({ 
                 id: null, name: '', category: 'Hardware', price: '', 
                 purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece', 
-                max_discount: '0', total_quantity: '0', remaining_display: '',
+                color: '', total_quantity: '0', remaining_display: '',
                 purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
                 supplier_phone: '', supplier_company_name: '',
                 add_quantity: '', restock_paid_amount: '', restock_purchase_date: new Date(),
@@ -253,7 +253,7 @@ export default function ProductsScreen() {
                 category: formItem.category,
                 price: Number(formItem.price),
                 purchase_rate: Number(formItem.purchase_rate),
-                max_discount: Number(formItem.max_discount),
+                color: formItem.color || '',
                 purchased_from: formItem.purchased_from,
                 total_quantity: Number(formItem.total_quantity),
                 purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
@@ -302,7 +302,7 @@ export default function ProductsScreen() {
                 category: formItem.category,
                 price: Number(formItem.price),
                 purchase_rate: Number(formItem.purchase_rate || 0),
-                max_discount: Number(formItem.max_discount || 0),
+                color: formItem.color || '',
                 purchased_from: formItem.purchased_from?.trim() || '',
                 purchase_date: formItem.purchase_date || new Date().toISOString().split('T')[0],
                 quantity_unit: formItem.quantity_unit || 'Per Piece',
@@ -660,7 +660,7 @@ export default function ProductsScreen() {
                                 'Supplier': item.purchased_from || 'N/A',
                                 'Purchase Price': showPurchaseRates ? `Rs. ${item.purchase_rate || '-'}` : '***',
                                 'Unit': item.quantity_unit || 'Per Piece',
-                                'Max Discount': `Rs. ${item.max_discount || 0}`,
+                                'Color': item.color ? item.color : 'N/A',
                                 'Total Qty': String(item.total_quantity),
                                 'Remaining Qty': `${remaining}${isZero ? ' (Out of Stock)' : isLow ? ' (Low)' : ''}`,
                                 'Purchase Date': item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : '-',
@@ -885,8 +885,8 @@ export default function ProductsScreen() {
                                 </View>
                             )}
 
-                            <Text style={styles.inputLabel}>Max Discount (Rs)</Text>
-                            <TextInput style={styles.input} value={formItem.max_discount} onChangeText={t => setFormItem({...formItem, max_discount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                            <Text style={styles.inputLabel}>Product Color (e.g. Red, #ff0000)</Text>
+                            <TextInput style={styles.input} value={formItem.color} onChangeText={t => setFormItem({...formItem, color: t})} placeholder="Enter color name or hex" placeholderTextColor={colors.text.muted} />
                             
                             {/* Show Paid Amount only for NEW products */}
                             {!formItem.id && (

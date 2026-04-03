@@ -20,7 +20,10 @@ const BILL_TYPES = [
     { key: 'CREDIT', label: '💳 Credit' },
 ];
 
-const UNIT_OPTIONS = ['Per Piece', 'Per Dozen', 'Per Box', 'Per Kg', 'Per Liter', 'Per Meter', 'Per Roll', 'Per Pack', 'Per Case'];
+const UNIT_OPTIONS = ['Per Piece', 'Per Dozen', 'Per Box', 'Per Kg', 'Per Liter', 'Per Meter', 'Per Roll', 'Per Pack', 'Per Case', 'Per Gallon', 'Per Bucket/Balti', 'Per 250 Gram', 'Per Gram', 'Per Inch', 'Per Ft', 'Per Millimeter', 'Per Pair', 'Per Set', 'Per Strip', 'Per Bag', 'Per Coil'];
+
+// Remove "Per " prefix for bill display (e.g. "Per Piece" → "Piece")
+const stripPer = (unit) => unit ? unit.replace(/^Per\s+/i, '') : '';
 
 // A searchable modal picker for Products and Companies
 const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'name', renderSub, isStringList = false, colors, FONTS }) => {
@@ -535,7 +538,7 @@ export default function BillingScreen() {
                             <View style={styles.cartItemDetails}>
                                 <Text style={styles.cartItemName}>{item.name}</Text>
                                 <Text style={styles.cartItemSub}>
-                                    <Text style={{color: colors.accent.primary}}>{formatProductId(item.id)}</Text> | Rs. {item.price} x {item.quantity} {item.cart_unit ? `(${item.cart_unit})` : ''}
+                                    <Text style={{color: colors.accent.primary}}>{formatProductId(item.id)}</Text> | Rs. {item.price} x {item.quantity} {item.cart_unit ? `(${stripPer(item.cart_unit)})` : ''}
                                 </Text>
                             </View>
                             <View style={styles.cartItemRight}>
