@@ -648,19 +648,6 @@ export default function ProductsScreen() {
                             title={item.name}
                             subtitle={item.category || item.purchased_from || null}
                             rightText={`Rs. ${item.price}`}
-                            rightSubText={
-                                isZero ? `Out of stock · Lmt: ${threshold}` : isLow ? `Low stock · ${remaining} left · Lmt: ${threshold}` : `Stock: ${remaining} · Lmt: ${threshold}`
-                            }
-                            summaryBoxes={[
-                                { label: 'Sale Price', value: `Rs. ${item.price}` },
-                                {
-                                    label: stockSummaryLabel,
-                                    value: stockSummaryValue,
-                                    valueColor: stockColor,
-                                    borderColor: stockBorder,
-                                },
-                                { label: 'Category', value: item.category || '—' },
-                            ]}
                             iconName="cube-outline"
                             containerStyle={containerStyle}
                             detailsData={{
