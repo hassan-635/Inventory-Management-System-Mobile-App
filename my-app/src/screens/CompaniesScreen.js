@@ -55,39 +55,38 @@ export default function CompaniesScreen() {
             Alert.alert('Excess Amount', `Company max Rs. ${company.total_remaining} is owed to you (please receive it).`);
             return;
         }
-        setPaying(true);
-        try {
-            // Pay proportionally to each buyer in the company
-            const buyers = company.buyers || [];
-            for (const buyer of buyers) {
-                const buyerRemaining = buyer.buyer_transactions?.reduce(
-                    (acc, t) => acc + Math.max(0, Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0
-                ) || 0;
-                if (buyerRemaining <= 0) continue;
-
-                const proportion = buyerRemaining / company.total_remaining;
-                const buyerPayment = Math.round(amount * proportion);
-                if (buyerPayment <= 0) continue;
-
-                // Find oldest unpaid transaction
-                const unpaid = buyer.buyer_transactions
-                    ?.filter(t => Number(t.total_amount || 0) > Number(t.paid_amount || 0))
-                    ?.sort((a, b) => new Date(a.purchase_date) - new Date(b.purchase_date));
-
-                if (unpaid && unpaid.length > 0) {
-                    await api.put(`/sales/${unpaid[0].id}`, { add_payment: buyerPayment });
+        
+        Alert.alert(
+            'Confirm Payment',
+            `Receive payment of Rs. ${amount} from ${company.company_name}? This will be distributed across all ${company.buyers.length} customers in this company.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Receive Payment',
+                    style: 'default',
+                    onPress: async () => {
+                        setPaying(true);
+                        try {
+                            await api.post('/buyers/company-payment', {
+                                company_name: company.company_name,
+                                payment_amount: amount,
+                                date: new Date().toISOString().split('T')[0]
+                            });
+                            
+                            useToastStore.getState().showToast('Payment Successful!', `Rs. ${amount} distributed across ${company.buyers.length} customers`, 'success');
+                            setPayModal({ visible: false, company: null });
+                            setPayAmount('');
+                            fetchCompanies();
+                        } catch (err) {
+                            useToastStore.getState().showToast('Error', 'Payment failed. Please try again.', 'error');
+                            console.error(err);
+                        } finally {
+                            setPaying(false);
+                        }
+                    }
                 }
-            }
-            useToastStore.getState().showToast('Payment Successful!', `Rs. ${amount} credited to company account`, 'success');
-            setPayModal({ visible: false, company: null });
-            setPayAmount('');
-            fetchCompanies();
-        } catch (err) {
-            useToastStore.getState().showToast('Error', 'Payment failed. Please try again.', 'error');
-            console.error(err);
-        } finally {
-            setPaying(false);
-        }
+            ]
+        );
     };
 
     if (loading && !refreshing) {
