@@ -40,9 +40,25 @@ export default function CompaniesScreen() {
     useRefetchOnFocus(fetchCompanies);
     const onRefresh = () => { setRefreshing(true); fetchCompanies(); };
 
-    const filtered = useMemo(() => companies.filter(c =>
-        (c.company_name || '').toLowerCase().includes(search.toLowerCase())
-    ), [companies, search]);
+    const filtered = useMemo(() => companies
+        .filter(c =>
+            (c.company_name || '').toLowerCase().includes(search.toLowerCase())
+        )
+        .sort((a, b) => {
+            // Calculate remaining amounts for both companies
+            const aRemaining = a.total_remaining || 0;
+            const bRemaining = b.total_remaining || 0;
+            
+            // If one has outstanding and other doesn't, outstanding comes first
+            if (aRemaining > 0 && bRemaining <= 0) return -1;
+            if (aRemaining <= 0 && bRemaining > 0) return 1;
+            
+            // If both have outstanding, sort by higher outstanding amount
+            if (aRemaining > 0 && bRemaining > 0) return bRemaining - aRemaining;
+            
+            // If both are cleared, sort alphabetically
+            return a.company_name.localeCompare(b.company_name);
+        }), [companies, search]);
 
     const handlePay = async () => {
         const amount = parseFloat(payAmount);
