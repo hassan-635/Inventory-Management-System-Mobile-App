@@ -127,9 +127,9 @@ export default function ProductsScreen() {
     // CRUD State
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [formItem, setFormItem] = useState({ 
-        id: null, name: '', category: 'Hardware', price: '', 
-        purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece', 
+    const [formItem, setFormItem] = useState({
+        id: null, name: '', category: 'Hardware', price: '',
+        purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece',
         color: '', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
         supplier_phone: '', supplier_company_name: ''
     });
@@ -137,7 +137,7 @@ export default function ProductsScreen() {
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
     const [showRestockDatePicker, setShowRestockDatePicker] = useState(false);
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
-    
+
     // Side List State
     const [isSideListVisible, setIsSideListVisible] = useState(false);
     const [pendingItems, setPendingItems] = useState([]);
@@ -149,7 +149,7 @@ export default function ProductsScreen() {
                 productsService.getAll(),
                 suppliersService.getAll().catch(() => [])
             ]);
-            
+
             const limitStr = await AsyncStorage.getItem('low_stock_limit');
             if (limitStr && !isNaN(limitStr)) {
                 setLowStockLimit(Number(limitStr));
@@ -220,11 +220,11 @@ export default function ProductsScreen() {
                     const latestTxn = prodTxns.sort((a, b) => b.id - a.id)[0];
                     setSupplierTxnInfo({ txn_id: latestTxn.id, total_amount: totalOwed, paid_amount: totalPaid, remaining: totalOwed - totalPaid });
                 }
-            } catch (_) {}
+            } catch (_) { }
         } else {
-            setFormItem({ 
-                id: null, name: '', category: 'Hardware', price: '', 
-                purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece', 
+            setFormItem({
+                id: null, name: '', category: 'Hardware', price: '',
+                purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece',
                 color: '', total_quantity: '0', remaining_display: '',
                 purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
                 supplier_phone: '', supplier_company_name: '',
@@ -239,14 +239,14 @@ export default function ProductsScreen() {
             useToastStore.getState().showToast("Error", "Name and Sale Price are required.", "error");
             return;
         }
-        
+
         if (!formItem.id) {
             // Check if product with same name already exists in pending list
             if (isProductIdInPendingList(formItem.name.trim())) {
                 useToastStore.getState().showToast('Error', 'This product is already in the pending list.', 'error');
                 return;
             }
-            
+
             // For new products, add to pending list instead of direct save
             const payload = {
                 name: formItem.name.trim(),
@@ -268,14 +268,14 @@ export default function ProductsScreen() {
                 name: formItem.name.trim(),
                 data: payload
             };
-            
+
             setPendingItems(prev => [...prev, newItem]);
             setIsSideListVisible(true);
             setModalVisible(false);
             useToastStore.getState().showToast('Added to Pending', 'Product added to pending list.', 'success');
             return;
         }
-        
+
         // For existing products (edit mode), keep the original logic
         setIsSaving(true);
         try {
@@ -308,6 +308,8 @@ export default function ProductsScreen() {
                 quantity_unit: formItem.quantity_unit || 'Per Piece',
                 supplier_phone: formItem.supplier_phone,
                 supplier_company_name: formItem.supplier_company_name,
+                set_total_quantity: formItem.total_quantity !== '' && formItem.total_quantity !== undefined ? Number(formItem.total_quantity) : undefined,
+                set_remaining_quantity: formItem.remaining_display !== '' && formItem.remaining_display !== undefined ? Number(formItem.remaining_display) : undefined,
             };
             if (hasRestock) {
                 payload.add_quantity = addQ;
@@ -327,7 +329,7 @@ export default function ProductsScreen() {
                 }
                 await purchasesService.updatePayment(supplierTxnInfo.txn_id, payAmt);
             }
-            
+
             setModalVisible(false);
             useToastStore.getState().showToast('Saved', 'Product updated successfully.', 'success');
             useDataRefreshStore.getState().bumpInventory();
@@ -343,13 +345,13 @@ export default function ProductsScreen() {
     const confirmDelete = (id) => {
         const product = products.find(p => p.id === id);
         if (!product) return;
-        
+
         // Check if product is already in pending list
         if (isProductIdInPendingList(id)) {
             useToastStore.getState().showToast('Error', 'This product is already in the pending list.', 'error');
             return;
         }
-        
+
         Alert.alert("Delete Product", `Add "${product.name}" to pending deletions?`, [
             { text: "Cancel", style: "cancel" },
             {
@@ -361,7 +363,7 @@ export default function ProductsScreen() {
                         name: product.name,
                         data: product
                     };
-                    
+
                     setPendingItems(prev => [...prev, newItem]);
                     setIsSideListVisible(true);
                     useToastStore.getState().showToast('Added to Pending', 'Product added to pending deletions.', 'success');
@@ -428,7 +430,7 @@ export default function ProductsScreen() {
 
     const handleProcessPendingItems = async () => {
         if (pendingItems.length === 0) return;
-        
+
         Alert.alert('Process Changes', `Process ${pendingItems.length} pending changes? This cannot be undone.`, [
             { text: 'Cancel', style: 'cancel' },
             {
@@ -570,10 +572,10 @@ export default function ProductsScreen() {
                         const isLow = f.key === 'low';
                         const isOut = f.key === 'out';
                         const isActive = activeFilter === f.key;
-                        
+
                         let customBorder = {};
                         let customText = {};
-                        
+
                         if (!isActive && isLow) {
                             customBorder = { borderColor: '#eab308' };
                             customText = { color: '#eab308' };
@@ -611,7 +613,7 @@ export default function ProductsScreen() {
                     const remaining = Number(item.remaining_quantity || 0);
                     const isLow = remaining > 0 && remaining <= lowStockLimit;
                     const isZero = remaining === 0;
-                    
+
                     let containerStyle = {};
                     if (isZero) {
                         containerStyle = {
@@ -691,7 +693,7 @@ export default function ProductsScreen() {
 
             {/* Pending Items Indicator */}
             {pendingItems.length > 0 && (
-                <TouchableOpacity 
+                <TouchableOpacity
                     style={[styles.pendingIndicator, { backgroundColor: colors.accent.primary }]}
                     onPress={() => setIsSideListVisible(true)}
                 >
@@ -714,130 +716,140 @@ export default function ProductsScreen() {
                         </View>
                         <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
                             <Text style={styles.inputLabel}>Product Name *</Text>
-                            <TextInput style={styles.input} value={formItem.name} onChangeText={t => setFormItem({...formItem, name: t})} placeholder="Enter product name" placeholderTextColor={colors.text.muted} />
+                            <TextInput style={styles.input} value={formItem.name} onChangeText={t => setFormItem({ ...formItem, name: t })} placeholder="Enter product name" placeholderTextColor={colors.text.muted} />
 
                             {!formItem.id ? (
-                            <View style={styles.row}>
-                                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                    <Text style={styles.inputLabel}>Sale Price *</Text>
-                                    <TextInput style={styles.input} value={formItem.price} onChangeText={t => setFormItem({...formItem, price: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                <View style={styles.row}>
+                                    <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                                        <Text style={styles.inputLabel}>Sale Price *</Text>
+                                        <TextInput style={styles.input} value={formItem.price} onChangeText={t => setFormItem({ ...formItem, price: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                    </View>
+                                    <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                                        <Text style={styles.inputLabel}>Purchase Price</Text>
+                                        <TextInput style={styles.input} value={formItem.purchase_rate} onChangeText={t => setFormItem({ ...formItem, purchase_rate: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                    </View>
                                 </View>
-                                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                    <Text style={styles.inputLabel}>Purchase Price</Text>
-                                    <TextInput style={styles.input} value={formItem.purchase_rate} onChangeText={t => setFormItem({...formItem, purchase_rate: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
-                                </View>
-                            </View>
                             ) : null}
 
                             {!formItem.id ? (
-                            <View style={styles.row}>
-                                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                    <Text style={styles.inputLabel}>Total Qty (Stock)</Text>
-                                    <TextInput style={styles.input} value={formItem.total_quantity} onChangeText={t => setFormItem({...formItem, total_quantity: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
-                                </View>
-                                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                    <Text style={styles.inputLabel}>Unit</Text>
-                                    <TouchableOpacity style={styles.input} onPress={() => setShowUnitPicker(true)}>
-                                        <Text style={[{color: colors.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.quantity_unit && {color: colors.text.muted}]} numberOfLines={1}>
-                                            {formItem.quantity_unit || 'Select Unit...'}
-                                        </Text>
-                                        <Icon name="chevron-down" size={18} color={colors.text.secondary} />
-                                    </TouchableOpacity>
-                                </View>
-                            </View>
-                            ) : (
-                            <>
                                 <View style={styles.row}>
                                     <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                        <Text style={styles.inputLabel}>Total qty</Text>
-                                        <View style={[styles.input, { justifyContent: 'center' }]}>
-                                            <Text style={{ color: colors.text.secondary, fontFamily: FONTS.medium }}>{formItem.total_quantity}</Text>
-                                        </View>
+                                        <Text style={styles.inputLabel}>Total Qty (Stock)</Text>
+                                        <TextInput style={styles.input} value={formItem.total_quantity} onChangeText={t => setFormItem({ ...formItem, total_quantity: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                     </View>
                                     <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                        <Text style={styles.inputLabel}>Remaining</Text>
-                                        <View style={[styles.input, { justifyContent: 'center' }]}>
-                                            <Text style={{ color: colors.text.secondary, fontFamily: FONTS.medium }}>{formItem.remaining_display}</Text>
-                                        </View>
-                                    </View>
-                                </View>
-                                <View style={styles.row}>
-                                    <View style={[styles.inputGroup, { flex: 1 }]}>
                                         <Text style={styles.inputLabel}>Unit</Text>
                                         <TouchableOpacity style={styles.input} onPress={() => setShowUnitPicker(true)}>
-                                            <Text style={[{color: colors.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.quantity_unit && {color: colors.text.muted}]} numberOfLines={1}>
+                                            <Text style={[{ color: colors.text.primary, fontFamily: FONTS.regular, flex: 1 }, !formItem.quantity_unit && { color: colors.text.muted }]} numberOfLines={1}>
                                                 {formItem.quantity_unit || 'Select Unit...'}
                                             </Text>
                                             <Icon name="chevron-down" size={18} color={colors.text.secondary} />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
-                                <View style={{ backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color, borderRadius: 12, padding: 14, marginBottom: 12 }}>
-                                    <Text style={[styles.inputLabel, { marginBottom: 10 }]}>Restock</Text>
+                            ) : (
+                                <>
                                     <View style={styles.row}>
                                         <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-                                            <Text style={styles.inputLabel}>Sale price *</Text>
-                                            <TextInput style={styles.input} value={formItem.price} onChangeText={t => setFormItem({...formItem, price: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                            <Text style={styles.inputLabel}>Total qty <Text style={{color: colors.text.muted, fontSize: 11}}>(Edit to adjust)</Text></Text>
+                                            <TextInput
+                                                style={[styles.input, { borderColor: 'rgba(99,102,241,0.5)' }]}
+                                                value={String(formItem.total_quantity)}
+                                                onChangeText={t => setFormItem({...formItem, total_quantity: t})}
+                                                keyboardType="numeric"
+                                                placeholder="0"
+                                                placeholderTextColor={colors.text.muted}
+                                            />
                                         </View>
                                         <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-                                            <Text style={styles.inputLabel}>Purchase rate</Text>
-                                            <TextInput style={styles.input} value={formItem.purchase_rate} onChangeText={t => setFormItem({...formItem, purchase_rate: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                            <Text style={styles.inputLabel}>Remaining <Text style={{color: colors.text.muted, fontSize: 11}}>(Edit to adjust)</Text></Text>
+                                            <TextInput
+                                                style={[styles.input, { borderColor: 'rgba(99,102,241,0.5)' }]}
+                                                value={String(formItem.remaining_display)}
+                                                onChangeText={t => setFormItem({...formItem, remaining_display: t})}
+                                                keyboardType="numeric"
+                                                placeholder="0"
+                                                placeholderTextColor={colors.text.muted}
+                                            />
                                         </View>
                                     </View>
-                                    <Text style={styles.inputLabel}>Add qty</Text>
-                                    <TextInput style={styles.input} value={formItem.add_quantity} onChangeText={t => setFormItem({...formItem, add_quantity: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
-                                    {(() => {
-                                        const aq = Number(formItem.add_quantity || 0);
-                                        const rate = Number(formItem.purchase_rate || 0);
-                                        if (!(aq > 0)) return null;
-                                        const supplierDue = rate * aq;
-                                        const paidRaw = Number(formItem.restock_paid_amount || 0);
-                                        const paid = Math.min(Math.max(0, paidRaw), supplierDue);
-                                        const balance = Math.max(0, supplierDue - paid);
-                                        return (
-                                            <View style={{ marginBottom: 12, paddingVertical: 12, paddingHorizontal: 12, backgroundColor: colors.background.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.color }}>
-                                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <Text style={{ color: colors.text.secondary, fontSize: 13, fontFamily: FONTS.medium }}>Supplier due</Text>
-                                                    <Text style={{ fontFamily: FONTS.bold, fontSize: 17, color: colors.text.primary }}>Rs. {supplierDue.toLocaleString()}</Text>
-                                                </View>
-                                                {rate > 0 ? (
-                                                    <Text style={{ color: colors.text.muted, fontSize: 12, marginTop: 6 }}>{aq} × Rs. {rate} purchase rate</Text>
-                                                ) : (
-                                                    <Text style={{ color: colors.status.warning, fontSize: 12, marginTop: 6 }}>Enter purchase rate</Text>
-                                                )}
-                                                {supplierDue > 0 && paidRaw > 0 ? (
-                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-                                                        <Text style={{ color: colors.text.muted, fontSize: 12 }}>Balance</Text>
-                                                        <Text style={{ fontSize: 13, fontFamily: FONTS.bold, color: balance > 0 ? colors.status.danger : colors.status.success }}>
-                                                            Rs. {balance.toLocaleString()}
-                                                        </Text>
-                                                    </View>
-                                                ) : null}
+                                    <View style={styles.row}>
+                                        <View style={[styles.inputGroup, { flex: 1 }]}>
+                                            <Text style={styles.inputLabel}>Unit</Text>
+                                            <TouchableOpacity style={styles.input} onPress={() => setShowUnitPicker(true)}>
+                                                <Text style={[{ color: colors.text.primary, fontFamily: FONTS.regular, flex: 1 }, !formItem.quantity_unit && { color: colors.text.muted }]} numberOfLines={1}>
+                                                    {formItem.quantity_unit || 'Select Unit...'}
+                                                </Text>
+                                                <Icon name="chevron-down" size={18} color={colors.text.secondary} />
+                                            </TouchableOpacity>
+                                        </View>
+                                    </View>
+                                    <View style={{ backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color, borderRadius: 12, padding: 14, marginBottom: 12 }}>
+                                        <Text style={[styles.inputLabel, { marginBottom: 10 }]}>Restock</Text>
+                                        <View style={styles.row}>
+                                            <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                                                <Text style={styles.inputLabel}>Sale price *</Text>
+                                                <TextInput style={styles.input} value={formItem.price} onChangeText={t => setFormItem({ ...formItem, price: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                             </View>
-                                        );
-                                    })()}
-                                    <Text style={styles.inputLabel}>Paid (Rs)</Text>
-                                    <TextInput style={styles.input} value={formItem.restock_paid_amount} onChangeText={t => setFormItem({...formItem, restock_paid_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
-                                    <Text style={styles.inputLabel}>Batch date</Text>
-                                    <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowRestockDatePicker(true)}>
-                                        <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>
-                                            {(formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()).toLocaleDateString()}
-                                        </Text>
-                                        <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
-                                    </TouchableOpacity>
-                                    {showRestockDatePicker ? (
-                                        <DateTimePicker
-                                            value={formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()}
-                                            mode="date"
-                                            display="default"
-                                            onChange={(e, d) => {
-                                                setShowRestockDatePicker(Platform.OS === 'ios');
-                                                if (d) setFormItem({ ...formItem, restock_purchase_date: d });
-                                            }}
-                                        />
-                                    ) : null}
-                                </View>
-                            </>
+                                            <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                                                <Text style={styles.inputLabel}>Purchase rate</Text>
+                                                <TextInput style={styles.input} value={formItem.purchase_rate} onChangeText={t => setFormItem({ ...formItem, purchase_rate: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                            </View>
+                                        </View>
+                                        <Text style={styles.inputLabel}>Add qty</Text>
+                                        <TextInput style={styles.input} value={formItem.add_quantity} onChangeText={t => setFormItem({ ...formItem, add_quantity: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                        {(() => {
+                                            const aq = Number(formItem.add_quantity || 0);
+                                            const rate = Number(formItem.purchase_rate || 0);
+                                            if (!(aq > 0)) return null;
+                                            const supplierDue = rate * aq;
+                                            const paidRaw = Number(formItem.restock_paid_amount || 0);
+                                            const paid = Math.min(Math.max(0, paidRaw), supplierDue);
+                                            const balance = Math.max(0, supplierDue - paid);
+                                            return (
+                                                <View style={{ marginBottom: 12, paddingVertical: 12, paddingHorizontal: 12, backgroundColor: colors.background.secondary, borderRadius: 10, borderWidth: 1, borderColor: colors.border.color }}>
+                                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Text style={{ color: colors.text.secondary, fontSize: 13, fontFamily: FONTS.medium }}>Supplier due</Text>
+                                                        <Text style={{ fontFamily: FONTS.bold, fontSize: 17, color: colors.text.primary }}>Rs. {supplierDue.toLocaleString()}</Text>
+                                                    </View>
+                                                    {rate > 0 ? (
+                                                        <Text style={{ color: colors.text.muted, fontSize: 12, marginTop: 6 }}>{aq} × Rs. {rate} purchase rate</Text>
+                                                    ) : (
+                                                        <Text style={{ color: colors.status.warning, fontSize: 12, marginTop: 6 }}>Enter purchase rate</Text>
+                                                    )}
+                                                    {supplierDue > 0 && paidRaw > 0 ? (
+                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+                                                            <Text style={{ color: colors.text.muted, fontSize: 12 }}>Balance</Text>
+                                                            <Text style={{ fontSize: 13, fontFamily: FONTS.bold, color: balance > 0 ? colors.status.danger : colors.status.success }}>
+                                                                Rs. {balance.toLocaleString()}
+                                                            </Text>
+                                                        </View>
+                                                    ) : null}
+                                                </View>
+                                            );
+                                        })()}
+                                        <Text style={styles.inputLabel}>Paid (Rs)</Text>
+                                        <TextInput style={styles.input} value={formItem.restock_paid_amount} onChangeText={t => setFormItem({ ...formItem, restock_paid_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                        <Text style={styles.inputLabel}>Batch date</Text>
+                                        <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowRestockDatePicker(true)}>
+                                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>
+                                                {(formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()).toLocaleDateString()}
+                                            </Text>
+                                            <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
+                                        </TouchableOpacity>
+                                        {showRestockDatePicker ? (
+                                            <DateTimePicker
+                                                value={formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()}
+                                                mode="date"
+                                                display="default"
+                                                onChange={(e, d) => {
+                                                    setShowRestockDatePicker(Platform.OS === 'ios');
+                                                    if (d) setFormItem({ ...formItem, restock_purchase_date: d });
+                                                }}
+                                            />
+                                        ) : null}
+                                    </View>
+                                </>
                             )}
 
                             {/* Auto-calculated total to pay supplier - only for new products */}
@@ -858,7 +870,7 @@ export default function ProductsScreen() {
 
                             <Text style={styles.inputLabel}>Category</Text>
                             <TouchableOpacity style={styles.input} onPress={() => setShowCategoryPicker(true)}>
-                                <Text style={[{color: colors.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.category && {color: colors.text.muted}]} numberOfLines={1}>
+                                <Text style={[{ color: colors.text.primary, fontFamily: FONTS.regular, flex: 1 }, !formItem.category && { color: colors.text.muted }]} numberOfLines={1}>
                                     {formItem.category || 'Select Category...'}
                                 </Text>
                                 <Icon name="chevron-down" size={18} color={colors.text.secondary} />
@@ -866,7 +878,7 @@ export default function ProductsScreen() {
 
                             <Text style={styles.inputLabel}>Supplier (Purchased From)</Text>
                             <TouchableOpacity style={styles.input} onPress={() => setShowSupplierPicker(true)}>
-                                <Text style={[{color: colors.text.primary, fontFamily: FONTS.regular, flex: 1}, !formItem.purchased_from && {color: colors.text.muted}]} numberOfLines={1}>
+                                <Text style={[{ color: colors.text.primary, fontFamily: FONTS.regular, flex: 1 }, !formItem.purchased_from && { color: colors.text.muted }]} numberOfLines={1}>
                                     {formItem.purchased_from || 'Select or type supplier...'}
                                 </Text>
                                 <Icon name="chevron-down" size={18} color={colors.text.secondary} />
@@ -876,23 +888,23 @@ export default function ProductsScreen() {
                             {formItem.purchased_from && !supplierOptions.includes(formItem.purchased_from) && (
                                 <View style={{ backgroundColor: 'rgba(99, 102, 241, 0.05)', padding: 12, borderRadius: 10, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(99, 102, 241, 0.2)' }}>
                                     <Text style={[styles.inputLabel, { color: colors.accent.primary }]}>Auto-Create New Supplier</Text>
-                                    
+
                                     <Text style={styles.inputLabel}>Phone Number</Text>
-                                    <TextInput style={styles.input} value={formItem.supplier_phone} onChangeText={t => setFormItem({...formItem, supplier_phone: t})} keyboardType="phone-pad" placeholder="Enter supplier's phone" placeholderTextColor={colors.text.muted} />
-                                    
+                                    <TextInput style={styles.input} value={formItem.supplier_phone} onChangeText={t => setFormItem({ ...formItem, supplier_phone: t })} keyboardType="phone-pad" placeholder="Enter supplier's phone" placeholderTextColor={colors.text.muted} />
+
                                     <Text style={styles.inputLabel}>Company Name (Optional)</Text>
-                                    <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.supplier_company_name} onChangeText={t => setFormItem({...formItem, supplier_company_name: t})} placeholder="Enter company name" placeholderTextColor={colors.text.muted} />
+                                    <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.supplier_company_name} onChangeText={t => setFormItem({ ...formItem, supplier_company_name: t })} placeholder="Enter company name" placeholderTextColor={colors.text.muted} />
                                 </View>
                             )}
 
                             <Text style={styles.inputLabel}>Product Color (e.g. Red, #ff0000)</Text>
-                            <TextInput style={styles.input} value={formItem.color} onChangeText={t => setFormItem({...formItem, color: t})} placeholder="Enter color name or hex" placeholderTextColor={colors.text.muted} />
-                            
+                            <TextInput style={styles.input} value={formItem.color} onChangeText={t => setFormItem({ ...formItem, color: t })} placeholder="Enter color name or hex" placeholderTextColor={colors.text.muted} />
+
                             {/* Show Paid Amount only for NEW products */}
                             {!formItem.id && (
                                 <>
-                                    <Text style={styles.inputLabel}>Paid Amount (Rs) <Text style={{color: colors.text.muted, fontSize: 12}}>(0 = credit only)</Text></Text>
-                                    <TextInput style={styles.input} value={formItem.paid_amount} onChangeText={t => setFormItem({...formItem, paid_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                    <Text style={styles.inputLabel}>Paid Amount (Rs) <Text style={{ color: colors.text.muted, fontSize: 12 }}>(0 = credit only)</Text></Text>
+                                    <TextInput style={styles.input} value={formItem.paid_amount} onChangeText={t => setFormItem({ ...formItem, paid_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                 </>
                             )}
 
@@ -919,7 +931,7 @@ export default function ProductsScreen() {
                                     <View style={[styles.input, { backgroundColor: colors.background.secondary }]}>
                                         <Text style={{ color: supplierTxnInfo.remaining > 0 ? colors.status.danger : colors.status.success, fontFamily: FONTS.bold }}>Rs. {supplierTxnInfo.remaining.toLocaleString()}</Text>
                                     </View>
-                                    <Text style={styles.inputLabel}>Add New Payment (Rs) <Text style={{color: colors.text.muted, fontSize: 12}}>(max: {supplierTxnInfo.remaining})</Text></Text>
+                                    <Text style={styles.inputLabel}>Add New Payment (Rs) <Text style={{ color: colors.text.muted, fontSize: 12 }}>(max: {supplierTxnInfo.remaining})</Text></Text>
                                     <TextInput style={styles.input} value={addPaymentAmount} onChangeText={setAddPaymentAmount} keyboardType="numeric" placeholder="Amount to pay now..." placeholderTextColor={colors.text.muted} />
                                 </>
                             )}
@@ -943,7 +955,7 @@ export default function ProductsScreen() {
                 visible={showUnitPicker}
                 onClose={() => setShowUnitPicker(false)}
                 items={UNIT_OPTIONS}
-                onSelect={(val) => setFormItem({...formItem, quantity_unit: val})}
+                onSelect={(val) => setFormItem({ ...formItem, quantity_unit: val })}
                 title="Select Unit"
                 colors={colors}
                 FONTS={FONTS}
@@ -952,7 +964,7 @@ export default function ProductsScreen() {
                 visible={showCategoryPicker}
                 onClose={() => setShowCategoryPicker(false)}
                 items={CATEGORY_OPTIONS}
-                onSelect={(val) => setFormItem({...formItem, category: val})}
+                onSelect={(val) => setFormItem({ ...formItem, category: val })}
                 title="Select Category"
                 colors={colors}
                 FONTS={FONTS}
@@ -961,11 +973,11 @@ export default function ProductsScreen() {
                 visible={showSupplierPicker}
                 onClose={() => setShowSupplierPicker(false)}
                 items={supplierOptions}
-                onSelect={(val) => setFormItem({...formItem, purchased_from: val})}
+                onSelect={(val) => setFormItem({ ...formItem, purchased_from: val })}
                 title="Select Supplier"
                 allowCustom={true}
                 customValue={formItem.purchased_from}
-                onCustomChange={(val) => setFormItem({...formItem, purchased_from: val})}
+                onCustomChange={(val) => setFormItem({ ...formItem, purchased_from: val })}
                 colors={colors}
                 FONTS={FONTS}
             />
@@ -1047,46 +1059,46 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     filterBtnTextActive: { color: '#fff', fontFamily: FONTS.bold },
     listContainer: { padding: 16, paddingBottom: 100 },
     emptyText: { color: colors.text.secondary, textAlign: 'center', marginTop: 40, fontFamily: FONTS.regular },
-    
+
     actionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.tertiary, paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8, gap: 6 },
     actionBtnDanger: { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
     actionBtnTxt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 },
-    
+
     fab: { position: 'absolute', bottom: 24, right: 24, width: 60, height: 60, borderRadius: 30, backgroundColor: colors.accent.primary, justifyContent: 'center', alignItems: 'center', elevation: 5, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 4 },
-    
-    pendingIndicator: { 
-        position: 'absolute', 
-        bottom: 24, 
-        left: 24, 
-        width: 50, 
-        height: 50, 
-        borderRadius: 25, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        elevation: 5, 
-        shadowColor: '#000', 
-        shadowOffset: { width: 0, height: 4 }, 
-        shadowOpacity: 0.3, 
-        shadowRadius: 4 
+
+    pendingIndicator: {
+        position: 'absolute',
+        bottom: 24,
+        left: 24,
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+        justifyContent: 'center',
+        alignItems: 'center',
+        elevation: 5,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4
     },
-    pendingBadge: { 
-        position: 'absolute', 
-        top: -4, 
-        right: -4, 
-        backgroundColor: colors.status.danger, 
-        borderRadius: 10, 
-        minWidth: 20, 
-        height: 20, 
-        justifyContent: 'center', 
-        alignItems: 'center' 
+    pendingBadge: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: colors.status.danger,
+        borderRadius: 10,
+        minWidth: 20,
+        height: 20,
+        justifyContent: 'center',
+        alignItems: 'center'
     },
-    pendingBadgeText: { 
-        color: '#fff', 
-        fontSize: 10, 
-        fontFamily: FONTS.bold, 
-        paddingHorizontal: 4 
+    pendingBadgeText: {
+        color: '#fff',
+        fontSize: 10,
+        fontFamily: FONTS.bold,
+        paddingHorizontal: 4
     },
-    
+
     modalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.6)' },
     modalContent: { backgroundColor: colors.background.secondary, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, maxHeight: '85%' },
     modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
@@ -1096,7 +1108,7 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     inputGroup: { flex: 1 },
     inputLabel: { color: colors.text.secondary, fontSize: 13, marginBottom: 6, fontFamily: FONTS.medium },
     input: { backgroundColor: colors.background.primary, color: colors.text.primary, borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: colors.border.color, fontFamily: FONTS.regular, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-    
+
     modalFooter: { flexDirection: 'row', gap: 15, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border.color },
     cancelBtn: { flex: 1, padding: 15, borderRadius: 12, backgroundColor: colors.background.primary, alignItems: 'center' },
     cancelBtnText: { color: colors.text.secondary, fontFamily: FONTS.bold, fontSize: 16 },
