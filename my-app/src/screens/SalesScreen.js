@@ -124,7 +124,7 @@ export default function SalesScreen() {
     const handleFullUndo = (sale) => {
         Alert.alert(
             'Full return',
-            'The entire sold quantity will be returned to the stock, and this line's credit/payments will be cleared.',
+            'The entire sold quantity will be returned to the stock, and this line credit/payments will be cleared.',
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
