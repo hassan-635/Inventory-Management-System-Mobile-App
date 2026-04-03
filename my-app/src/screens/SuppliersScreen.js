@@ -261,14 +261,30 @@ export default function SuppliersScreen() {
         ]);
     };
 
-    const filteredSuppliers = useMemo(() => suppliers.filter(s => {
-        const q = search.toLowerCase();
-        return (
-            (s.name || '').toLowerCase().includes(q) ||
-            (s.company_name || '').toLowerCase().includes(q) ||
-            (s.phone || '').includes(search)
-        );
-    }), [suppliers, search]);
+    const filteredSuppliers = useMemo(() => suppliers
+        .filter(s => {
+            const q = search.toLowerCase();
+            return (
+                (s.name || '').toLowerCase().includes(q) ||
+                (s.company_name || '').toLowerCase().includes(q) ||
+                (s.phone || '').includes(search)
+            );
+        })
+        .sort((a, b) => {
+            // Calculate remaining amounts for both suppliers
+            const aRemaining = computeDue(a.supplier_transactions);
+            const bRemaining = computeDue(b.supplier_transactions);
+            
+            // If one has outstanding and other doesn't, outstanding comes first
+            if (aRemaining > 0 && bRemaining <= 0) return -1;
+            if (aRemaining <= 0 && bRemaining > 0) return 1;
+            
+            // If both have outstanding, sort by higher outstanding amount
+            if (aRemaining > 0 && bRemaining > 0) return bRemaining - aRemaining;
+            
+            // If both are cleared, sort alphabetically
+            return a.name.localeCompare(b.name);
+        }), [suppliers, search]);
 
     const filteredPending = useMemo(
         () => filteredSuppliers.reduce((sum, s) => sum + computeDue(s.supplier_transactions), 0),
