@@ -131,7 +131,7 @@ export default function ProductsScreen() {
         id: null, name: '', category: 'Hardware', price: '',
         purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece',
         color: '', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
-        supplier_phone: '', supplier_company_name: ''
+        supplier_phone: '', supplier_company_name: '', low_stock_threshold: '10'
     });
     const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
@@ -209,6 +209,7 @@ export default function ProductsScreen() {
                 add_quantity: '',
                 restock_paid_amount: '',
                 restock_purchase_date: new Date(),
+                low_stock_threshold: product.low_stock_threshold !== undefined && product.low_stock_threshold !== null ? String(product.low_stock_threshold) : '10'
             });
 
             try {
@@ -229,6 +230,7 @@ export default function ProductsScreen() {
                 purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
                 supplier_phone: '', supplier_company_name: '',
                 add_quantity: '', restock_paid_amount: '', restock_purchase_date: new Date(),
+                low_stock_threshold: '10'
             });
         }
         setModalVisible(true);
@@ -261,6 +263,7 @@ export default function ProductsScreen() {
                 quantity_unit: formItem.quantity_unit,
                 supplier_phone: formItem.supplier_phone,
                 supplier_company_name: formItem.supplier_company_name,
+                low_stock_threshold: Number(formItem.low_stock_threshold || 10)
             };
 
             const newItem = {
@@ -310,6 +313,7 @@ export default function ProductsScreen() {
                 supplier_company_name: formItem.supplier_company_name,
                 set_total_quantity: formItem.total_quantity !== '' && formItem.total_quantity !== undefined ? Number(formItem.total_quantity) : undefined,
                 set_remaining_quantity: formItem.remaining_display !== '' && formItem.remaining_display !== undefined ? Number(formItem.remaining_display) : undefined,
+                low_stock_threshold: Number(formItem.low_stock_threshold || 10)
             };
             if (hasRestock) {
                 payload.add_quantity = addQ;
@@ -377,9 +381,10 @@ export default function ProductsScreen() {
             if (!productMatchesSearch(p, search)) return false;
 
             const remaining = Number(p.remaining_quantity || 0);
+            const threshold = p.low_stock_threshold !== undefined && p.low_stock_threshold !== null ? p.low_stock_threshold : 10;
 
             if (activeFilter === 'low') {
-                return remaining > 0 && remaining <= lowStockLimit;
+                return remaining > 0 && remaining <= threshold;
             }
             if (activeFilter === 'out') {
                 return remaining === 0;
@@ -611,7 +616,8 @@ export default function ProductsScreen() {
                 contentContainerStyle={[styles.listContainer, isTablet && { paddingHorizontal: 32 }]}
                 renderItem={({ item }) => {
                     const remaining = Number(item.remaining_quantity || 0);
-                    const isLow = remaining > 0 && remaining <= lowStockLimit;
+                    const threshold = item.low_stock_threshold !== undefined && item.low_stock_threshold !== null ? item.low_stock_threshold : 10;
+                    const isLow = remaining > 0 && remaining <= threshold;
                     const isZero = remaining === 0;
 
                     let containerStyle = {};
@@ -643,7 +649,7 @@ export default function ProductsScreen() {
                             subtitle={item.category || item.purchased_from || null}
                             rightText={`Rs. ${item.price}`}
                             rightSubText={
-                                isZero ? 'Out of stock' : isLow ? `Low stock · ${remaining} left` : `Stock: ${remaining}`
+                                isZero ? `Out of stock · Lmt: ${threshold}` : isLow ? `Low stock · ${remaining} left · Lmt: ${threshold}` : `Stock: ${remaining} · Lmt: ${threshold}`
                             }
                             summaryBoxes={[
                                 { label: 'Sale Price', value: `Rs. ${item.price}` },
@@ -665,6 +671,7 @@ export default function ProductsScreen() {
                                 'Color': item.color ? item.color : 'N/A',
                                 'Total Qty': String(item.total_quantity),
                                 'Remaining Qty': `${remaining}${isZero ? ' (Out of Stock)' : isLow ? ' (Low)' : ''}`,
+                                'Alert Limit': String(threshold),
                                 'Purchase Date': item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : '-',
                                 'Added': new Date(item.created_at).toLocaleDateString()
                             }}
@@ -868,13 +875,21 @@ export default function ProductsScreen() {
                                 return null;
                             })()}
 
-                            <Text style={styles.inputLabel}>Category</Text>
-                            <TouchableOpacity style={styles.input} onPress={() => setShowCategoryPicker(true)}>
-                                <Text style={[{ color: colors.text.primary, fontFamily: FONTS.regular, flex: 1 }, !formItem.category && { color: colors.text.muted }]} numberOfLines={1}>
-                                    {formItem.category || 'Select Category...'}
-                                </Text>
-                                <Icon name="chevron-down" size={18} color={colors.text.secondary} />
-                            </TouchableOpacity>
+                            <View style={styles.row}>
+                                <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
+                                    <Text style={styles.inputLabel}>Category</Text>
+                                    <TouchableOpacity style={styles.input} onPress={() => setShowCategoryPicker(true)}>
+                                        <Text style={[{ color: colors.text.primary, fontFamily: FONTS.regular, flex: 1 }, !formItem.category && { color: colors.text.muted }]} numberOfLines={1}>
+                                            {formItem.category || 'Select Category...'}
+                                        </Text>
+                                        <Icon name="chevron-down" size={18} color={colors.text.secondary} />
+                                    </TouchableOpacity>
+                                </View>
+                                <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
+                                    <Text style={styles.inputLabel}>Low Stock Alert</Text>
+                                    <TextInput style={styles.input} value={String(formItem.low_stock_threshold || '')} onChangeText={t => setFormItem({ ...formItem, low_stock_threshold: t })} keyboardType="numeric" placeholder="10" placeholderTextColor={colors.text.muted} />
+                                </View>
+                            </View>
 
                             <Text style={styles.inputLabel}>Supplier (Purchased From)</Text>
                             <TouchableOpacity style={styles.input} onPress={() => setShowSupplierPicker(true)}>

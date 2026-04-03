@@ -118,10 +118,7 @@ export const scheduleAllLowStockNotifications = async (timesArray = null) => {
 
         if (!timesToSchedule || timesToSchedule.length === 0) return;
 
-        // 2. Fetch limit and check if we even have low stock items right now
-        const limitStr = await AsyncStorage.getItem('low_stock_limit');
-        const limit = limitStr ? parseInt(limitStr, 10) : 10;
-        
+        // 2. Fetch products and check if we have low stock items right now
         let products = [];
         try {
             products = await productsService.getAll();
@@ -130,7 +127,11 @@ export const scheduleAllLowStockNotifications = async (timesArray = null) => {
             return;
         }
         
-        const lowStockItems = products.filter(p => parseInt(p.remaining_quantity, 10) <= limit);
+        const lowStockItems = products.filter(p => {
+            const rem = parseInt(p.remaining_quantity, 10);
+            const thr = p.low_stock_threshold !== undefined && p.low_stock_threshold !== null ? parseInt(p.low_stock_threshold, 10) : 10;
+            return rem <= thr;
+        });
         
         if (lowStockItems.length === 0) return;
         

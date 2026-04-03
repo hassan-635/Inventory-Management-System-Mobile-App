@@ -20,8 +20,6 @@ export default function SettingsScreen() {
     const isDarkMode = useThemeStore((state) => state.isDarkMode);
     const toggleTheme = useThemeStore((state) => state.toggleTheme);
     const isDark = isDarkMode;
-
-    const [stockLimit, setStockLimit] = useState('10');
     const [notificationTimes, setNotificationTimes] = useState([]);
     const [showPicker, setShowPicker] = useState(false);
     const [tempTime, setTempTime] = useState(new Date());
@@ -31,9 +29,6 @@ export default function SettingsScreen() {
     useEffect(() => {
         const loadSettings = async () => {
             try {
-                const limit = await AsyncStorage.getItem('low_stock_limit');
-                if (limit) setStockLimit(limit);
-
                 const timesStr = await AsyncStorage.getItem('notification_times');
                 if (timesStr) {
                     setNotificationTimes(JSON.parse(timesStr));
@@ -46,13 +41,7 @@ export default function SettingsScreen() {
     }, []);
 
     const saveSettings = async () => {
-        if (isNaN(stockLimit) || Number(stockLimit) < 0) {
-            useToastStore.getState().showToast('Invalid Input', 'Please enter a valid positive number for stock limit', 'error');
-            return;
-        }
-
         try {
-            await AsyncStorage.setItem('low_stock_limit', stockLimit);
             await AsyncStorage.setItem('notification_times', JSON.stringify(notificationTimes));
             
             // Reschedule notifications based on new times
@@ -135,23 +124,7 @@ export default function SettingsScreen() {
                 </View>
             </View>
 
-            {/* Stock Rules Section */}
-            <View style={[styles.section, { marginTop: 16 }]}>
-                <Text style={styles.sectionTitle}>Stock Rules</Text>
-                <Text style={styles.description}>Set the remaining quantity limit to trigger low stock alerts.</Text>
 
-                <View style={styles.inputRow}>
-                    <Text style={styles.label}>Low Stock Limit:</Text>
-                    <TextInput
-                        style={styles.input}
-                        value={stockLimit}
-                        onChangeText={setStockLimit}
-                        keyboardType="numeric"
-                        maxLength={4}
-                        placeholderTextColor={colors.text.muted}
-                    />
-                </View>
-            </View>
 
             {/* Notifications Section */}
             <View style={[styles.section, { marginTop: 16 }]}>

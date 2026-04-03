@@ -301,6 +301,17 @@ export default function BillingScreen() {
             useToastStore.getState().showToast('Success', `${isCreditBill ? 'Credit' : 'Original'} Bill saved successfully!`, 'success');
             useDataRefreshStore.getState().bumpInventory();
 
+            // Check for low stock AFTER sale
+            cart.forEach(item => {
+                const remainingAfterSale = (item.remaining_quantity || 0) - item.quantity;
+                const threshold = item.low_stock_threshold !== undefined && item.low_stock_threshold !== null ? Number(item.low_stock_threshold) : 10;
+                if (remainingAfterSale > 0 && remainingAfterSale <= threshold) {
+                    useToastStore.getState().showToast('Low Stock Alert', `⚠️ "${item.name}" stock has dropped to ${remainingAfterSale}!`, 'error');
+                } else if (remainingAfterSale <= 0) {
+                    useToastStore.getState().showToast('Out of Stock', `❌ "${item.name}" is now out of stock!`, 'error');
+                }
+            });
+
             // Save sale data for PDF download
             const cartForPdf = cart.map(item => ({
                 name: item.name,
