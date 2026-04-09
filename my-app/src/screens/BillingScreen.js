@@ -90,6 +90,7 @@ export default function BillingScreen() {
     const [billType, setBillType] = useState('REAL');
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [splitCash, setSplitCash] = useState('');
+    const [splitOnline, setSplitOnline] = useState('');
     
     // Cart State
     const [cart, setCart] = useState([]);
@@ -110,7 +111,7 @@ export default function BillingScreen() {
     const [showCompanyDD, setShowCompanyDD] = useState(false);
 
     // Credit State
-    const [paidAmount, setPaidAmount] = useState('');
+    const [paidAmount, setPaidAmount] = useState('0');
 
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
     const billingFirstFocus = useRef(true);
@@ -259,13 +260,14 @@ export default function BillingScreen() {
         const activePaymentAmt = isCreditBill ? Number(paidAmount || 0) : totalAmount;
 
         if (paymentMethod === 'Split') {
-            const parsedCash = Number(splitCash);
-            if (!splitCash || isNaN(parsedCash) || parsedCash <= 0) {
-                useToastStore.getState().showToast('Validation Error', 'Please enter a valid Cash Amount for the split.', 'error');
+            const parsedCash = Number(splitCash || 0);
+            const parsedOnline = Number(splitOnline || 0);
+            if (parsedCash < 0 || parsedOnline < 0) {
+                useToastStore.getState().showToast('Validation Error', 'Split amounts must be non-negative.', 'error');
                 return;
             }
-            if (parsedCash >= activePaymentAmt) {
-                useToastStore.getState().showToast('Validation Error', 'Cash Amount must be less than the total paid amount for a split.', 'error');
+            if (Math.abs((parsedCash + parsedOnline) - activePaymentAmt) > 0.01) {
+                useToastStore.getState().showToast('Validation Error', 'Split amounts must perfectly equal the total paid amount.', 'error');
                 return;
             }
         }
@@ -296,7 +298,7 @@ export default function BillingScreen() {
             const bName = buyerSearch.trim() || 'Walk-in Customer';
 
             const activePaymentAmt = isCreditBill ? Number(paidAmount || 0) : totalAmount;
-            const derivedSplitOnline = paymentMethod === 'Split' ? Math.max(0, activePaymentAmt - Number(splitCash || 0)) : 0;
+            const derivedSplitOnline = paymentMethod === 'Split' ? Number(splitOnline || 0) : 0;
 
             // Submit each cart item individually to match backend constraints
             for (const item of cart) {
@@ -392,15 +394,19 @@ export default function BillingScreen() {
         setCompanyName('');
         setQuantity('1');
         setSelectedUnit('Per Piece');
-        setPaidAmount('');
+        setPaidAmount('0');
         setBillType('REAL');
         setPaymentMethod('Cash');
         setSplitCash('');
+        setSplitOnline('');
     };
 
     const canProceed = useMemo(() => {
         // Basic validation
-        if (cart.length === 0) return false;
+        if (cart.length === 0) {
+            console.log('Cart is empty');
+            return false;
+        }
         
         // Credit bill validation - allow partial payments
         if (billType === 'CREDIT') {
@@ -414,16 +420,15 @@ export default function BillingScreen() {
             if (billType === 'CREDIT') {
                 // For credit bills: cash + online = paid amount
                 const cash = Number(splitCash || 0);
-                const online = Math.max(0, Number(paidAmount || 0) - Number(splitCash || 0));
+                const online = Number(splitOnline || 0);
                 const totalPaid = cash + online;
                 
                 if (totalPaid !== Number(paidAmount || 0)) return false;
                 if (cash < 0 || online < 0) return false;
-                if (cash > Number(paidAmount || 0)) return false; // cash cannot exceed paid amount
             } else {
                 // For regular bills: cash + online = total amount
                 const cash = Number(splitCash || 0);
-                const online = Math.max(0, totalAmount - Number(splitCash || 0));
+                const online = Number(splitOnline || 0);
                 const totalPaid = cash + online;
                 
                 if (totalPaid !== totalAmount) return false;
@@ -568,9 +573,9 @@ export default function BillingScreen() {
                                 <View style={[styles.inputGroup, { flex: 1, marginLeft: 6, marginBottom: 0 }]}>
                                     <Text style={styles.inputLabel}>Online Amount (Rs)</Text>
                                     <TextInput 
-                                        style={[styles.textInput, { backgroundColor: colors.background.primary, color: colors.text.muted }]} 
-                                        value={String(Math.max(0, (billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount) - Number(splitCash || 0)))} 
-                                        editable={false}
+                                        style={styles.textInput} keyboardType="numeric" 
+                                        value={splitOnline} onChangeText={setSplitOnline} 
+                                        placeholder="0" placeholderTextColor={colors.text.muted} 
                                     />
                                 </View>
                             </View>
