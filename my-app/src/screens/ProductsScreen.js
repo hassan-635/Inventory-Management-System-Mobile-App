@@ -131,7 +131,8 @@ export default function ProductsScreen() {
         id: null, name: '', category: 'Hardware', price: '',
         purchase_rate: '', purchased_from: '', quantity_unit: 'Per Piece',
         color: '', total_quantity: '0', purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
-        supplier_phone: '', supplier_company_name: '', low_stock_threshold: '10'
+        supplier_phone: '', supplier_company_name: '', low_stock_threshold: '10',
+        payment_method: 'Cash', cash_amount: '', online_amount: ''
     });
     const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
@@ -209,7 +210,8 @@ export default function ProductsScreen() {
                 add_quantity: '',
                 restock_paid_amount: '',
                 restock_purchase_date: new Date(),
-                low_stock_threshold: product.low_stock_threshold !== undefined && product.low_stock_threshold !== null ? String(product.low_stock_threshold) : '10'
+                low_stock_threshold: product.low_stock_threshold !== undefined && product.low_stock_threshold !== null ? String(product.low_stock_threshold) : '10',
+                payment_method: 'Cash', cash_amount: '', online_amount: ''
             });
 
             try {
@@ -230,7 +232,8 @@ export default function ProductsScreen() {
                 purchase_date: new Date().toISOString().split('T')[0], paid_amount: '0',
                 supplier_phone: '', supplier_company_name: '',
                 add_quantity: '', restock_paid_amount: '', restock_purchase_date: new Date(),
-                low_stock_threshold: '10'
+                low_stock_threshold: '10',
+                payment_method: 'Cash', cash_amount: '', online_amount: ''
             });
         }
         setModalVisible(true);
@@ -263,7 +266,10 @@ export default function ProductsScreen() {
                 quantity_unit: formItem.quantity_unit,
                 supplier_phone: formItem.supplier_phone,
                 supplier_company_name: formItem.supplier_company_name,
-                low_stock_threshold: Number(formItem.low_stock_threshold || 10)
+                low_stock_threshold: Number(formItem.low_stock_threshold || 10),
+                payment_method: formItem.payment_method || 'Cash',
+                cash_amount: formItem.payment_method === 'Split' ? Number(formItem.cash_amount || 0) : 0,
+                online_amount: formItem.payment_method === 'Split' ? Number(formItem.online_amount || 0) : 0
             };
 
             const newItem = {
@@ -902,11 +908,42 @@ export default function ProductsScreen() {
                             <Text style={styles.inputLabel}>Product Color (e.g. Red, #ff0000)</Text>
                             <TextInput style={styles.input} value={formItem.color} onChangeText={t => setFormItem({ ...formItem, color: t })} placeholder="Enter color name or hex" placeholderTextColor={colors.text.muted} />
 
-                            {/* Show Paid Amount only for NEW products */}
                             {!formItem.id && (
                                 <>
                                     <Text style={styles.inputLabel}>Paid Amount (Rs) <Text style={{ color: colors.text.muted, fontSize: 12 }}>(0 = credit only)</Text></Text>
-                                    <TextInput style={styles.input} value={formItem.paid_amount} onChangeText={t => setFormItem({ ...formItem, paid_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                    <TextInput style={styles.input} value={formItem.paid_amount} onChangeText={t => setFormItem({ ...formItem, paid_amount: t, cash_amount: '', online_amount: '' })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+
+                                    {Number(formItem.paid_amount) > 0 && (
+                                        <View style={{ marginBottom: 12 }}>
+                                            <Text style={styles.inputLabel}>Payment Method</Text>
+                                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                                                {['Cash', 'Online', 'Split'].map(pm => (
+                                                    <TouchableOpacity
+                                                        key={pm}
+                                                        style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, formItem.payment_method === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
+                                                        onPress={() => setFormItem({ ...formItem, payment_method: pm, cash_amount: '', online_amount: '' })}
+                                                    >
+                                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 12 }, formItem.payment_method === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>
+                                                            {pm === 'Online' ? '📱 Online' : pm === 'Cash' ? '💵 Cash' : '🔀 Split'}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+
+                                            {formItem.payment_method === 'Split' && (
+                                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Cash Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.cash_amount} onChangeText={t => setFormItem({ ...formItem, cash_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Online Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.online_amount} onChangeText={t => setFormItem({ ...formItem, online_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
                                 </>
                             )}
 
