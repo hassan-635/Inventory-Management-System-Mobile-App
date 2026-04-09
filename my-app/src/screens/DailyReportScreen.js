@@ -153,6 +153,15 @@ export default function DailyReportScreen() {
     const totalReturns = returns.reduce((s, x) => s + Number(x.total_amount || 0), 0);
     const supplierTotal = supplierTxns.reduce((s, x) => s + Number(x.total_amount || 0), 0);
     const supplierPaid = supplierTxns.reduce((s, x) => s + Number(x.paid_amount || 0), 0);
+    
+    // Profit Calculation (Sale Rate - Purchase Rate) * Quantity
+    const totalProfit = sales.reduce((sum, s) => {
+        const saleRate = Number(s.products?.price || 0);
+        const purchaseRate = Number(s.products?.purchase_rate || 0);
+        const quantity = Number(s.quantity || 0);
+        const profitPerUnit = saleRate - purchaseRate;
+        return sum + (profitPerUnit * quantity);
+    }, 0);
 
     const displayDate = new Date(reportDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
     const isToday = reportDate === new Date().toISOString().split('T')[0];
@@ -215,6 +224,13 @@ export default function DailyReportScreen() {
                         <Text style={[styles.statSub, { color: totalCredit > 0 ? '#ef4444' : colors.text.secondary }]}>
                             Credit: Rs. {totalCredit.toLocaleString()}
                         </Text>
+                    </View>
+
+                    <View style={[styles.statCard, { borderTopColor: '#10b981', borderTopWidth: 3 }]}>
+                        <Icon name="trending-up-outline" size={20} color="#10b981" style={styles.statIcon} />
+                        <Text style={styles.statTitle}>Today's Profit</Text>
+                        <Text style={[styles.statValue, { color: '#10b981' }]}>Rs. {totalProfit.toLocaleString()}</Text>
+                        <Text style={styles.statSub}>Product margin</Text>
                     </View>
                 </View>
 

@@ -189,6 +189,22 @@ export default function MonthlyReportScreen() {
                         </Text>
                     </View>
 
+                    <View style={[styles.statCard, { borderLeftColor: '#10b981', borderLeftWidth: 4 }]}>
+                        <Icon name="trending-up" size={22} color="#10b981" style={styles.statIcon} />
+                        <Text style={styles.statTitle}>Product Profit</Text>
+                        <Text style={[styles.statValue, { color: '#10b981' }]}>
+                            Rs. {(summary.product_profit || 0).toLocaleString()}
+                        </Text>
+                    </View>
+
+                    <View style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}>
+                        <Icon name="wallet-outline" size={22} color="#3b82f6" style={styles.statIcon} />
+                        <Text style={styles.statTitle}>Gross Margin</Text>
+                        <Text style={[styles.statValue, { color: '#3b82f6' }]}>
+                            Rs. {summary.accrual_profit.toLocaleString()}
+                        </Text>
+                    </View>
+
                     <View style={[styles.statCard, { borderLeftColor: '#f97316', borderLeftWidth: 4 }]}>
                         <Icon name="wallet" size={22} color="#f97316" style={styles.statIcon} />
                         <Text style={styles.statTitle}>Total Expenses</Text>
