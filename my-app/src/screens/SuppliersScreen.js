@@ -30,7 +30,15 @@ export default function SuppliersScreen() {
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [formItem, setFormItem] = useState({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0, payment_date: new Date(), payment_method: 'Cash', cash_amount: '', online_amount: '' });
+    const [showPurchaseDatePicker, setShowPurchaseDatePicker] = useState(false);
+    const [formItem, setFormItem] = useState({
+        id: null, name: '', phone: '', company_name: '',
+        payment_amount: '', txn_due: 0, payment_date: new Date(),
+        payment_method: 'Cash', cash_amount: '', online_amount: '',
+        product_name: '', quantity: '', unit_price: '', total_amount: '',
+        purchase_paid_amount: '0', purchase_date: new Date(),
+        purchase_payment_method: 'Cash', purchase_cash_amount: '', purchase_online_amount: ''
+    });
 
     const fetchSuppliers = useCallback(async () => {
         try {
@@ -49,6 +57,11 @@ export default function SuppliersScreen() {
 
     // CRUD Functions
     const openModal = (supplier = null) => {
+        const extra = {
+            product_name: '', quantity: '', unit_price: '', total_amount: '',
+            purchase_paid_amount: '0', purchase_date: new Date(),
+            purchase_payment_method: 'Cash', purchase_cash_amount: '', purchase_online_amount: ''
+        };
         if (supplier) {
             const txnDue = (supplier.supplier_transactions || []).reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0);
             setFormItem({
@@ -61,101 +74,103 @@ export default function SuppliersScreen() {
                 txn_due: txnDue,
                 payment_method: 'Cash',
                 cash_amount: '',
-                online_amount: ''
+                online_amount: '',
+                ...extra
             });
         } else {
-            setFormItem({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0, payment_date: new Date(), payment_method: 'Cash', cash_amount: '', online_amount: '' });
+            setFormItem({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0, payment_date: new Date(), payment_method: 'Cash', cash_amount: '', online_amount: '', ...extra });
         }
         setModalVisible(true);
     };
 
     const handleSave = async () => {
-        const payStr = formItem.payment_amount != null ? String(formItem.payment_amount).trim() : '';
-        const isPaymentOnlySave = !!formItem.id && payStr !== '';
+        if (!formItem.name || !String(formItem.name).trim()) {
+            useToastStore.getState().showToast('Error', 'Supplier name is required.', 'error'); return;
+        }
 
-        let payload;
-        if (isPaymentOnlySave) {
+        if (!formItem.id) {
+            if (isSupplierIdInPendingList(formItem.name.trim())) {
+                useToastStore.getState().showToast('Error', 'This supplier is already in the pending list.', 'error'); return;
+            }
+            const payload = { name: String(formItem.name).trim(), phone: String(formItem.phone || '').trim(), company_name: String(formItem.company_name || '').trim() };
+            setPendingItems(prev => [...prev, { action: 'add', name: formItem.name.trim(), data: payload }]);
+            setIsSideListVisible(true);
+            setModalVisible(false);
+            useToastStore.getState().showToast('Added to Pending', 'Supplier added to pending list.', 'success');
+            return;
+        }
+
+        // --- Existing supplier ---
+        const payStr = String(formItem.payment_amount || '').trim();
+        const hasPayment = payStr !== '' && Number(payStr) > 0;
+        const hasProduct = String(formItem.product_name || '').trim() !== '' && Number(formItem.quantity) > 0;
+
+        // Validate payment
+        if (hasPayment) {
             const payAmt = Number(payStr);
             if (!Number.isFinite(payAmt) || payAmt <= 0) {
-                useToastStore.getState().showToast('Error', 'Enter a valid payment amount.', 'error');
-                return;
+                useToastStore.getState().showToast('Error', 'Enter a valid payment amount.', 'error'); return;
             }
             if (payAmt > formItem.txn_due) {
-                useToastStore.getState().showToast('Error', 'Payment cannot exceed remaining amount: Rs. ' + formItem.txn_due, 'error');
-                return;
+                useToastStore.getState().showToast('Error', 'Payment cannot exceed remaining amount: Rs. ' + formItem.txn_due, 'error'); return;
             }
             if (formItem.payment_method === 'Split') {
                 const pc = Number(formItem.cash_amount || 0);
                 const po = Number(formItem.online_amount || 0);
-                if (pc < 0 || po < 0) {
-                    useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error');
-                    return;
-                }
-                if (Math.abs((pc + po) - payAmt) > 0.01) {
-                    useToastStore.getState().showToast('Error', `Split amounts (${pc} + ${po}) must equal paid amount (${payAmt}).`, 'error');
-                    return;
-                }
+                if (pc < 0 || po < 0) { useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error'); return; }
+                if (Math.abs((pc + po) - payAmt) > 0.01) { useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${payAmt}).`, 'error'); return; }
             }
+        }
 
-            payload = {
-                payment_amount: payAmt,
-                date: formItem.payment_date.toISOString().split('T')[0],
-                payment_method: formItem.payment_method,
-                cash_amount: Number(formItem.cash_amount || 0),
-                online_amount: Number(formItem.online_amount || 0)
-            };
-        } else {
-            if (!formItem.name || !String(formItem.name).trim()) {
-                useToastStore.getState().showToast("Error", "Supplier name is required.", "error");
-                return;
+        // Validate product
+        if (hasProduct) {
+            const pPaid = Number(formItem.purchase_paid_amount || 0);
+            const pTotal = Number(formItem.total_amount || 0);
+            if (pPaid > pTotal) { useToastStore.getState().showToast('Error', 'Paid amount cannot exceed total amount.', 'error'); return; }
+            if (formItem.purchase_payment_method === 'Split') {
+                const pc = Number(formItem.purchase_cash_amount || 0);
+                const po = Number(formItem.purchase_online_amount || 0);
+                if (pc < 0 || po < 0) { useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error'); return; }
+                if (pPaid > 0 && Math.abs((pc + po) - pPaid) > 0.01) { useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${pPaid}).`, 'error'); return; }
             }
-            
-            if (!formItem.id) {
-                // Check if supplier with same name already exists in pending list
-                if (isSupplierIdInPendingList(formItem.name.trim())) {
-                    useToastStore.getState().showToast('Error', 'This supplier is already in the pending list.', 'error');
-                    return;
-                }
-                
-                // For new suppliers, add to pending list instead of direct save
-                payload = {
-                    name: String(formItem.name).trim(),
-                    phone: formItem.phone != null ? String(formItem.phone).trim() : '',
-                    company_name: formItem.company_name != null ? String(formItem.company_name).trim() : '',
-                };
-
-                const newItem = {
-                    action: 'add',
-                    name: formItem.name.trim(),
-                    data: payload
-                };
-                
-                setPendingItems(prev => [...prev, newItem]);
-                setIsSideListVisible(true);
-                setModalVisible(false);
-                useToastStore.getState().showToast('Added to Pending', 'Supplier added to pending list.', 'success');
-                return;
-            }
-            
-            // For existing suppliers (edit mode), keep original logic
-            payload = {
-                name: String(formItem.name).trim(),
-                phone: formItem.phone != null ? String(formItem.phone).trim() : '',
-                company_name: formItem.company_name != null ? String(formItem.company_name).trim() : '',
-            };
         }
 
         setIsSaving(true);
         try {
-            if (formItem.id) {
-                await suppliersService.update(formItem.id, payload);
-                setModalVisible(false);
-                useToastStore.getState().showToast('Saved', 'Supplier saved successfully!', 'success');
-                fetchSuppliers();
+            const basicPayload = {
+                name: String(formItem.name).trim(),
+                phone: String(formItem.phone || '').trim(),
+                company_name: String(formItem.company_name || '').trim(),
+            };
+            if (hasPayment) {
+                basicPayload.payment_amount = Number(payStr);
+                basicPayload.date = formItem.payment_date.toISOString().split('T')[0];
+                basicPayload.payment_method = formItem.payment_method;
+                basicPayload.cash_amount = Number(formItem.cash_amount || 0);
+                basicPayload.online_amount = Number(formItem.online_amount || 0);
             }
+            await suppliersService.update(formItem.id, basicPayload);
+
+            if (hasProduct) {
+                await api.post('/purchases', {
+                    supplier_id: formItem.id,
+                    product_name: String(formItem.product_name).trim(),
+                    quantity: Number(formItem.quantity),
+                    total_amount: Number(formItem.total_amount || 0),
+                    paid_amount: Number(formItem.purchase_paid_amount || 0),
+                    purchase_date: formItem.purchase_date.toISOString().split('T')[0],
+                    payment_method: formItem.purchase_payment_method,
+                    cash_amount: Number(formItem.purchase_cash_amount || 0),
+                    online_amount: Number(formItem.purchase_online_amount || 0)
+                });
+            }
+
+            setModalVisible(false);
+            useToastStore.getState().showToast('Saved', 'Supplier saved successfully!', 'success');
+            fetchSuppliers();
         } catch (error) {
-            console.error("Save supplier error", error);
-            useToastStore.getState().showToast("Error", error.response?.data?.error || "Could not save supplier.", "error");
+            console.error('Save supplier error', error);
+            useToastStore.getState().showToast('Error', error.response?.data?.error || 'Could not save supplier.', 'error');
         } finally {
             setIsSaving(false);
         }
@@ -392,8 +407,30 @@ export default function SuppliersScreen() {
                                                 const remaining = Number(txn.total_amount || 0) - Number(txn.paid_amount || 0);
                                                 return (
                                                     <View key={txn.id || idx} style={styles.txnCard}>
-                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                                                            <Text style={styles.txnProduct}>{txn.products?.name || `Product #${txn.product_id}`}</Text>
+                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                            <View style={{ flex: 1, marginRight: 8 }}>
+                                                                <Text style={styles.txnProduct}>{txn.products?.name || `Product #${txn.product_id}`}</Text>
+                                                                {txn.payment_method && (
+                                                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 }}>
+                                                                        <View style={[{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+                                                                            txn.payment_method === 'Cash' ? { backgroundColor: 'rgba(74,222,128,0.15)' } :
+                                                                            txn.payment_method === 'Online' ? { backgroundColor: 'rgba(56,189,248,0.15)' } :
+                                                                            { backgroundColor: 'rgba(251,191,36,0.15)' }
+                                                                        ]}>
+                                                                            <Text style={[{ fontSize: 10, fontFamily: FONTS.bold },
+                                                                                txn.payment_method === 'Cash' ? { color: '#4ade80' } :
+                                                                                txn.payment_method === 'Online' ? { color: '#38bdf8' } :
+                                                                                { color: '#fbbf24' }
+                                                                            ]}>{txn.payment_method}</Text>
+                                                                        </View>
+                                                                        {txn.payment_method === 'Split' && (
+                                                                            <Text style={{ fontSize: 10, color: colors.text.muted, fontFamily: FONTS.regular }}>
+                                                                                C:{txn.cash_amount} | O:{txn.online_amount}
+                                                                            </Text>
+                                                                        )}
+                                                                    </View>
+                                                                )}
+                                                            </View>
                                                             <Text style={[styles.txnRemaining, { color: remaining > 0 ? colors.status.danger : colors.status.success }]}>
                                                                 {remaining > 0 ? `Due: Rs. ${remaining.toLocaleString()}` : '✓ Paid'}
                                                             </Text>
@@ -541,7 +578,132 @@ export default function SuppliersScreen() {
                                 </>
                             )}
 
-                            <View style={{ height: 20 }} />
+                            {!!formItem.id && (
+                                <>
+                                    <View style={{ height: 1, backgroundColor: colors.border.color, marginVertical: 10 }} />
+                                    <Text style={[styles.inputLabel, { color: colors.accent.primary, fontFamily: FONTS.bold, marginBottom: 4 }]}>Add New Purchase (Optional)</Text>
+
+                                    <Text style={styles.inputLabel}>Product Name</Text>
+                                    <TextInput
+                                        style={styles.input}
+                                        value={formItem.product_name}
+                                        onChangeText={t => setFormItem({...formItem, product_name: t})}
+                                        placeholder="Enter product name..."
+                                        placeholderTextColor={colors.text.muted}
+                                    />
+
+                                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[styles.inputLabel, { fontSize: 12 }]}>Quantity</Text>
+                                            <TextInput
+                                                style={[styles.input, { marginBottom: 0 }]}
+                                                value={formItem.quantity}
+                                                onChangeText={t => {
+                                                    const qty = Number(t);
+                                                    const price = Number(formItem.unit_price || 0);
+                                                    setFormItem({...formItem, quantity: t, total_amount: qty > 0 && price > 0 ? String(qty * price) : formItem.total_amount});
+                                                }}
+                                                keyboardType="numeric"
+                                                placeholder="0"
+                                                placeholderTextColor={colors.text.muted}
+                                            />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[styles.inputLabel, { fontSize: 12 }]}>Unit Price (Rs)</Text>
+                                            <TextInput
+                                                style={[styles.input, { marginBottom: 0 }]}
+                                                value={formItem.unit_price}
+                                                onChangeText={t => {
+                                                    const price = Number(t);
+                                                    const qty = Number(formItem.quantity || 0);
+                                                    setFormItem({...formItem, unit_price: t, total_amount: qty > 0 && price > 0 ? String(qty * price) : formItem.total_amount});
+                                                }}
+                                                keyboardType="numeric"
+                                                placeholder="0"
+                                                placeholderTextColor={colors.text.muted}
+                                            />
+                                        </View>
+                                    </View>
+
+                                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[styles.inputLabel, { fontSize: 12 }]}>Total Amount (Rs)</Text>
+                                            <TextInput
+                                                style={[styles.input, { marginBottom: 0, color: colors.text.muted }]}
+                                                value={formItem.total_amount}
+                                                editable={false}
+                                                placeholder="Auto calculated"
+                                                placeholderTextColor={colors.text.muted}
+                                            />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={[styles.inputLabel, { fontSize: 12 }]}>Paid Amount (Rs)</Text>
+                                            <TextInput
+                                                style={[styles.input, { marginBottom: 0 }]}
+                                                value={formItem.purchase_paid_amount}
+                                                onChangeText={t => setFormItem({...formItem, purchase_paid_amount: t})}
+                                                keyboardType="numeric"
+                                                placeholder="0"
+                                                placeholderTextColor={colors.text.muted}
+                                            />
+                                        </View>
+                                    </View>
+
+                                    {Number(formItem.purchase_paid_amount) > 0 && (
+                                        <View style={{ marginTop: 12 }}>
+                                            <Text style={styles.inputLabel}>Payment Method</Text>
+                                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                                                {['Cash', 'Online', 'Split'].map(pm => (
+                                                    <TouchableOpacity
+                                                        key={pm}
+                                                        style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, formItem.purchase_payment_method === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
+                                                        onPress={() => setFormItem({...formItem, purchase_payment_method: pm})}
+                                                    >
+                                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 12 }, formItem.purchase_payment_method === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>
+                                                            {pm === 'Online' ? '📱 Online' : pm === 'Cash' ? '💵 Cash' : '🔀 Split'}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+
+                                            {formItem.purchase_payment_method === 'Split' && (
+                                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Cash Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.purchase_cash_amount} onChangeText={t => setFormItem({...formItem, purchase_cash_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Online Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.purchase_online_amount} onChangeText={t => setFormItem({...formItem, purchase_online_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
+
+                                    <Text style={[styles.inputLabel, { marginTop: 10 }]}>Purchase Date</Text>
+                                    <TouchableOpacity
+                                        style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                                        onPress={() => setShowPurchaseDatePicker(true)}
+                                    >
+                                        <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>{formItem.purchase_date.toLocaleDateString()}</Text>
+                                        <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
+                                    </TouchableOpacity>
+                                    {showPurchaseDatePicker && (
+                                        <DateTimePicker
+                                            value={formItem.purchase_date}
+                                            mode="date"
+                                            display="default"
+                                            onChange={(event, selectedDate) => {
+                                                setShowPurchaseDatePicker(Platform.OS === 'ios');
+                                                if (selectedDate) setFormItem({...formItem, purchase_date: selectedDate});
+                                            }}
+                                        />
+                                    )}
+                                </>
+                            )}
+
+                                    <View style={{ height: 20 }} />
                         </ScrollView>
                         <View style={styles.modalFooter}>
                             <TouchableOpacity style={styles.cancelBtn} onPress={() => setModalVisible(false)} disabled={isSaving}>
