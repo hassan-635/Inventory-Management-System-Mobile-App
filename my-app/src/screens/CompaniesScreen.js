@@ -23,6 +23,9 @@ export default function CompaniesScreen() {
     const [expandedId, setExpandedId] = useState(null);
     const [payModal, setPayModal] = useState({ visible: false, company: null });
     const [payAmount, setPayAmount] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState('Company Payment');
+    const [cashAmount, setCashAmount] = useState('');
+    const [onlineAmount, setOnlineAmount] = useState('');
     const [paying, setPaying] = useState(false);
 
     const fetchCompanies = useCallback(async () => {
@@ -71,6 +74,19 @@ export default function CompaniesScreen() {
             Alert.alert('Excess Amount', `Company max Rs. ${company.total_remaining} is owed to you (please receive it).`);
             return;
         }
+
+        if (paymentMethod === 'Split') {
+            const parsedCash = Number(cashAmount || 0);
+            const parsedOnline = Number(onlineAmount || 0);
+            if (parsedCash < 0 || parsedOnline < 0) {
+                useToastStore.getState().showToast('Invalid Amount', 'Split amounts cannot be negative', 'error');
+                return;
+            }
+            if (Math.abs((parsedCash + parsedOnline) - amount) > 0.01) {
+                useToastStore.getState().showToast('Invalid Amount', `Split amounts (${parsedCash} + ${parsedOnline}) must equal the paid amount (${amount})`, 'error');
+                return;
+            }
+        }
         
         Alert.alert(
             'Confirm Payment',
@@ -86,12 +102,18 @@ export default function CompaniesScreen() {
                             await api.post('/buyers/company-payment', {
                                 company_name: company.company_name,
                                 payment_amount: amount,
-                                date: new Date().toISOString().split('T')[0]
+                                date: new Date().toISOString().split('T')[0],
+                                payment_method: paymentMethod,
+                                cash_amount: Number(cashAmount || 0),
+                                online_amount: Number(onlineAmount || 0)
                             });
                             
                             useToastStore.getState().showToast('Payment Successful!', `Rs. ${amount} distributed across ${company.buyers.length} customers`, 'success');
                             setPayModal({ visible: false, company: null });
                             setPayAmount('');
+                            setPaymentMethod('Company Payment');
+                            setCashAmount('');
+                            setOnlineAmount('');
                             fetchCompanies();
                         } catch (err) {
                             useToastStore.getState().showToast('Error', 'Payment failed. Please try again.', 'error');
@@ -258,10 +280,43 @@ export default function CompaniesScreen() {
                             value={payAmount}
                             onChangeText={setPayAmount}
                         />
+
+                        {payAmount > 0 && (
+                            <View style={{ marginBottom: 16 }}>
+                                <Text style={{ color: colors.text.secondary, fontSize: 13, marginBottom: 6, fontFamily: FONTS.medium }}>Payment Method</Text>
+                                <View style={{ flexDirection: 'row', gap: 10 }}>
+                                    {['Company Payment', 'Cash', 'Online', 'Split'].map(pm => (
+                                        <TouchableOpacity
+                                            key={pm}
+                                            style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, paymentMethod === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
+                                            onPress={() => setPaymentMethod(pm)}
+                                        >
+                                            <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 11, textAlign: 'center' }, paymentMethod === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>
+                                                {pm === 'Company Payment' ? '🏢 Default' : pm === 'Online' ? '📱 Online' : (pm === 'Cash' ? '💵 Cash' : '🔀 Split')}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                                
+                                {paymentMethod === 'Split' && (
+                                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={{ color: colors.text.secondary, fontSize: 11, marginBottom: 4 }}>Cash Amount</Text>
+                                            <TextInput style={[styles.modalInput, { marginBottom: 0 }]} value={cashAmount} onChangeText={setCashAmount} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted || colors.text.secondary} />
+                                        </View>
+                                        <View style={{ flex: 1 }}>
+                                            <Text style={{ color: colors.text.secondary, fontSize: 11, marginBottom: 4 }}>Online Amount</Text>
+                                            <TextInput style={[styles.modalInput, { marginBottom: 0 }]} value={onlineAmount} onChangeText={setOnlineAmount} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted || colors.text.secondary} />
+                                        </View>
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
                         <View style={styles.modalBtns}>
                             <TouchableOpacity
                                 style={[styles.modalBtn, { backgroundColor: colors.background.tertiary }]}
-                                onPress={() => { setPayModal({ visible: false, company: null }); setPayAmount(''); }}
+                                onPress={() => { setPayModal({ visible: false, company: null }); setPayAmount(''); setPaymentMethod('Company Payment'); setCashAmount(''); setOnlineAmount(''); }}
                             >
                                 <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium }}>Cancel</Text>
                             </TouchableOpacity>

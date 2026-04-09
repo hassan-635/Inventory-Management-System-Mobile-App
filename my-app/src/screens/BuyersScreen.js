@@ -32,11 +32,12 @@ export default function BuyersScreen() {
     // Form modal
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [showDatePicker, setShowDatePicker] = useState(false);
     const [formItem, setFormItem] = useState({
         id: null, name: '', phone: '', company_name: '', address: '',
-        payment_amount: '', txn_due: 0, payment_date: new Date()
+        payment_amount: '', txn_due: 0, payment_date: new Date(),
+        payment_method: 'Cash', cash_amount: '', online_amount: ''
     });
+    const [showDatePicker, setShowDatePicker] = useState(false);
 
     const fetchBuyers = useCallback(async () => {
         try {
@@ -71,9 +72,9 @@ export default function BuyersScreen() {
     const openModal = (buyer = null) => {
         if (buyer) {
             const txnDue = computeDue(buyer.buyer_transactions);
-            setFormItem({ id: buyer.id, name: buyer.name || '', phone: buyer.phone || '', company_name: buyer.company_name || '', address: buyer.address || '', payment_amount: '', txn_due: txnDue, payment_date: new Date() });
+            setFormItem({ id: buyer.id, name: buyer.name || '', phone: buyer.phone || '', company_name: buyer.company_name || '', address: buyer.address || '', payment_amount: '', txn_due: txnDue, payment_date: new Date(), payment_method: 'Cash', cash_amount: '', online_amount: '' });
         } else {
-            setFormItem({ id: null, name: '', phone: '', company_name: '', address: '', payment_amount: '', txn_due: 0, payment_date: new Date() });
+            setFormItem({ id: null, name: '', phone: '', company_name: '', address: '', payment_amount: '', txn_due: 0, payment_date: new Date(), payment_method: 'Cash', cash_amount: '', online_amount: '' });
         }
         setModalVisible(true);
     };
@@ -130,8 +131,25 @@ export default function BuyersScreen() {
                         useToastStore.getState().showToast('Error', 'Payment cannot exceed Rs. ' + formItem.txn_due, 'error');
                         return;
                     }
+
+                    if (formItem.payment_method === 'Split') {
+                        const pc = Number(formItem.cash_amount || 0);
+                        const po = Number(formItem.online_amount || 0);
+                        if (pc < 0 || po < 0) {
+                            useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error');
+                            return;
+                        }
+                        if (Math.abs((pc + po) - payAmt) > 0.01) {
+                            useToastStore.getState().showToast('Error', `Split amounts (${pc} + ${po}) must equal paid amount (${payAmt}).`, 'error');
+                            return;
+                        }
+                    }
+
                     payload.payment_amount = payAmt;
                     payload.date = formItem.payment_date.toISOString().split('T')[0];
+                    payload.payment_method = formItem.payment_method;
+                    payload.cash_amount = Number(formItem.cash_amount || 0);
+                    payload.online_amount = Number(formItem.online_amount || 0);
                 }
             }
         }
@@ -442,6 +460,36 @@ export default function BuyersScreen() {
                                         <Text style={{ color: colors.text.muted, fontSize: 11, fontFamily: FONTS.regular }}>(max: Rs. {formItem.txn_due})</Text>
                                     </Text>
                                     <TextInput style={styles.input} value={formItem.payment_amount} onChangeText={t => setFormItem({ ...formItem, payment_amount: t })} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={colors.text.muted} />
+
+                                    {formItem.payment_amount > 0 && (
+                                        <View style={{ marginBottom: 16 }}>
+                                            <Text style={styles.inputLabel}>Payment Method</Text>
+                                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                                                {['Cash', 'Online', 'Split'].map(pm => (
+                                                    <TouchableOpacity
+                                                        key={pm}
+                                                        style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, formItem.payment_method === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
+                                                        onPress={() => setFormItem({...formItem, payment_method: pm})}
+                                                    >
+                                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, formItem.payment_method === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>{pm === 'Online' ? '📱 Online' : (pm === 'Cash' ? '💵 Cash' : '🔀 Split')}</Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+                                            
+                                            {formItem.payment_method === 'Split' && (
+                                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Cash Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.cash_amount} onChangeText={t => setFormItem({...formItem, cash_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Online Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.online_amount} onChangeText={t => setFormItem({...formItem, online_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
 
                                     <Text style={styles.inputLabel}>Payment Date</Text>
                                     <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowDatePicker(true)}>
