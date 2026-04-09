@@ -252,6 +252,33 @@ export default function ProductsScreen() {
                 return;
             }
 
+            // --- VALIDATIONS ---
+            const paidAmt = Number(formItem.paid_amount || 0);
+            const purchaseRate = Number(formItem.purchase_rate || 0);
+            const qty = Number(formItem.total_quantity || 0);
+            const supplierDue = purchaseRate > 0 && qty > 0 ? purchaseRate * qty : 0;
+
+            // Validation 1: paid_amount must not exceed supplier due
+            if (supplierDue > 0 && paidAmt > supplierDue) {
+                useToastStore.getState().showToast('Error', `Paid amount (Rs. ${paidAmt}) cannot exceed supplier due (Rs. ${supplierDue}).`, 'error');
+                return;
+            }
+
+            // Validation 2: Split — cash + online must equal paid_amount
+            if (formItem.payment_method === 'Split' && paidAmt > 0) {
+                const cash = Number(formItem.cash_amount || 0);
+                const online = Number(formItem.online_amount || 0);
+                if (cash < 0 || online < 0) {
+                    useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error');
+                    return;
+                }
+                if (Math.abs((cash + online) - paidAmt) > 0.01) {
+                    useToastStore.getState().showToast('Error', `Split amounts (Cash: ${cash} + Online: ${online}) must equal paid amount (Rs. ${paidAmt}).`, 'error');
+                    return;
+                }
+            }
+            // -------------------
+
             // For new products, add to pending list instead of direct save
             const payload = {
                 name: formItem.name.trim(),
