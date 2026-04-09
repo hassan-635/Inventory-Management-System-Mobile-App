@@ -409,14 +409,26 @@ export default function BillingScreen() {
             if (Number(paidAmount) > totalAmount) return false;
         }
         
-        // Split payment validation
+        // Split payment validation - different logic for credit vs regular bills
         if (paymentMethod === 'Split') {
-            const cash = Number(splitCash || 0);
-            const online = Math.max(0, (billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount) - Number(splitCash || 0));
-            const totalPaid = cash + online;
-            
-            if (totalPaid !== (billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount)) return false;
-            if (cash < 0 || online < 0) return false;
+            if (billType === 'CREDIT') {
+                // For credit bills: cash + online = paid amount
+                const cash = Number(splitCash || 0);
+                const online = Math.max(0, Number(paidAmount || 0) - Number(splitCash || 0));
+                const totalPaid = cash + online;
+                
+                if (totalPaid !== Number(paidAmount || 0)) return false;
+                if (cash < 0 || online < 0) return false;
+                if (cash > Number(paidAmount || 0)) return false; // cash cannot exceed paid amount
+            } else {
+                // For regular bills: cash + online = total amount
+                const cash = Number(splitCash || 0);
+                const online = Math.max(0, totalAmount - Number(splitCash || 0));
+                const totalPaid = cash + online;
+                
+                if (totalPaid !== totalAmount) return false;
+                if (cash < 0 || online < 0) return false;
+            }
         }
         
         return true;
