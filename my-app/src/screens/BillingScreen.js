@@ -398,6 +398,30 @@ export default function BillingScreen() {
         setSplitCash('');
     };
 
+    const canProceed = useMemo(() => {
+        // Basic validation
+        if (cart.length === 0) return false;
+        
+        // Credit bill validation - allow partial payments
+        if (billType === 'CREDIT') {
+            if (!buyerSearch.trim() || !buyerPhone.trim()) return false;
+            if (!paidAmount || Number(paidAmount) < 0) return false;
+            if (Number(paidAmount) > totalAmount) return false;
+        }
+        
+        // Split payment validation
+        if (paymentMethod === 'Split') {
+            const cash = Number(splitCash || 0);
+            const online = Math.max(0, (billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount) - Number(splitCash || 0));
+            const totalPaid = cash + online;
+            
+            if (totalPaid !== (billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount)) return false;
+            if (cash < 0 || online < 0) return false;
+        }
+        
+        return true;
+    }, [cart, billType, buyerSearch, buyerPhone, paidAmount, totalAmount, paymentMethod, splitCash]);
+
     if (loading && products.length === 0) {
         return (
             <View style={styles.centerContainer}>
@@ -677,9 +701,9 @@ export default function BillingScreen() {
 
             {/* Submit */}
             <TouchableOpacity
-                style={[styles.submitBtn, (submitting || cart.length === 0) && { opacity: 0.6 }]}
+                style={[styles.submitBtn, (submitting || !canProceed) && { opacity: 0.6 }]}
                 onPress={handleSubmit}
-                disabled={submitting || cart.length === 0}
+                disabled={submitting || !canProceed}
             >
                 {submitting ? (
                     <ActivityIndicator color="#fff" />
