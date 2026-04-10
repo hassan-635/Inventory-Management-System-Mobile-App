@@ -342,9 +342,69 @@ export default function BuyersScreen() {
                         <View style={styles.detailRows}>
                             {item.phone && <View style={styles.detailRow}><Icon name="call-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>{item.phone}</Text></View>}
                             {item.address && <View style={styles.detailRow}><Icon name="location-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>{item.address}</Text></View>}
-                            <View style={styles.detailRow}><Icon name="receipt-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>{item.buyer_transactions?.length || 0} transactions</Text></View>
                             <View style={styles.detailRow}><Icon name="calendar-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>Since {new Date(item.created_at).toLocaleDateString()}</Text></View>
                         </View>
+
+                        {/* Transaction History mapped similarly to Suppliers */}
+                        {(item.buyer_transactions || []).length > 0 && (
+                            <View style={{ marginTop: 10, marginBottom: 12 }}>
+                                <Text style={[styles.inputLabel, { marginBottom: 6, fontSize: 12, letterSpacing: 0.5 }]}>🛒 SALES HISTORY</Text>
+                                {item.buyer_transactions.map((txn, idx) => {
+                                    const saleRate = txn.quantity > 0 ? Math.round(Number(txn.total_amount) / Number(txn.quantity)) : 0;
+                                    const remaining = Number(txn.total_amount || 0) - Number(txn.paid_amount || 0);
+                                    return (
+                                        <View key={txn.id || idx} style={styles.txnCard}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <View style={{ flex: 1, marginRight: 8 }}>
+                                                    <Text style={styles.txnProduct}>{txn.products?.name || `Product #${txn.product_id}`}</Text>
+                                                    {txn.payment_method && (
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 }}>
+                                                            <View style={[{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+                                                                txn.payment_method === 'Cash' ? { backgroundColor: 'rgba(74,222,128,0.15)' } :
+                                                                txn.payment_method === 'Online' ? { backgroundColor: 'rgba(56,189,248,0.15)' } :
+                                                                { backgroundColor: 'rgba(251,191,36,0.15)' }
+                                                            ]}>
+                                                                <Text style={[{ fontSize: 10, fontFamily: FONTS.bold },
+                                                                    txn.payment_method === 'Cash' ? { color: '#4ade80' } :
+                                                                    txn.payment_method === 'Online' ? { color: '#38bdf8' } :
+                                                                    { color: '#fbbf24' }
+                                                                ]}>{txn.payment_method}</Text>
+                                                            </View>
+                                                            {txn.payment_method === 'Split' && (
+                                                                <Text style={{ fontSize: 10, color: colors.text.muted, fontFamily: FONTS.regular }}>
+                                                                    C:{txn.cash_amount} | O:{txn.online_amount}
+                                                                </Text>
+                                                            )}
+                                                        </View>
+                                                    )}
+                                                </View>
+                                                <Text style={[styles.txnRemaining, { color: remaining > 0 ? colors.status.danger : colors.status.success }]}>
+                                                    {remaining > 0 ? `Due: Rs. ${remaining.toLocaleString()}` : '✅ Paid'}
+                                                </Text>
+                                            </View>
+                                            <View style={styles.txnRow}>
+                                                <View style={styles.txnCell}>
+                                                    <Text style={styles.txnLabel}>Qty</Text>
+                                                    <Text style={styles.txnValue}>{txn.quantity}</Text>
+                                                </View>
+                                                <View style={styles.txnCell}>
+                                                    <Text style={styles.txnLabel}>Rate</Text>
+                                                    <Text style={styles.txnValue}>Rs. {saleRate.toLocaleString()}</Text>
+                                                </View>
+                                                <View style={styles.txnCell}>
+                                                    <Text style={styles.txnLabel}>Total</Text>
+                                                    <Text style={styles.txnValue}>Rs. {Number(txn.total_amount).toLocaleString()}</Text>
+                                                </View>
+                                                <View style={styles.txnCell}>
+                                                    <Text style={styles.txnLabel}>Paid</Text>
+                                                    <Text style={[styles.txnValue, { color: colors.status.success }]}>Rs. {Number(txn.paid_amount).toLocaleString()}</Text>
+                                                </View>
+                                            </View>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        )}
 
                         {/* Action Buttons */}
                         <View style={styles.actionRow}>
@@ -619,9 +679,24 @@ const getStyles = (colors, FONTS, SW) => StyleSheet.create({
         alignItems: 'center' 
     },
     pendingBadgeText: { 
-        color: '#fff', 
         fontSize: 10, 
         fontFamily: FONTS.bold, 
         paddingHorizontal: 4 
     },
+    
+    // Transaction History Styles
+    txnCard: {
+        backgroundColor: colors.background.primary,
+        borderRadius: 8,
+        padding: 10,
+        marginBottom: 8,
+        borderWidth: 1,
+        borderColor: colors.border.color,
+    },
+    txnProduct: { color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 13 },
+    txnRemaining: { fontSize: 12, fontFamily: FONTS.medium },
+    txnRow: { flexDirection: 'row', marginTop: 4, gap: 4 },
+    txnCell: { flex: 1, alignItems: 'center', backgroundColor: colors.background.secondary, borderRadius: 6, padding: 6 },
+    txnLabel: { color: colors.text.muted, fontSize: 10, fontFamily: FONTS.regular, marginBottom: 2 },
+    txnValue: { color: colors.text.primary, fontSize: 12, fontFamily: FONTS.medium },
 });
