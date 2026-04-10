@@ -136,6 +136,9 @@ export default function ProductsScreen() {
     });
     const [supplierTxnInfo, setSupplierTxnInfo] = useState(null);
     const [addPaymentAmount, setAddPaymentAmount] = useState('');
+    const [updatePaymentMethod, setUpdatePaymentMethod] = useState('Cash');
+    const [updateCashAmount, setUpdateCashAmount] = useState('');
+    const [updateOnlineAmount, setUpdateOnlineAmount] = useState('');
     const [showRestockDatePicker, setShowRestockDatePicker] = useState(false);
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
 
@@ -210,9 +213,13 @@ export default function ProductsScreen() {
                 add_quantity: '',
                 restock_paid_amount: '',
                 restock_purchase_date: new Date(),
+                restock_payment_method: 'Cash', restock_cash_amount: '', restock_online_amount: '',
                 low_stock_threshold: product.low_stock_threshold !== undefined && product.low_stock_threshold !== null ? String(product.low_stock_threshold) : '10',
                 payment_method: 'Cash', cash_amount: '', online_amount: ''
             });
+            setUpdatePaymentMethod('Cash');
+            setUpdateCashAmount('');
+            setUpdateOnlineAmount('');
 
             try {
                 const allTxns = await purchasesService.getAll();
@@ -331,6 +338,21 @@ export default function ProductsScreen() {
                     setIsSaving(false);
                     return;
                 }
+                
+                if (formItem.restock_payment_method === 'Split' && paidRestock > 0) {
+                    const rcash = Number(formItem.restock_cash_amount || 0);
+                    const ronline = Number(formItem.restock_online_amount || 0);
+                    if (rcash < 0 || ronline < 0) {
+                        useToastStore.getState().showToast('Error', 'Split amounts for restock cannot be negative.', 'error');
+                        setIsSaving(false);
+                        return;
+                    }
+                    if (Math.abs((rcash + ronline) - paidRestock) > 0.01) {
+                        useToastStore.getState().showToast('Error', 'Split amounts must equal restock paid amount.', 'error');
+                        setIsSaving(false);
+                        return;
+                    }
+                }
             }
 
             const payload = {
@@ -354,6 +376,11 @@ export default function ProductsScreen() {
                 payload.restock_purchase_date = formItem.restock_purchase_date instanceof Date
                     ? formItem.restock_purchase_date.toISOString().split('T')[0]
                     : String(formItem.restock_purchase_date || '').split('T')[0] || new Date().toISOString().split('T')[0];
+                if (payload.restock_paid_amount > 0) {
+                    payload.restock_payment_method = formItem.restock_payment_method || 'Cash';
+                    payload.restock_cash_amount = payload.restock_payment_method === 'Split' ? Number(formItem.restock_cash_amount || 0) : 0;
+                    payload.restock_online_amount = payload.restock_payment_method === 'Split' ? Number(formItem.restock_online_amount || 0) : 0;
+                }
             }
 
             await productsService.update(formItem.id, payload);
@@ -364,7 +391,26 @@ export default function ProductsScreen() {
                     setIsSaving(false);
                     return;
                 }
-                await purchasesService.updatePayment(supplierTxnInfo.txn_id, payAmt);
+                
+                if (updatePaymentMethod === 'Split') {
+                    const ucash = Number(updateCashAmount || 0);
+                    const uonline = Number(updateOnlineAmount || 0);
+                    if (ucash < 0 || uonline < 0) {
+                        useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error');
+                        setIsSaving(false); return;
+                    }
+                    if (Math.abs((ucash + uonline) - payAmt) > 0.01) {
+                        useToastStore.getState().showToast('Error', 'Split amounts must equal added payment.', 'error');
+                        setIsSaving(false); return;
+                    }
+                }
+
+                await purchasesService.updatePayment(supplierTxnInfo.txn_id, {
+                    add_payment: payAmt,
+                    payment_method: updatePaymentMethod,
+                    cash_amount: updatePaymentMethod === 'Split' ? Number(updateCashAmount || 0) : 0,
+                    online_amount: updatePaymentMethod === 'Split' ? Number(updateOnlineAmount || 0) : 0
+                });
             }
 
             setModalVisible(false);
@@ -856,7 +902,39 @@ export default function ProductsScreen() {
                                             );
                                         })()}
                                         <Text style={styles.inputLabel}>Paid (Rs)</Text>
-                                        <TextInput style={styles.input} value={formItem.restock_paid_amount} onChangeText={t => setFormItem({ ...formItem, restock_paid_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                        <TextInput style={styles.input} value={formItem.restock_paid_amount} onChangeText={t => setFormItem({ ...formItem, restock_paid_amount: t, restock_cash_amount: '', restock_online_amount: '' })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+
+                                        {Number(formItem.restock_paid_amount) > 0 && (
+                                            <View style={{ marginBottom: 16 }}>
+                                                <Text style={styles.inputLabel}>Restock Payment Method</Text>
+                                                <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                                                    {['Cash', 'Online', 'Split'].map(pm => (
+                                                        <TouchableOpacity
+                                                            key={pm}
+                                                            style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, formItem.restock_payment_method === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
+                                                            onPress={() => setFormItem({ ...formItem, restock_payment_method: pm, restock_cash_amount: '', restock_online_amount: '' })}
+                                                        >
+                                                            <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 12 }, formItem.restock_payment_method === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>
+                                                                {pm === 'Online' ? '📱 Online' : pm === 'Cash' ? '💵 Cash' : '🔀 Split'}
+                                                            </Text>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+
+                                                {formItem.restock_payment_method === 'Split' && (
+                                                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                                                        <View style={{ flex: 1 }}>
+                                                            <Text style={[styles.inputLabel, { fontSize: 11 }]}>Cash Amount</Text>
+                                                            <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.restock_cash_amount} onChangeText={t => setFormItem({ ...formItem, restock_cash_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                        </View>
+                                                        <View style={{ flex: 1 }}>
+                                                            <Text style={[styles.inputLabel, { fontSize: 11 }]}>Online Amount</Text>
+                                                            <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.restock_online_amount} onChangeText={t => setFormItem({ ...formItem, restock_online_amount: t })} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                        </View>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        )}
                                         <Text style={styles.inputLabel}>Batch date</Text>
                                         <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowRestockDatePicker(true)}>
                                             <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>
@@ -998,7 +1076,39 @@ export default function ProductsScreen() {
                                         <Text style={{ color: supplierTxnInfo.remaining > 0 ? colors.status.danger : colors.status.success, fontFamily: FONTS.bold }}>Rs. {supplierTxnInfo.remaining.toLocaleString()}</Text>
                                     </View>
                                     <Text style={styles.inputLabel}>Add New Payment (Rs) <Text style={{ color: colors.text.muted, fontSize: 12 }}>(max: {supplierTxnInfo.remaining})</Text></Text>
-                                    <TextInput style={styles.input} value={addPaymentAmount} onChangeText={setAddPaymentAmount} keyboardType="numeric" placeholder="Amount to pay now..." placeholderTextColor={colors.text.muted} />
+                                    <TextInput style={styles.input} value={addPaymentAmount} onChangeText={t => { setAddPaymentAmount(t); setUpdateCashAmount(''); setUpdateOnlineAmount(''); }} keyboardType="numeric" placeholder="Amount to pay now..." placeholderTextColor={colors.text.muted} />
+
+                                    {Number(addPaymentAmount) > 0 && (
+                                        <View style={{ marginBottom: 12 }}>
+                                            <Text style={styles.inputLabel}>Payment Method</Text>
+                                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
+                                                {['Cash', 'Online', 'Split'].map(pm => (
+                                                    <TouchableOpacity
+                                                        key={pm}
+                                                        style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, updatePaymentMethod === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
+                                                        onPress={() => { setUpdatePaymentMethod(pm); setUpdateCashAmount(''); setUpdateOnlineAmount(''); }}
+                                                    >
+                                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 12 }, updatePaymentMethod === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>
+                                                            {pm === 'Online' ? '📱 Online' : pm === 'Cash' ? '💵 Cash' : '🔀 Split'}
+                                                        </Text>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </View>
+
+                                            {updatePaymentMethod === 'Split' && (
+                                                <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Cash Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={updateCashAmount} onChangeText={setUpdateCashAmount} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[styles.inputLabel, { fontSize: 11 }]}>Online Amount</Text>
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={updateOnlineAmount} onChangeText={setUpdateOnlineAmount} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                    </View>
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
                                 </>
                             )}
 

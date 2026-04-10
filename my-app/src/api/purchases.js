@@ -1,12 +1,12 @@
-import api from './apiClient';
+import api from './axiosConfig';
 
 export const purchasesService = {
     getAll: async () => {
         const response = await api.get('/purchases');
         return response.data;
     },
-    updatePayment: async (id, add_payment) => {
-        const response = await api.put(`/purchases/${id}`, { add_payment });
+    updatePayment: async (id, data) => {
+        const response = await api.put(`/purchases/${id}`, data);
         return response.data;
     }
 };
