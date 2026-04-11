@@ -23,6 +23,10 @@ export default function SettingsScreen() {
     const [notificationTimes, setNotificationTimes] = useState([]);
     const [showPicker, setShowPicker] = useState(false);
     const [tempTime, setTempTime] = useState(new Date());
+
+    const [shopName, setShopName] = useState('My Store');
+    const [shopAddress, setShopAddress] = useState('City, Pakistan');
+    const [shopPhone, setShopPhone] = useState('0300-0000000');
     
     const logout = useAuthStore((state) => state.logout);
 
@@ -32,6 +36,13 @@ export default function SettingsScreen() {
                 const timesStr = await AsyncStorage.getItem('notification_times');
                 if (timesStr) {
                     setNotificationTimes(JSON.parse(timesStr));
+                }
+                const shopStr = await AsyncStorage.getItem('shop_settings');
+                if (shopStr) {
+                    const shop = JSON.parse(shopStr);
+                    setShopName(shop.name || 'My Store');
+                    setShopAddress(shop.address || 'City, Pakistan');
+                    setShopPhone(shop.phone || '0300-0000000');
                 }
             } catch (err) {
                 console.error("Error loading settings", err);
@@ -43,6 +54,11 @@ export default function SettingsScreen() {
     const saveSettings = async () => {
         try {
             await AsyncStorage.setItem('notification_times', JSON.stringify(notificationTimes));
+            await AsyncStorage.setItem('shop_settings', JSON.stringify({
+                name: shopName,
+                address: shopAddress,
+                phone: shopPhone
+            }));
             
             // Reschedule notifications based on new times
             await scheduleAllLowStockNotifications(notificationTimes);
@@ -105,8 +121,48 @@ export default function SettingsScreen() {
         <ScrollView style={styles.container} contentContainerStyle={[styles.contentContainer, isTablet && { paddingHorizontal: '15%' }]}>
             <Text style={styles.headerTitle}>App Settings</Text>
 
-            {/* Appearance Section */}
+            {/* Shop Info Section */}
             <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Shop Information</Text>
+                <Text style={styles.description}>This information will appear on generated PDFs.</Text>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Shop/Store Name</Text>
+                    <TextInput
+                        style={styles.textInputFull}
+                        value={shopName}
+                        onChangeText={setShopName}
+                        placeholder="e.g. Jellani Hardware Store"
+                        placeholderTextColor={colors.text.muted}
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Shop Address</Text>
+                    <TextInput
+                        style={[styles.textInputFull, { minHeight: 60 }]}
+                        value={shopAddress}
+                        onChangeText={setShopAddress}
+                        placeholder="e.g. Main Kallar Syedan Road..."
+                        placeholderTextColor={colors.text.muted}
+                        multiline
+                    />
+                </View>
+
+                <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Phone Number</Text>
+                    <TextInput
+                        style={styles.textInputFull}
+                        value={shopPhone}
+                        onChangeText={setShopPhone}
+                        placeholder="e.g. 0329-5749291"
+                        placeholderTextColor={colors.text.muted}
+                    />
+                </View>
+            </View>
+
+            {/* Appearance Section */}
+            <View style={[styles.section, { marginTop: 16 }]}>
                 <Text style={styles.sectionTitle}>Appearance</Text>
                 <Text style={styles.description}>Customize the look and feel of your app.</Text>
 
@@ -264,6 +320,27 @@ const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
         fontSize: 16,
         marginRight: 10,
         fontFamily: FONTS.medium,
+    },
+    inputGroup: {
+        marginBottom: 16,
+    },
+    inputLabel: {
+        color: colors.text.secondary,
+        fontSize: 13,
+        marginBottom: 6,
+        fontFamily: FONTS.medium,
+        textTransform: 'uppercase',
+    },
+    textInputFull: {
+        backgroundColor: colors.background.tertiary,
+        color: colors.text.primary,
+        fontFamily: FONTS.medium,
+        fontSize: 15,
+        borderWidth: 1,
+        borderColor: colors.border.color || 'rgba(0,0,0,0.1)',
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 10,
     },
     input: {
         backgroundColor: colors.background.tertiary,

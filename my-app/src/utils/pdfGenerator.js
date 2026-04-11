@@ -1,6 +1,15 @@
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatProductId } from './formatProductId';
+
+async function getShopSettings() {
+    try {
+        const str = await AsyncStorage.getItem('shop_settings');
+        if (str) return JSON.parse(str);
+    } catch {}
+    return { name: 'Jellani Hardware Store', address: 'Main Kallar Syedan Road', phone: '0300-0000000' };
+}
 
 /** Readable, filesystem-safe piece for PDF names (customer name, period label, etc.) */
 function pdfNamePart(raw, maxLen = 40) {
@@ -92,6 +101,7 @@ export const sharePdf = async (htmlContent, defaultFileName) => {
 };
 
 export const generateDailyReportPdf = async (reportDate, salesToday, returnsToday, productsToday, supplierTxns, buyersToday, suppliersToday) => {
+    const shopSettings = await getShopSettings();
     const totalSalesAmount = salesToday.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
     const totalCashPaid = salesToday.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
     const totalCreditGiven = totalSalesAmount - totalCashPaid;
@@ -110,8 +120,9 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
             <style>${PDF_CSS}</style>
         </head>
         <body>
-            <h1>Store Daily Report</h1>
-            <p style="text-align:center; font-size:14px; margin-top:-5px; color:#475569;">Date: <strong>${new Date(reportDate).toLocaleDateString('en-GB')}</strong></p>
+            <h1>${shopSettings.name}</h1>
+            <p style="text-align:center; font-size:16px; margin:0 0 5px 0; font-weight:bold; color:#1e3a8a;">Daily Report</p>
+            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Date: <strong>${new Date(reportDate).toLocaleDateString('en-GB')}</strong></p>
 
             <div class="report-hero-stats">
                 <div class="stat-card-premium blue">
@@ -219,6 +230,7 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
  * @param {'quotation'|'cash_invoice'|'credit_invoice'} [fileMeta.kind]
  */
 export const generateInvoicePdf = async (transactionInfo, cartItems, customerName, totalBill, discount, finalAmount, customPaymentDate, fileMeta = {}) => {
+    const shopSettings = await getShopSettings();
     // Exact copy of frontend receipt structure with proper receipt styling
     const htmlContent = `
         <html>
@@ -391,9 +403,9 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
             <div class="receipt">
                 <div class="receipt-header">
                     <div class="receipt-logo">🧮</div>
-                    <h2 style="font-size: 1.4rem;">Jellani Hardware, Paint<br />and Electric Store</h2>
-                    <p class="receipt-address">Main Kallar Syedan Road, Near DHA Phase 7 Gate 1</p>
-                    <p class="receipt-contact">Ph: 0329-5749291</p>
+                    <h2 style="font-size: 1.4rem; word-break: break-word; white-space: pre-wrap;">${shopSettings.name}</h2>
+                    <p class="receipt-address">${shopSettings.address}</p>
+                    <p class="receipt-contact">Ph: ${shopSettings.phone}</p>
                     
                     <div class="receipt-type-badge">
                         ${fileMeta.kind === 'quotation' ? 'QUOTATION / ESTIMATE' : fileMeta.kind === 'credit_invoice' ? 'CREDIT / CREDIT INVOICE' : 'TAX INVOICE'}
@@ -489,6 +501,7 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
 };
 
 export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYear, isDailySummary) => {
+    const shopSettings = await getShopSettings();
     const { summary, expense_breakdown, activity_lists, company_wise_summary, daily_breakdown } = reportData;
 
     let overviewHtml = ``;
@@ -643,8 +656,9 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
             <style>${PDF_CSS} .pdf-mode-active { zoom: 0.8; }</style>
         </head>
         <body class="pdf-mode-active">
-            <h1>${isDailySummary ? 'Day-by-Day Monthly Summary' : 'Monthly Financial Overview'}</h1>
-            <p style="text-align:center; font-size:14px; margin-top:-5px; color:#475569;">Period: <strong>${filterMonth}/${filterYear}</strong></p>
+            <h1>${shopSettings.name}</h1>
+            <p style="text-align:center; font-size:16px; margin:0 0 5px 0; font-weight:bold; color:#1e3a8a;">${isDailySummary ? 'Day-by-Day Monthly Summary' : 'Monthly Financial Overview'}</p>
+            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Period: <strong>${filterMonth}/${filterYear}</strong></p>
             <p style="text-align:center; font-size:12px; margin-top:4px; color:#64748b;">${isDailySummary ? 'Daily roll-up table only (mobile Daily Summaries tab).' : 'Full month overview: income, payables, expenses, company summary (mobile Overview tab).'}</p>
 
             ${isDailySummary ? dailySummaryHtml : overviewHtml}
