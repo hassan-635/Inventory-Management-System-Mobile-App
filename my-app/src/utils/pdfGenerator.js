@@ -195,16 +195,20 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
             ${salesToday.length === 0 ? '<p class="text-muted">No sales recorded today.</p>' : `
             <div class="premium-table-wrap">
                 <table class="premium-table">
-                    <thead><tr><th>Customer</th><th>Product Info</th><th>Qty</th><th>Total Amount</th><th>Paid Amount</th><th>Condition</th></tr></thead>
+                    <thead><tr><th>Customer</th><th>Product Info</th><th>Qty</th><th>Total Amount</th><th>Paid Amount</th><th>Method</th><th>Condition</th></tr></thead>
                     <tbody>
                         ${salesToday.map(sale => {
                             const t = Number(sale.total_amount || 0); const p = Number(sale.paid_amount || 0); const u = t - p;
+                            const m = sale.payment_method || 'Cash';
+                            const splitDetails = m === 'Split' ? `<br/><small style="color:#64748b; font-size: 10px;">C:${sale.cash_amount} O:${sale.online_amount}</small>` : '';
+                            const methodHtml = m === 'Online' ? `<span style="color:#38bdf8;">Online</span>` : m === 'Split' ? `<span style="color:#f59e0b;">Split</span>${splitDetails}` : `<span style="color:#22c55e;">Cash</span>`;
                             return `<tr>
                                 <td>${sale.buyer_name || (sale.buyers && sale.buyers.name) || 'Walk-in Customer'}</td>
                                 <td><strong>${(sale.products && sale.products.name) || ('Product ID ' + sale.product_id)}</strong></td>
                                 <td>${sale.quantity}</td>
                                 <td><strong>Rs. ${t.toLocaleString()}</strong></td>
                                 <td class="text-success"><strong>Rs. ${p.toLocaleString()}</strong></td>
+                                <td style="text-align:center;"><strong>${methodHtml}</strong></td>
                                 <td>${u > 0 ? '<span class="text-danger">Credit: Rs.' + u.toLocaleString() + '</span>' : '<span class="text-success">Clear</span>'}</td>
                             </tr>`;
                         }).join('')}

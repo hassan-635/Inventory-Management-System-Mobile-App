@@ -327,8 +327,9 @@ export default function DailyReportScreen() {
                                 <Text style={[styles.tableHeaderText, { flex: 2 }]}>Customer</Text>
                                 <Text style={[styles.tableHeaderText, { flex: 2 }]}>Product</Text>
                                 <Text style={[styles.tableHeaderText, { flex: 1, textAlign: 'center' }]}>Qty</Text>
-                                <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Total</Text>
-                                <Text style={[styles.tableHeaderText, { flex: 2, textAlign: 'right' }]}>Status</Text>
+                                <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Total</Text>
+                                <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'center' }]}>Method</Text>
+                                <Text style={[styles.tableHeaderText, { flex: 1.5, textAlign: 'right' }]}>Status</Text>
                             </View>
                             {sales.map((sale, i) => {
                                 const t = Number(sale.total_amount || 0);
@@ -345,10 +346,22 @@ export default function DailyReportScreen() {
                                         <Text style={[styles.tableCell, { flex: 1, textAlign: 'center', color: colors.text.secondary }]}>
                                             {sale.quantity}
                                         </Text>
-                                        <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', fontFamily: FONTS.medium }]}>
-                                            Rs. {t.toLocaleString()}
-                                        </Text>
-                                        <Text style={[styles.tableCell, { flex: 2, textAlign: 'right', color: u > 0 ? '#ef4444' : '#22c55e', fontFamily: FONTS.bold }]}>
+                                        <View style={{ flex: 1.5, alignItems: 'flex-end' }}>
+                                            <Text style={[styles.tableCell, { fontFamily: FONTS.medium }]}>
+                                                Rs. {t.toLocaleString()}
+                                            </Text>
+                                        </View>
+                                        <View style={{ flex: 1.5, alignItems: 'center' }}>
+                                            <Text style={[styles.tableCell, { fontSize: 10, color: sale.payment_method === 'Online' ? '#38bdf8' : (sale.payment_method === 'Split' ? '#fbbf24' : '#4ade80'), fontFamily: FONTS.bold }]}>
+                                                {sale.payment_method || 'Cash'}
+                                            </Text>
+                                            {sale.payment_method === 'Split' && (
+                                                <Text style={{ fontSize: 8, color: colors.text.muted, marginTop: 2 }}>
+                                                    C:{sale.cash_amount} O:{sale.online_amount}
+                                                </Text>
+                                            )}
+                                        </View>
+                                        <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: u > 0 ? '#ef4444' : '#22c55e', fontFamily: FONTS.bold }]}>
                                             {u > 0 ? `Credit` : '✓ Clear'}
                                         </Text>
                                     </View>
