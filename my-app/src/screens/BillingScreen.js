@@ -3,6 +3,7 @@ import {
     View, Text, StyleSheet, ScrollView, TouchableOpacity,
     TextInput, Alert, ActivityIndicator, FlatList, Modal, useWindowDimensions
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { productsService } from '../api/products';
 import { buyersService } from '../api/buyers';
 import { salesService } from '../api/sales';
@@ -113,6 +114,11 @@ export default function BillingScreen() {
     // Credit State
     const [paidAmount, setPaidAmount] = useState('0');
 
+    // Recent bill recovery
+    const [recentGeneratedBill, setRecentGeneratedBill] = useState(null);
+    const [isEditingGeneratedBill, setIsEditingGeneratedBill] = useState(false);
+    const skipAutosave = useRef(false);
+
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
     const billingFirstFocus = useRef(true);
 
@@ -140,6 +146,45 @@ export default function BillingScreen() {
         if (inventoryTick === 0) return;
         loadData({ showLoading: false });
     }, [inventoryTick, loadData]);
+
+    // Load draft + recent bill from AsyncStorage on mount
+    useEffect(() => {
+        const loadSaved = async () => {
+            try {
+                const savedRecent = await AsyncStorage.getItem('recent_billing_data');
+                if (savedRecent) setRecentGeneratedBill(JSON.parse(savedRecent));
+
+                const savedDraft = await AsyncStorage.getItem('current_billing_draft');
+                if (savedDraft) {
+                    skipAutosave.current = true;
+                    const d = JSON.parse(savedDraft);
+                    setCart(d.cart || []);
+                    setBuyerSearch(d.buyerSearch || '');
+                    setCompanyName(d.companyName || '');
+                    setBuyerPhone(d.buyerPhone || '');
+                    setBillType(d.billType || 'REAL');
+                    setPaidAmount(d.paidAmount || '0');
+                    setPaymentMethod(d.paymentMethod || 'Cash');
+                    setSplitCash(d.splitCash || '');
+                    setSplitOnline(d.splitOnline || '');
+                    setIsEditingGeneratedBill(d.isEditingGeneratedBill || false);
+                    setTimeout(() => { skipAutosave.current = false; }, 500);
+                }
+            } catch (e) { console.error('Failed to load billing draft', e); }
+        };
+        loadSaved();
+    }, []);
+
+    // Continuously autosave draft
+    useEffect(() => {
+        if (skipAutosave.current) return;
+        const draftObj = { cart, buyerSearch, companyName, buyerPhone, billType, paidAmount, paymentMethod, splitCash, splitOnline, isEditingGeneratedBill };
+        if (cart.length > 0 || buyerSearch) {
+            AsyncStorage.setItem('current_billing_draft', JSON.stringify(draftObj)).catch(() => {});
+        } else {
+            AsyncStorage.removeItem('current_billing_draft').catch(() => {});
+        }
+    }, [cart, buyerSearch, companyName, buyerPhone, billType, paidAmount, paymentMethod, splitCash, splitOnline, isEditingGeneratedBill]);
 
     // Derived Companies List from Buyers (unique, sorted)
     const companyOptions = useMemo(() => {
@@ -300,8 +345,23 @@ export default function BillingScreen() {
             const activePaymentAmt = isCreditBill ? Number(paidAmount || 0) : totalAmount;
             const derivedSplitOnline = paymentMethod === 'Split' ? Number(splitOnline || 0) : 0;
 
+            // If editing a previously generated bill, delete the old sale records first
+            if (isEditingGeneratedBill && recentGeneratedBill?.cart) {
+                for (const oldItem of recentGeneratedBill.cart) {
+                    if (oldItem.txn_id) {
+                        try {
+                            await salesService.delete(oldItem.txn_id);
+                        } catch (e) {
+                            console.error('Failed to delete old txn', oldItem.txn_id, e);
+                        }
+                    }
+                }
+            }
+
             // Submit each cart item individually to match backend constraints
-            for (const item of cart) {
+            const generatedCartItems = [...cart];
+            for (let i = 0; i < generatedCartItems.length; i++) {
+                const item = generatedCartItems[i];
                 const itemTotal = item.price * item.quantity;
                 
                 // Proportion logic for split payment
@@ -340,7 +400,9 @@ export default function BillingScreen() {
                     online_amount: itemOnlineAmount
                 };
                 
-                await salesService.create(payload);
+                const res = await salesService.create(payload);
+                // Capture txn id for future edit/reversal
+                generatedCartItems[i].txn_id = res?.data?.id || res?.id || res?.data?.[0]?.id;
             }
 
             useToastStore.getState().showToast('Success', `${isCreditBill ? 'Credit' : 'Original'} Bill saved successfully!`, 'success');
@@ -356,6 +418,22 @@ export default function BillingScreen() {
                     useToastStore.getState().showToast('Out of Stock', `❌ "${item.name}" is now out of stock!`, 'error');
                 }
             });
+
+            // Save the generated bill snapshot to AsyncStorage for recovery
+            const billSnapshot = {
+                cart: generatedCartItems,
+                buyerSearch: bName,
+                companyName: companyName.trim() || '',
+                buyerPhone,
+                billType,
+                paidAmount,
+                paymentMethod,
+                splitCash,
+                splitOnline,
+                isEditingGeneratedBill: false,
+            };
+            await AsyncStorage.setItem('recent_billing_data', JSON.stringify(billSnapshot));
+            setRecentGeneratedBill(billSnapshot);
 
             // Save sale data for PDF download
             const cartForPdf = cart.map(item => ({
@@ -399,6 +477,10 @@ export default function BillingScreen() {
         setPaymentMethod('Cash');
         setSplitCash('');
         setSplitOnline('');
+        setIsEditingGeneratedBill(false);
+        skipAutosave.current = true;
+        AsyncStorage.removeItem('current_billing_draft').catch(() => {});
+        setTimeout(() => { skipAutosave.current = false; }, 500);
     };
 
     const canProceed = useMemo(() => {
@@ -449,6 +531,27 @@ export default function BillingScreen() {
 
     return (
         <ScrollView style={styles.container} contentContainerStyle={[styles.content, isTablet && { paddingHorizontal: '10%' }]} keyboardShouldPersistTaps="handled">
+            {/* Editing banner */}
+            {isEditingGeneratedBill && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(245,158,11,0.12)', borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+                    <Text style={{ color: '#f59e0b', fontFamily: FONTS.semibold, fontSize: 14 }}>✏️ Editing Printed Bill</Text>
+                    <TouchableOpacity
+                        onPress={() => {
+                            setIsEditingGeneratedBill(false);
+                            setCart([]);
+                            setBuyerSearch(''); setBuyerPhone(''); setCompanyName('');
+                            setPaidAmount('0'); setSplitCash(''); setSplitOnline('');
+                            setPaymentMethod('Cash'); setBillType('REAL');
+                            skipAutosave.current = true;
+                            AsyncStorage.removeItem('current_billing_draft').catch(() => {});
+                            setTimeout(() => { skipAutosave.current = false; }, 300);
+                        }}
+                        style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6 }}
+                    >
+                        <Text style={{ color: '#ef4444', fontFamily: FONTS.semibold, fontSize: 12 }}>Cancel Editing</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
             <Text style={styles.headerTitle}>Generate Bill</Text>
 
             {/* --- BILL DETAILS SECTION --- */}
@@ -662,7 +765,34 @@ export default function BillingScreen() {
             <View style={styles.cardSection}>
                 <View style={styles.cartHeaderRow}>
                     <Text style={styles.sectionHeader}>Current Items</Text>
-                    <Text style={styles.itemCountText}>{cart.length} items</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <Text style={styles.itemCountText}>{cart.length} items</Text>
+                        {(cart.length > 0 || buyerSearch || companyName || buyerPhone) && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    setCart([]);
+                                    setBuyerSearch('');
+                                    setCompanyName('');
+                                    setBuyerPhone('');
+                                    setPaidAmount('0');
+                                    setSplitCash('');
+                                    setSplitOnline('');
+                                    setPaymentMethod('Cash');
+                                    setBillType('REAL');
+                                    setSelectedProduct(null);
+                                    setQuantity('1');
+                                    setIsEditingGeneratedBill(false);
+                                    skipAutosave.current = true;
+                                    AsyncStorage.removeItem('current_billing_draft').catch(() => {});
+                                    setTimeout(() => { skipAutosave.current = false; }, 300);
+                                }}
+                                style={styles.cancelBillBtn}
+                            >
+                                <Icon name="trash-outline" size={12} color="#ef4444" />
+                                <Text style={styles.cancelBillBtnTxt}> Cancel Bill</Text>
+                            </TouchableOpacity>
+                        )}
+                    </View>
                 </View>
 
                 {cart.length === 0 ? (
@@ -760,6 +890,49 @@ export default function BillingScreen() {
                         Download Last Invoice ({lastSaleData.customerName})
                     </Text>
                 </TouchableOpacity>
+            )}
+
+            <View style={{height: 10}} />
+
+            {/* Recent generated bill compact row */}
+            {recentGeneratedBill && !isEditingGeneratedBill && (
+                <View style={styles.recentBillRow}>
+                    <Icon name="receipt-outline" size={16} color={colors.accent.primary} style={{ marginRight: 8 }} />
+                    <View style={{ flex: 1 }}>
+                        <Text style={styles.recentBillName} numberOfLines={1}>
+                            {recentGeneratedBill.buyerSearch || 'Walk-in'}
+                        </Text>
+                        <Text style={styles.recentBillMeta} numberOfLines={1}>
+                            {recentGeneratedBill.cart?.length || 0} items • Rs. {(recentGeneratedBill.cart || []).reduce((s, it) => s + (it.price * it.quantity), 0).toLocaleString()}
+                        </Text>
+                    </View>
+                    <TouchableOpacity
+                        style={styles.recentBillEditBtn}
+                        onPress={() => {
+                            skipAutosave.current = true;
+                            setCart(recentGeneratedBill.cart || []);
+                            setBuyerSearch(recentGeneratedBill.buyerSearch || '');
+                            setCompanyName(recentGeneratedBill.companyName || '');
+                            setBuyerPhone(recentGeneratedBill.buyerPhone || '');
+                            setBillType(recentGeneratedBill.billType || 'REAL');
+                            setPaidAmount(recentGeneratedBill.paidAmount || '0');
+                            setPaymentMethod(recentGeneratedBill.paymentMethod || 'Cash');
+                            setSplitCash(recentGeneratedBill.splitCash || '');
+                            setSplitOnline(recentGeneratedBill.splitOnline || '');
+                            setIsEditingGeneratedBill(true);
+                            setTimeout(() => { skipAutosave.current = false; }, 500);
+                            useToastStore.getState().showToast('Recovered', 'Recent bill loaded!', 'success');
+                        }}
+                    >
+                        <Text style={styles.recentBillEditTxt}>Edit</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        onPress={() => { AsyncStorage.removeItem('recent_billing_data').catch(() => {}); setRecentGeneratedBill(null); }}
+                        style={{ padding: 6 }}
+                    >
+                        <Icon name="close-circle-outline" size={18} color={colors.text.muted} />
+                    </TouchableOpacity>
+                </View>
             )}
 
             <View style={{height: 20}} />
@@ -864,6 +1037,37 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     // Cart
     cartHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
     itemCountText: { color: colors.accent.primary, fontFamily: FONTS.medium, fontSize: 13 },
+    cancelBillBtn: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(239,68,68,0.12)',
+        borderWidth: 1,
+        borderColor: 'rgba(239,68,68,0.35)',
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+    },
+    cancelBillBtnTxt: { color: '#ef4444', fontFamily: FONTS.semibold, fontSize: 12 },
+    recentBillRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(99,102,241,0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(99,102,241,0.25)',
+        borderRadius: 12,
+        padding: 12,
+        marginBottom: 6,
+    },
+    recentBillName: { color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 14 },
+    recentBillMeta: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12, marginTop: 2 },
+    recentBillEditBtn: {
+        backgroundColor: colors.accent.primary,
+        borderRadius: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 7,
+        marginHorizontal: 8,
+    },
+    recentBillEditTxt: { color: '#fff', fontFamily: FONTS.semibold, fontSize: 13 },
     emptyCart: { alignItems: 'center', padding: 20 },
     emptyCartTxt: { color: colors.text.muted, fontFamily: FONTS.regular, marginTop: 8 },
     cartItem: {
