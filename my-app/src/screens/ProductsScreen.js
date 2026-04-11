@@ -147,6 +147,40 @@ export default function ProductsScreen() {
     const [pendingItems, setPendingItems] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    useEffect(() => {
+        const checkOldDataForArchive = async () => {
+            try {
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                const lastCheckMonth = await AsyncStorage.getItem('last_archive_check_month');
+                if (lastCheckMonth === currentMonth) return;
+
+                const token = await AsyncStorage.getItem('token');
+                if (!token) return;
+
+                const url = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+                const response = await fetch(`${url}/export/check-old-data`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.hasOldData) {
+                        Alert.alert(
+                            "Data Archive Available 🕒",
+                            "You have data older than 1 year! Please visit Database Management to archive it and free up space.",
+                            [{ text: "Not Now", style: "cancel" }, { text: "OK" }]
+                        );
+                    }
+                    await AsyncStorage.setItem('last_archive_check_month', currentMonth);
+                }
+            } catch (err) {
+                console.error("Archive check error:", err);
+            }
+        };
+
+        checkOldDataForArchive();
+    }, []);
+
     const fetchProductsAndSuppliers = useCallback(async () => {
         try {
             const [prodData, suppData] = await Promise.all([

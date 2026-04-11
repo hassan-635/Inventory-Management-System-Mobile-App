@@ -41,6 +41,22 @@ export default function DatabaseExportScreen({ navigation }) {
     const [confirmCode, setConfirmCode] = useState('');
     
     const lockTimer = useRef(null);
+    /* ── archive state ── */
+    const [archiveTimeframe, setArchiveTimeframe] = useState('1_year');
+    const [isArchiving, setIsArchiving] = useState(false);
+    const [isDeletingArchive, setIsDeletingArchive] = useState(false);
+    const [showArchiveConfirm, setShowArchiveConfirm] = useState(false);
+    const [archiveConfirmCode, setArchiveConfirmCode] = useState('');
+
+    const TIMEFRAMES = [
+        { id: '1_week', label: '1 Week (Test)' },
+        { id: '1_month', label: '1 Month' },
+        { id: '6_months', label: '6 Months' },
+        { id: '1_year', label: '1 Year' },
+        { id: '2_years', label: '2 Years' }
+    ];
+    
+    const lockTimer = useRef(null);
     const countdownTimer = useRef(null);
 
     // Styles memo
@@ -139,6 +155,52 @@ export default function DatabaseExportScreen({ navigation }) {
             Alert.alert("Error", "❌ Export failed. Please try again.");
         } finally {
             setIsExporting(false);
+        }
+    };
+
+    const handleDownloadArchive = async () => {
+        try {
+            setIsArchiving(true);
+            const token = await tokenStorage.getItemAsync('token');
+            const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
+            const endpoint = `${apiUrl}/export/download-archive?timeframe=${archiveTimeframe}`;
+            
+            const fileUri = FileSystem.documentDirectory + `archive_${archiveTimeframe}_${new Date().toISOString().split('T')[0]}.json`;
+
+            const downloadRes = await FileSystem.downloadAsync(endpoint, fileUri, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (downloadRes.status !== 200) {
+                throw new Error("Download failed");
+            }
+
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(downloadRes.uri);
+            } else {
+                Alert.alert("Info", `Archive saved to: ${downloadRes.uri}`);
+            }
+        } catch (error) {
+            console.error('Archive download error:', error);
+            Alert.alert("Error", "❌ Archive generation failed. Please try again.");
+        } finally {
+            setIsArchiving(false);
+        }
+    };
+
+    const handleDeleteArchive = async () => {
+        if (archiveConfirmCode !== 'DELETE_MY_DATA') return;
+        
+        try {
+            setIsDeletingArchive(true);
+            await api.post('/export/delete-archive', { timeframe: archiveTimeframe, confirmCode: 'DELETE_MY_DATA' });
+            Alert.alert("Success", "✅ Archived data deleted successfully!");
+            setShowArchiveConfirm(false);
+            setArchiveConfirmCode('');
+        } catch (error) {
+            Alert.alert("Error", '❌ Failed to delete archive: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setIsDeletingArchive(false);
         }
     };
 
@@ -258,6 +320,92 @@ export default function DatabaseExportScreen({ navigation }) {
                             <Icon name="download" size={20} color="#fff" style={{marginRight: 8}}/>
                             <Text style={styles.btnText}>{isExporting ? 'Exporting...' : 'Download CSV'}</Text>
                         </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* Archive Section */}
+                <View style={[styles.actionCard, {borderColor: 'rgba(245, 158, 11, 0.3)', backgroundColor: 'rgba(245, 158, 11, 0.05)'}]}>
+                    <View style={styles.actionHeader}>
+                        <View style={[styles.iconBox, {backgroundColor: 'rgba(245, 158, 11, 0.15)'}]}>
+                            <Icon name="archive" size={32} color="#f59e0b" />
+                        </View>
+                        <View style={{flex: 1}}>
+                            <Text style={styles.actionTitle}>Data Archive</Text>
+                            <Text style={styles.actionSub}>Download and delete old records</Text>
+                        </View>
+                    </View>
+                    <View style={styles.actionContent}>
+                        <Text style={[styles.previewHeading, {marginBottom: 8}]}>Select Timeframe to Archive:</Text>
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+                            {TIMEFRAMES.map((tf) => (
+                                <TouchableOpacity 
+                                    key={tf.id} 
+                                    style={[styles.tfBtn, archiveTimeframe === tf.id && styles.tfBtnActive]}
+                                    onPress={() => setArchiveTimeframe(tf.id)}
+                                >
+                                    <Text style={[styles.tfBtnText, archiveTimeframe === tf.id && styles.tfBtnTextActive]}>{tf.label}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+
+                        <View style={styles.dataPreviewBox}>
+                            <Text style={styles.previewHeading}>What gets archived/deleted:</Text>
+                            <Text style={styles.previewLine}>📦 <Text style={{color: '#10b981', fontFamily: FONTS.bold}}>NEVER </Text> Products</Text>
+                            <Text style={styles.previewLine}>👥 <Text style={{color: '#10b981', fontFamily: FONTS.bold}}>NEVER </Text> Udhaar Customers</Text>
+                            <Text style={styles.previewLine}>🗑️ Only fully paid transactions & expenses</Text>
+                        </View>
+                        
+                        <View style={{ gap: 12 }}>
+                            <TouchableOpacity 
+                                style={[styles.exportBtn, {backgroundColor: '#f59e0b', marginBottom: 12}, isArchiving && styles.btnDisabled]} 
+                                onPress={handleDownloadArchive}
+                                disabled={isArchiving}
+                            >
+                                <Icon name="download" size={20} color="#fff" style={{marginRight: 8}}/>
+                                <Text style={styles.btnText}>{isArchiving ? 'Generating JSON...' : 'Download JSON Archive'}</Text>
+                            </TouchableOpacity>
+
+                            {!showArchiveConfirm ? (
+                                <TouchableOpacity 
+                                    style={[styles.dangerBtn, isDeletingArchive && styles.btnDisabled]}
+                                    onPress={() => setShowArchiveConfirm(true)}
+                                    disabled={isDeletingArchive}
+                                >
+                                    <Icon name="trash" size={20} color="#fff" style={{marginRight: 8}}/>
+                                    <Text style={styles.btnText}>Delete Archived Data</Text>
+                                </TouchableOpacity>
+                            ) : (
+                                <View style={styles.confirmBox}>
+                                    <Text style={styles.confirmHeading}>Type "DELETE_MY_DATA" to confirm:</Text>
+                                    <TextInput
+                                        style={styles.confirmInput}
+                                        value={archiveConfirmCode}
+                                        onChangeText={setArchiveConfirmCode}
+                                        placeholder="DELETE_MY_DATA"
+                                        placeholderTextColor={colors.text.muted}
+                                        autoCapitalize="characters"
+                                        editable={!isDeletingArchive}
+                                    />
+                                    <View style={styles.confirmBtnRow}>
+                                        <TouchableOpacity 
+                                            style={[styles.cancelBtn, isDeletingArchive && styles.btnDisabled]}
+                                            onPress={() => { setShowArchiveConfirm(false); setArchiveConfirmCode(''); }}
+                                            disabled={isDeletingArchive}
+                                        >
+                                            <Text style={styles.cancelBtnText}>Cancel</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity 
+                                            style={[styles.confirmDangerBtn, (isDeletingArchive || archiveConfirmCode !== 'DELETE_MY_DATA') && styles.btnDisabled]}
+                                            onPress={handleDeleteArchive}
+                                            disabled={isDeletingArchive || archiveConfirmCode !== 'DELETE_MY_DATA'}
+                                        >
+                                            <Icon name="trash" size={18} color="#fff" style={{marginRight: 4}}/>
+                                            <Text style={styles.btnText}>{isDeletingArchive ? 'Deleting...' : 'Confirm'}</Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            )}
+                        </View>
                     </View>
                 </View>
 
@@ -668,6 +816,28 @@ function createStyles(colors, FONTS) {
             fontFamily: FONTS.bold,
             color: colors.accent.primary,
             fontSize: 12
+        },
+        tfBtn: {
+            paddingVertical: 8,
+            paddingHorizontal: 16,
+            borderRadius: 20,
+            backgroundColor: colors.background.primary,
+            borderWidth: 1,
+            borderColor: colors.border.color,
+            marginRight: 10
+        },
+        tfBtnActive: {
+            backgroundColor: '#f59e0b',
+            borderColor: '#f59e0b'
+        },
+        tfBtnText: {
+            fontFamily: FONTS.medium,
+            color: colors.text.secondary,
+            fontSize: 13
+        },
+        tfBtnTextActive: {
+            color: '#fff',
+            fontFamily: FONTS.bold
         }
     });
 }
