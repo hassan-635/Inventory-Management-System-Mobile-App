@@ -99,8 +99,8 @@ export default function BuyersScreen() {
         }
 
         return list.sort((a,b) => {
-            if (sortOption === 'date_desc') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-            if (sortOption === 'date_asc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+            if (sortOption === 'date_desc') return (b.id || 0) - (a.id || 0);
+            if (sortOption === 'date_asc') return (a.id || 0) - (b.id || 0);
             if (sortOption === 'nameAsc') return (a.name || '').localeCompare(b.name || '');
             if (sortOption === 'nameDesc') return (b.name || '').localeCompare(a.name || '');
             
