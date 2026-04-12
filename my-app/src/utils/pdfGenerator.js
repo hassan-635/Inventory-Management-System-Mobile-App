@@ -853,34 +853,6 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
 
 
 
-    const htmlContent = `
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <style>${PDF_CSS} .pdf-mode-active { zoom: 0.8; }</style>
-        </head>
-        <body class="pdf-mode-active">
-            <h1>${shopSettings.name}</h1>
-            <p style="text-align:center; font-size:16px; margin:0 0 5px 0; font-weight:bold; color:#1e3a8a;">${isDailySummary ? 'Day-by-Day Monthly Summary' : 'Monthly Financial Overview'}</p>
-            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Period: <strong>${filterMonth}/${filterYear}</strong></p>
-            <p style="text-align:center; font-size:12px; margin-top:4px; color:#64748b;">${isDailySummary ? 'Daily roll-up table only (mobile Daily Summaries tab).' : 'Full month overview: income, payables, expenses, company summary (mobile Overview tab).'}</p>
-
-            ${isDailySummary ? dailySummaryHtml : overviewHtml}
-
-            <div class="footer">
-                <h3 style="margin-bottom: 4px;">Software Developed by Hassan Ali Abrar</h3>
-                <p style="margin: 0;">Instagram: <strong>hassan.secure</strong> | WhatsApp: <strong>+92 348 5055098</strong></p>
-            </div>
-        </body>
-        </html>
-    `;
-
-    const yyyymm = `${filterYear}-${String(filterMonth).padStart(2, '0')}`;
-    const fileName = isDailySummary
-        ? `InventoryPro_MonthlyFinancial_DayByDay_${yyyymm}.pdf`
-        : `InventoryPro_MonthlyFinancial_Overview_${yyyymm}.pdf`;
-    return sharePdf(htmlContent, fileName);
-};
 
 function escapeHtmlSales(s) {
     if (s == null || s === undefined) return '';
