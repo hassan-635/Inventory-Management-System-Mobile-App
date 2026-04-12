@@ -197,24 +197,12 @@ export default function MonthlyReportScreen() {
                     {/* Payment Method Split */}
                     <View style={[styles.statCard, { borderLeftColor: '#38bdf8', borderLeftWidth: 4 }]}>
                         <Icon name="card-outline" size={22} color="#38bdf8" style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Payment Method Breakdown</Text>
-                        <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>💵 Cash Only ({paymentSplit.cash_count || 0} log):</Text>
-                            <Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(paymentSplit.cash || 0).toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>📱 Online Only ({paymentSplit.online_count || 0} log):</Text>
-                            <Text style={[styles.ledgerAmt, { color: '#38bdf8' }]}>Rs. {(paymentSplit.online || 0).toLocaleString()}</Text>
-                        </View>
-                        <View style={styles.ledgerRow}>
-                            <Text style={styles.ledgerText}>🔀 Split ({paymentSplit.split_count || 0} log):</Text>
-                            <Text style={[styles.ledgerAmt, { color: '#f59e0b', fontSize: 11 }]}>Cash+Online →</Text>
-                        </View>
-                        <Text style={{ fontSize: 10, color: '#94a3b8', paddingLeft: 8, marginBottom: 4 }}>
-                            ↳ Split ka Cash → 💵 mein | Split ka Online → 📱 mein
-                        </Text>
-                        <Text style={[styles.statValue, { color: '#22c55e', marginTop: 8 }]}>
-                            💰 Rs. {(paymentSplit.grand_total || 0).toLocaleString()}
+                        <Text style={styles.statTitle}>Payment Received By Method</Text>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>💵 Cash:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(paymentSplit.cash || 0).toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>📱 Online:</Text><Text style={[styles.ledgerAmt, { color: '#38bdf8' }]}>Rs. {(paymentSplit.online || 0).toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Split Txns:</Text><Text style={styles.ledgerAmt}>{paymentSplit.split_count || 0}</Text></View>
+                        <Text style={[styles.statValue, { color: '#38bdf8', marginTop: 8 }]}>
+                            Total: Rs. {((paymentSplit.cash || 0) + (paymentSplit.online || 0)).toLocaleString()}
                         </Text>
                     </View>
 

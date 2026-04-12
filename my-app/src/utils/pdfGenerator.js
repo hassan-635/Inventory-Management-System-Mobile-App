@@ -171,12 +171,10 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
                 </div>
 
                 <div class="stat-card-premium green">
-                    <div class="stat-header"><div class="stat-icon-wrapper">P</div><h3 class="stat-title">Payment Method Breakdown</h3></div>
-                    <div class="stat-row"><span>&#x1F4B5; Cash Only (${salesToday.filter(s => (s.payment_method||'Cash').toLowerCase()==='cash').length} log):</span><span class="stat-value text-success">Rs. ${cashReceived.toLocaleString()}</span></div>
-                    <div class="stat-row"><span>&#x1F4F1; Online Only (${salesToday.filter(s => (s.payment_method||'').toLowerCase()==='online').length} log):</span><span class="stat-value" style="color:#38bdf8;">Rs. ${onlineReceived.toLocaleString()}</span></div>
-                    <div class="stat-row"><span>&#x1F500; Split (${salesToday.filter(s => (s.payment_method||'').toLowerCase()==='split').length} log):</span><span class="stat-value" style="color:#f59e0b; font-size:0.8em;">Cash + Online &darr;</span></div>
-                    <div style="font-size:0.72em; color:#94a3b8; padding-left:10px; margin-bottom:4px;">&darr; Split ka Cash &rarr; &#x1F4B5; mein add | Split ka Online &rarr; &#x1F4F1; mein add</div>
-                    <div class="stat-row highlight"><span><strong>&#x1F4B0; Grand Total Received:</strong></span><span class="stat-value text-success"><strong>Rs. ${(cashReceived + onlineReceived).toLocaleString()}</strong></span></div>
+                    <div class="stat-header"><div class="stat-icon-wrapper">P</div><h3 class="stat-title">Payment Method Split</h3></div>
+                    <div class="stat-row"><span>&#x1F4B5; Cash Received:</span><span class="stat-value text-success">Rs. ${cashReceived.toLocaleString()}</span></div>
+                    <div class="stat-row"><span>&#x1F4F1; Online Received:</span><span class="stat-value" style="color:#38bdf8;">Rs. ${onlineReceived.toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>Total Collected:</span><span class="stat-value">Rs. ${(cashReceived + onlineReceived).toLocaleString()}</span></div>
                 </div>
 
                 <div class="stat-card-premium ${netRealProfit >= 0 ? 'green' : 'red'}">
@@ -584,7 +582,7 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
 export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYear, isDailySummary) => {
     const shopSettings = await getShopSettings();
     const { summary, expense_breakdown, activity_lists, company_wise_summary, daily_breakdown, product_profit_list, supplier_purchase_summary } = reportData;
-    const paymentSplit = summary.payment_split || { cash: 0, online: 0, cash_count: 0, online_count: 0, split_count: 0, grand_total: 0 };
+    const paymentSplit = summary.payment_split || { cash: 0, online: 0, split_count: 0 };
 
     let overviewHtml = ``;
     let dailySummaryHtml = ``;
@@ -608,12 +606,11 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                 </div>
 
                 <div class="stat-card-premium purple">
-                    <div class="stat-header"><div class="stat-icon-wrapper">P</div><h3 class="stat-title">Payment Method Breakdown</h3></div>
-                    <div class="stat-row"><span>&#x1F4B5; Cash Only (${paymentSplit.cash_count || 0} log):</span><span class="stat-value text-success">Rs. ${(paymentSplit.cash || 0).toLocaleString()}</span></div>
-                    <div class="stat-row"><span>&#x1F4F1; Online Only (${paymentSplit.online_count || 0} log):</span><span class="stat-value" style="color:#38bdf8;">Rs. ${(paymentSplit.online || 0).toLocaleString()}</span></div>
-                    <div class="stat-row"><span>&#x1F500; Split (${paymentSplit.split_count || 0} log):</span><span class="stat-value" style="color:#f59e0b; font-size:0.8em;">Cash + Online &darr;</span></div>
-                    <div style="font-size:0.72em; color:#94a3b8; padding-left:10px; margin-bottom:4px;">&darr; Split ka Cash &rarr; &#x1F4B5; mein | Split ka Online &rarr; &#x1F4F1; mein</div>
-                    <div class="stat-row highlight"><span><strong>&#x1F4B0; Grand Total Received:</strong></span><span class="stat-value text-success"><strong>Rs. ${(paymentSplit.grand_total || 0).toLocaleString()}</strong></span></div>
+                    <div class="stat-header"><div class="stat-icon-wrapper">P</div><h3 class="stat-title">Payment Received By Method</h3></div>
+                    <div class="stat-row"><span>&#x1F4B5; Cash Received:</span><span class="stat-value text-success">Rs. ${(paymentSplit.cash || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>&#x1F4F1; Online Received:</span><span class="stat-value" style="color:#38bdf8;">Rs. ${(paymentSplit.online || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Split Transactions:</span><span class="stat-value">${paymentSplit.split_count || 0}</span></div>
+                    <div class="stat-row highlight"><span>Total Collected:</span><span class="stat-value">Rs. ${((paymentSplit.cash || 0) + (paymentSplit.online || 0)).toLocaleString()}</span></div>
                 </div>
 
                 <div class="stat-card-premium orange">
@@ -696,14 +693,8 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                         <div class="stat-row"><span>Total Sales Invoices Made:</span><span class="stat-value">Rs. ${(summary.total_sales_created_value || 0).toLocaleString()}</span></div>
                         <div class="stat-row"><span>Cash Sales (Fully Paid):</span><span class="stat-value text-success">Rs. ${(summary.total_cash_sales_this_month || 0).toLocaleString()}</span></div>
                         <div class="stat-row"><span>Credit Installments Received:</span><span class="stat-value" style="color:#0ea5e9;">Rs. ${(summary.total_sales_collected_this_month || 0).toLocaleString()}</span></div>
-                        <div style="margin: 8px 0 4px; padding: 8px; background: rgba(16,185,129,0.05); border-radius: 6px; border: 1px solid rgba(16,185,129,0.15);">
-                            <div style="font-weight:700; font-size:0.82em; margin-bottom:6px; color:#1e293b;">&#x1F4B3; Payment Method Breakdown:</div>
-                            <div class="stat-row"><span>&#x1F4B5; Cash Only (${paymentSplit.cash_count || 0} log):</span><span class="stat-value text-success">Rs. ${(paymentSplit.cash || 0).toLocaleString()}</span></div>
-                            <div class="stat-row"><span>&#x1F4F1; Online Only (${paymentSplit.online_count || 0} log):</span><span class="stat-value" style="color:#38bdf8;">Rs. ${(paymentSplit.online || 0).toLocaleString()}</span></div>
-                            <div class="stat-row"><span>&#x1F500; Split (${paymentSplit.split_count || 0} log):</span><span class="stat-value" style="color:#f59e0b; font-size:0.8em;">Cash + Online &darr;</span></div>
-                            <div style="font-size:0.7em; color:#94a3b8; padding-left:10px; margin-bottom:4px;">&darr; Split ka Cash &rarr; &#x1F4B5; mein | Online &rarr; &#x1F4F1; mein</div>
-                            <div class="stat-row highlight"><span><strong>&#x1F4B0; Grand Total Received:</strong></span><span class="stat-value text-success"><strong>Rs. ${(paymentSplit.grand_total || 0).toLocaleString()}</strong></span></div>
-                        </div>
+                        <div class="stat-row"><span>&#x1F4B5; Cash Received:</span><span class="stat-value text-success">Rs. ${(paymentSplit.cash || 0).toLocaleString()}</span></div>
+                        <div class="stat-row"><span>&#x1F4F1; Online Received:</span><span class="stat-value" style="color:#38bdf8;">Rs. ${(paymentSplit.online || 0).toLocaleString()}</span></div>
                         <div class="stat-row highlight"><span>New Credit Given This Month:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_credit_given_this_month || 0).toLocaleString()}</span></div>
                     </div>
                     
@@ -850,8 +841,6 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
         : `InventoryPro_MonthlyFinancial_Overview_${yyyymm}.pdf`;
     return sharePdf(htmlContent, fileName);
 };
-
-
 
 
 function escapeHtmlSales(s) {
