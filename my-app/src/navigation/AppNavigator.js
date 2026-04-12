@@ -12,6 +12,7 @@ import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 
 // Screens
+import DashboardScreen from '../screens/DashboardScreen';
 import LoginScreen from '../screens/LoginScreen';
 import ProductsScreen from '../screens/ProductsScreen';
 import BuyersScreen from '../screens/BuyersScreen';
@@ -35,6 +36,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const DRAWER_ICON_SIZE = Math.min(22, SCREEN_WIDTH * 0.058);
 
 const ICON_MAP = {
+    Dashboard: { focused: 'analytics', outline: 'analytics-outline' },
     Billing: { focused: 'document-text', outline: 'document-text-outline' },
     Products: { focused: 'cube', outline: 'cube-outline' },
     Customers: { focused: 'people', outline: 'people-outline' },
@@ -184,6 +186,7 @@ const DrawerNavigator = () => {
                 },
             })}
         >
+            <Drawer.Screen name="Dashboard" component={DashboardScreen} />
             <Drawer.Screen name="Billing" component={BillingScreen} />
             <Drawer.Screen name="Products" component={ProductsScreen} />
             <Drawer.Screen name="Customers" component={BuyersScreen} />
