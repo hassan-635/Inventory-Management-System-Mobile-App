@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, RefreshControl, Modal, TextInput, Alert, ScrollView, useWindowDimensions } from 'react-native';
-import axios from 'axios';
-import { useAuthStore } from '../store/authStore';
+import api from '../api/apiClient';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -9,7 +8,6 @@ import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import GenericSideList from '../components/GenericSideList';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
 
 const SORT_OPTIONS = [
@@ -53,9 +51,7 @@ export default function ExpensesScreen() {
 
     const fetchExpenses = useCallback(async () => {
         try {
-            const res = await axios.get(`${API_URL}/expenses?year=${filterYear}&month=${filterMonth}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/expenses?year=${filterYear}&month=${filterMonth}`);
             setExpenses(res.data);
         } catch (error) {
             console.error('Fetch expenses error:', error);
@@ -107,9 +103,7 @@ export default function ExpensesScreen() {
         // For existing expenses (edit mode), keep the original logic
         setIsSaving(true);
         try {
-            await axios.put(`${API_URL}/expenses/${formItem.id}`, formItem, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            await api.put(`/expenses/${formItem.id}`, formItem);
             setModalVisible(false);
             useToastStore.getState().showToast('Saved', 'Expense saved successfully!', 'success');
             fetchExpenses();
@@ -209,14 +203,10 @@ export default function ExpensesScreen() {
                         for (const item of pendingItems) {
                             try {
                                 if (item.action === 'add') {
-                                    await axios.post(`${API_URL}/expenses`, item.data, {
-                                        headers: { Authorization: `Bearer ${token}` }
-                                    });
+                                    await api.post(`/expenses`, item.data);
                                     successCount++;
                                 } else if (item.action === 'delete') {
-                                    await axios.delete(`${API_URL}/expenses/${item.data.id}`, {
-                                        headers: { Authorization: `Bearer ${token}` }
-                                    });
+                                    await api.delete(`/expenses/${item.data.id}`);
                                     successCount++;
                                 }
                             } catch (err) {

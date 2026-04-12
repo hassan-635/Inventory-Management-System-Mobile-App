@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Dimensions, RefreshControl } from 'react-native';
-import axios from 'axios';
+import api from '../api/apiClient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+
 const screenWidth = Dimensions.get("window").width;
 
 export default function DashboardScreen() {
@@ -25,9 +25,7 @@ export default function DashboardScreen() {
     const fetchDashboardData = useCallback(async () => {
         try {
             const formattedMonth = currentMonth.toString().padStart(2, '0');
-            const res = await axios.get(`${API_URL}/reports/monthly?year=${currentYear}&month=${formattedMonth}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/reports/monthly?year=${currentYear}&month=${formattedMonth}`);
             setReportData(res.data);
         } catch (error) {
             console.error('Fetch dashboard error:', error);

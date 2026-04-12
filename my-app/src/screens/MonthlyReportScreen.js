@@ -3,14 +3,13 @@ import {
     View, Text, StyleSheet, ScrollView, ActivityIndicator,
     TouchableOpacity, RefreshControl, Modal, Alert, useWindowDimensions,
 } from 'react-native';
-import axios from 'axios';
+import api from '../api/apiClient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import { generateMonthlyReportPdf } from '../utils/pdfGenerator';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
@@ -38,9 +37,7 @@ export default function MonthlyReportScreen() {
     const fetchReport = useCallback(async () => {
         try {
             const formattedMonth = selectedMonth.toString().padStart(2, '0');
-            const res = await axios.get(`${API_URL}/reports/monthly?year=${selectedYear}&month=${formattedMonth}`, {
-                headers: { Authorization: `Bearer ${token}` }
-            });
+            const res = await api.get(`/reports/monthly?year=${selectedYear}&month=${formattedMonth}`);
             setReportData(res.data);
         } catch (error) {
             console.error('Fetch report error:', error);
