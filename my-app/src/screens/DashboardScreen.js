@@ -5,7 +5,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
-import { LineChart, BarChart } from "react-native-chart-kit";
+import { LineChart, BarChart, PieChart } from "react-native-chart-kit";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const screenWidth = Dimensions.get("window").width;
@@ -71,15 +71,8 @@ export default function DashboardScreen() {
     let profitData = [];
 
     if (daily_breakdown && daily_breakdown.length > 0) {
-        // Sample every nth day if there are many days to prevent label clashing
-        const step = Math.ceil(daily_breakdown.length / 7);
-        
-        daily_breakdown.forEach((day, i) => {
-            if (i % step === 0 || i === daily_breakdown.length - 1) {
-                labels.push(new Date(day.date).getDate().toString());
-            } else {
-                labels.push('');
-            }
+        daily_breakdown.forEach((day) => {
+            labels.push(new Date(day.date).getDate().toString());
             salesData.push(day.total_sales || 0);
             expensesData.push(day.expenses || 0);
             profitData.push(day.daily_profit || 0);
@@ -90,6 +83,25 @@ export default function DashboardScreen() {
         expensesData = [0, 0];
         profitData = [0, 0];
     }
+
+    // Pie Chart Data mapping
+    const expenseBreakdown = reportData.expense_breakdown || {};
+    const E_COLORS = ['#ef4444', '#f97316', '#eab308', '#a855f7', '#3b82f6', '#ec4899'];
+    const pieExpenseData = Object.keys(expenseBreakdown).map((key, index) => ({
+        name: key,
+        population: expenseBreakdown[key],
+        color: E_COLORS[index % E_COLORS.length],
+        legendFontColor: colors.text.secondary,
+        legendFontSize: 12
+    }));
+
+    const paymentSplit = summary.payment_split || { cash: 0, online: 0 };
+    const piePaymentData = [
+        { name: "Cash", population: paymentSplit.cash || 0, color: "#22c55e", legendFontColor: colors.text.secondary, legendFontSize: 12 },
+        { name: "Online", population: paymentSplit.online || 0, color: "#38bdf8", legendFontColor: colors.text.secondary, legendFontSize: 12 }
+    ].filter(p => p.population > 0);
+
+    const dynamicChartWidth = Math.max(screenWidth - 32, labels.length * 50);
 
     const chartConfig = {
         backgroundGradientFrom: colors.background.secondary,
@@ -147,34 +159,37 @@ export default function DashboardScreen() {
                         <Icon name="analytics" size={18} color={colors.text.primary} />
                         <Text style={styles.chartTitle}>Daily Sales vs Expenses</Text>
                     </View>
-                    <LineChart
-                        data={{
-                            labels: labels,
-                            datasets: [
-                                {
-                                    data: salesData,
-                                    color: (opacity = 1) => `rgba(56, 189, 248, ${opacity})`, 
-                                    strokeWidth: 2
-                                },
-                                {
-                                    data: expensesData,
-                                    color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`, 
-                                    strokeWidth: 2
-                                }
-                            ],
-                            legend: ["Sales", "Expenses"]
-                        }}
-                        width={screenWidth - 32} 
-                        height={240}
-                        yAxisLabel="Rs."
-                        yAxisInterval={1}
-                        chartConfig={chartConfig}
-                        bezier
-                        style={{
-                            marginVertical: 8,
-                            borderRadius: 16
-                        }}
-                    />
+                    <Text style={{ color: colors.text.muted, fontSize: 11, marginBottom: 10 }}>Swap horizontally to see all dates</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <LineChart
+                            data={{
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        data: salesData,
+                                        color: (opacity = 1) => `rgba(56, 189, 248, ${opacity})`, 
+                                        strokeWidth: 2
+                                    },
+                                    {
+                                        data: expensesData,
+                                        color: (opacity = 1) => `rgba(239, 68, 68, ${opacity})`, 
+                                        strokeWidth: 2
+                                    }
+                                ],
+                                legend: ["Sales", "Expenses"]
+                            }}
+                            width={dynamicChartWidth} 
+                            height={240}
+                            yAxisLabel="Rs."
+                            yAxisInterval={1}
+                            chartConfig={chartConfig}
+                            bezier
+                            style={{
+                                marginVertical: 8,
+                                borderRadius: 16
+                            }}
+                        />
+                    </ScrollView>
                 </View>
 
                 {/* Bar Chart */}
@@ -183,29 +198,73 @@ export default function DashboardScreen() {
                         <Icon name="bar-chart" size={18} color="#22c55e" />
                         <Text style={styles.chartTitle}>Daily Profit Trend</Text>
                     </View>
-                    <BarChart
-                        data={{
-                            labels: labels,
-                            datasets: [
-                                {
-                                    data: profitData
-                                }
-                            ]
-                        }}
-                        width={screenWidth - 32}
-                        height={240}
-                        yAxisLabel="Rs."
-                        chartConfig={{
-                            ...chartConfig,
-                            color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
-                        }}
-                        verticalLabelRotation={0}
-                        style={{
-                            marginVertical: 8,
-                            borderRadius: 16
-                        }}
-                    />
+                    <Text style={{ color: colors.text.muted, fontSize: 11, marginBottom: 10 }}>Swap horizontally to see all dates</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        <BarChart
+                            data={{
+                                labels: labels,
+                                datasets: [
+                                    {
+                                        data: profitData
+                                    }
+                                ]
+                            }}
+                            width={dynamicChartWidth}
+                            height={240}
+                            yAxisLabel="Rs."
+                            chartConfig={{
+                                ...chartConfig,
+                                color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
+                            }}
+                            verticalLabelRotation={0}
+                            style={{
+                                marginVertical: 8,
+                                borderRadius: 16
+                            }}
+                        />
+                    </ScrollView>
                 </View>
+
+                {/* Pie Charts */}
+                {piePaymentData.length > 0 && (
+                    <View style={styles.chartContainer}>
+                        <View style={styles.chartHeaderRow}>
+                            <Icon name="card" size={18} color="#f59e0b" />
+                            <Text style={styles.chartTitle}>Payment Method Match</Text>
+                        </View>
+                        <PieChart
+                            data={piePaymentData}
+                            width={screenWidth - 32}
+                            height={220}
+                            chartConfig={chartConfig}
+                            accessor={"population"}
+                            backgroundColor={"transparent"}
+                            paddingLeft={"15"}
+                            center={[10, 0]}
+                            absolute
+                        />
+                    </View>
+                )}
+
+                {pieExpenseData.length > 0 && (
+                    <View style={styles.chartContainer}>
+                        <View style={styles.chartHeaderRow}>
+                            <Icon name="pie-chart" size={18} color="#ec4899" />
+                            <Text style={styles.chartTitle}>Expense Breakdown</Text>
+                        </View>
+                        <PieChart
+                            data={pieExpenseData}
+                            width={screenWidth - 32}
+                            height={220}
+                            chartConfig={chartConfig}
+                            accessor={"population"}
+                            backgroundColor={"transparent"}
+                            paddingLeft={"15"}
+                            center={[10, 0]}
+                            absolute
+                        />
+                    </View>
+                )}
 
             </ScrollView>
         </View>
