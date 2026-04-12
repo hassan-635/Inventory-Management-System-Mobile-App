@@ -623,8 +623,7 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                 <div class="stat-card-premium red">
                     <div class="stat-header"><div class="stat-icon-wrapper">R</div><h3 class="stat-title">Returns & Dues</h3></div>
                     <div class="stat-row"><span>Returns Refunded:</span><span class="stat-value text-danger">Rs. ${(summary.total_returns_this_month || 0).toLocaleString()}</span></div>
-                    <div class="stat-row"><span>New Credit Given:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_credit_given_this_month || 0).toLocaleString()}</span></div>
-                    <div class="stat-row highlight"><span>All-Time Customer Dues:</span><span class="stat-value text-danger">Rs. ${(summary.total_all_time_dues_from_buyers || 0).toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>New Credit Given:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_credit_given_this_month || 0).toLocaleString()}</span></div>
                 </div>
 
                 <div class="stat-card-premium blue">
@@ -758,23 +757,7 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                 </table>
             </div>
             
-            ${activity_lists?.all_time_buyers_with_dues?.length > 0 ? `
-            <div class="premium-table-wrap" style="border-color:#eab308;">
-                <h3 style="background:#fefce8; color:#ca8a04;">&#x26A0;&#xFE0F; Customers with Outstanding Dues (All-Time)</h3>
-                <table class="premium-table">
-                    <thead><tr><th>Customer Name</th><th>Phone Number</th><th style="text-align:right;">Total Remaining</th></tr></thead>
-                    <tbody>
-                        ${activity_lists?.all_time_buyers_with_dues?.map(b => `
-                            <tr>
-                                <td>${b.name}</td>
-                                <td>${b.phone}</td>
-                                <td style="text-align:right;" class="text-danger">Rs. ${b.remaining_due.toLocaleString()}</td>
-                            </tr>
-                        `).join('') || ''}
-                    </tbody>
-                </table>
-            </div>
-            ` : ''}
+            ${/* All-Time Dues table removed to save Supabase free tier database bandwidth limits */ ''}
         `;
     } else {
         dailySummaryHtml = `

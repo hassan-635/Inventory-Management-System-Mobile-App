@@ -276,14 +276,7 @@ export default function MonthlyReportScreen() {
                     </View>
                 </View>
 
-                {/* All-Time Pending Alert */}
-                <View style={styles.alertPanel}>
-                    <Icon name="warning" size={24} color="#eab308" />
-                    <View style={styles.alertTextWrapper}>
-                        <Text style={styles.alertTitle}>All-Time Pending Dues (Customers)</Text>
-                        <Text style={styles.alertSub}>Total: Rs. {summary.total_all_time_dues_from_buyers.toLocaleString()}</Text>
-                    </View>
-                </View>
+                {/* All-Time Pending Alert removed to save Supabase bandwidth */}
 
                 {/* Cash Sales by Salesman */}
                 {cashSalesList.length > 0 && (
