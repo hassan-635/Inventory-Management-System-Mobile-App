@@ -15,7 +15,7 @@ import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import { useDataRefreshStore } from '../store/dataRefreshStore';
 
-const FILTERS = [
+const staticFilters = [
     { key: 'all', label: 'All' },
     { key: 'Paint', label: 'Paint' },
     { key: 'Electric', label: 'Electric' },
@@ -27,8 +27,13 @@ const FILTERS = [
 /** Same options as web Products.jsx `CustomDropdown` arrange-by */
 const SORT_OPTIONS = [
     { key: 'default', label: 'Default' },
+    { key: 'dateDesc', label: 'Newest Added' },
+    { key: 'dateAsc', label: 'Oldest Added' },
     { key: 'nameAsc', label: 'Name (A-Z)' },
+    { key: 'nameDesc', label: 'Name (Z-A)' },
+    { key: 'priceDesc', label: 'Price (High to Low)' },
     { key: 'priceAsc', label: 'Price (Low to High)' },
+    { key: 'stockDesc', label: 'Stock (High to Low)' },
     { key: 'stockAsc', label: 'Stock (Low to High)' },
 ];
 
@@ -216,6 +221,18 @@ export default function ProductsScreen() {
         const supps = suppliers.map(s => s.name).filter(Boolean);
         return [...new Set(supps)];
     }, [suppliers]);
+
+    const categoryFilters = useMemo(() => {
+        const cats = new Set();
+        products.forEach(p => {
+             if (p.category && p.category.trim() !== '') {
+                 cats.add(p.category.trim());
+             }
+        });
+        ['Paint', 'Electric', 'Hardware'].forEach(c => cats.delete(c));
+        const dynamic = Array.from(cats).map(c => ({ key: c, label: c }));
+        return [...staticFilters, ...dynamic];
+    }, [products]);
 
     const sortLabel = useMemo(
         () => SORT_OPTIONS.find((o) => o.key === sortBy)?.label ?? 'Default',
@@ -510,8 +527,23 @@ export default function ProductsScreen() {
 
         return [...list].sort((a, b) => {
             if (sortBy === 'nameAsc') return (a.name || '').localeCompare(b.name || '');
+            if (sortBy === 'nameDesc') return (b.name || '').localeCompare(a.name || '');
             if (sortBy === 'priceAsc') return Number(a.price || 0) - Number(b.price || 0);
+            if (sortBy === 'priceDesc') return Number(b.price || 0) - Number(a.price || 0);
             if (sortBy === 'stockAsc') return Number(a.remaining_quantity || 0) - Number(b.remaining_quantity || 0);
+            if (sortBy === 'stockDesc') return Number(b.remaining_quantity || 0) - Number(a.remaining_quantity || 0);
+            if (sortBy === 'dateDesc') {
+                const dA = a.purchase_date ? new Date(a.purchase_date) : new Date(0);
+                const dB = b.purchase_date ? new Date(b.purchase_date) : new Date(0);
+                if (dA.getTime() === dB.getTime()) return b.id - a.id;
+                return dB - dA;
+            }
+            if (sortBy === 'dateAsc') {
+                const dA = a.purchase_date ? new Date(a.purchase_date) : new Date(0);
+                const dB = b.purchase_date ? new Date(b.purchase_date) : new Date(0);
+                if (dA.getTime() === dB.getTime()) return a.id - b.id;
+                return dA - dB;
+            }
             return 0;
         });
     }, [products, search, activeFilter, lowStockLimit, sortBy]);
@@ -686,7 +718,7 @@ export default function ProductsScreen() {
             {/* Filter Tabs */}
             <View style={styles.filterWrapper}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
-                    {FILTERS.map(f => {
+                    {categoryFilters.map(f => {
                         const isLow = f.key === 'low';
                         const isOut = f.key === 'out';
                         const isActive = activeFilter === f.key;

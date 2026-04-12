@@ -44,6 +44,22 @@ const getDateThreshold = (key) => {
     }
 };
 
+const SORT_OPTIONS = [
+    { key: 'dateDesc', label: 'Newest First' },
+    { key: 'dateAsc', label: 'Oldest First' },
+    { key: 'amountDesc', label: 'Highest Amount' },
+    { key: 'amountAsc', label: 'Lowest Amount' },
+];
+
+const CATEGORY_FILTERS = [
+    { key: 'all', label: 'All Sales' },
+    { key: 'credit', label: 'Credit (Udhar)' },
+    { key: 'paid', label: 'Fully Paid' },
+    { key: 'method_cash', label: 'Cash Sales' },
+    { key: 'method_online', label: 'Online Sales' },
+    { key: 'method_split', label: 'Split Sales' },
+];
+
 export default function SalesScreen() {
     const { colors, FONTS } = useAppTheme();
     const styles = useMemo(() => getStyles(colors, FONTS), [colors, FONTS]);
@@ -55,6 +71,10 @@ export default function SalesScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [activeFilter, setActiveFilter] = useState('1m');
     const [search, setSearch] = useState('');
+    const [sortOption, setSortOption] = useState('dateDesc');
+    const [categoryFilterOption, setCategoryFilterOption] = useState('all');
+    const [showSortPicker, setShowSortPicker] = useState(false);
+    const [showFilterPicker, setShowFilterPicker] = useState(false);
     const [pdfLoading, setPdfLoading] = useState(false);
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
 
@@ -150,7 +170,7 @@ export default function SalesScreen() {
 
     const filteredSales = useMemo(() => {
         const threshold = getDateThreshold(activeFilter);
-        return sales.filter(s => {
+        let list = sales.filter(s => {
             const saleDate = new Date(s.purchase_date);
             const withinDate = saleDate >= threshold;
             const matchSearch =
@@ -158,7 +178,38 @@ export default function SalesScreen() {
                 (s.buyers?.name || '').toLowerCase().includes(search.toLowerCase());
             return withinDate && matchSearch;
         });
-    }, [sales, activeFilter, search]);
+
+        if (categoryFilterOption === 'credit') {
+            list = list.filter(s => Number(s.total_amount || 0) > Number(s.paid_amount || 0));
+        } else if (categoryFilterOption === 'paid') {
+            list = list.filter(s => Number(s.total_amount || 0) <= Number(s.paid_amount || 0));
+        } else if (categoryFilterOption === 'method_cash') {
+            list = list.filter(s => s.payment_method === 'Cash');
+        } else if (categoryFilterOption === 'method_online') {
+            list = list.filter(s => s.payment_method === 'Online');
+        } else if (categoryFilterOption === 'method_split') {
+            list = list.filter(s => s.payment_method === 'Split');
+        }
+
+        return list.sort((a,b) => {
+            if (sortOption === 'dateDesc') {
+                const dA = a.purchase_date ? new Date(a.purchase_date) : new Date(0);
+                const dB = b.purchase_date ? new Date(b.purchase_date) : new Date(0);
+                if(dA.getTime() === dB.getTime()) return b.id - a.id;
+                return dB - dA;
+            }
+            if (sortOption === 'dateAsc') {
+                const dA = a.purchase_date ? new Date(a.purchase_date) : new Date(0);
+                const dB = b.purchase_date ? new Date(b.purchase_date) : new Date(0);
+                if(dA.getTime() === dB.getTime()) return a.id - b.id;
+                return dA - dB;
+            }
+            if (sortOption === 'amountDesc') return Number(b.total_amount || 0) - Number(a.total_amount || 0);
+            if (sortOption === 'amountAsc') return Number(a.total_amount || 0) - Number(b.total_amount || 0);
+            return 0;
+        });
+
+    }, [sales, activeFilter, search, categoryFilterOption, sortOption]);
 
     const totalRevenue = filteredSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
 
@@ -208,15 +259,40 @@ export default function SalesScreen() {
             </View>
 
             {/* Search */}
-            <View style={styles.searchRow}>
-                <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search by product or customer..."
-                    placeholderTextColor={colors.text.muted}
-                    value={search}
-                    onChangeText={setSearch}
-                />
+            <View style={[styles.searchSortRow, { paddingHorizontal: 16, marginBottom: 10 }]}>
+                <View style={[styles.searchRow, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
+                    <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search by product or customer..."
+                        placeholderTextColor={colors.text.muted}
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
+            </View>
+
+            {/* Filter and Sort Dropdowns */}
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 }}>
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowFilterPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {CATEGORY_FILTERS.find(o => o.key === categoryFilterOption)?.label || 'All Sales'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowSortPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Arrange by'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -362,6 +438,66 @@ export default function SalesScreen() {
                         </View>
                     </View>
                 </KeyboardAvoidingView>
+            </Modal>
+
+            {/* Filter Modal */}
+            <Modal visible={showFilterPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Filter by</Text>
+                            <TouchableOpacity onPress={() => setShowFilterPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={CATEGORY_FILTERS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = categoryFilterOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setCategoryFilterOption(item.key); setShowFilterPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Sort Modal */}
+            <Modal visible={showSortPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Arrange by</Text>
+                            <TouchableOpacity onPress={() => setShowSortPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={SORT_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = sortOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setSortOption(item.key); setShowSortPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
             </Modal>
         </View>
     );

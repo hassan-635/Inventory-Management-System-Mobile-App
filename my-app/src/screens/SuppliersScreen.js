@@ -10,6 +10,24 @@ import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import GenericSideList from '../components/GenericSideList';
 
+const SORT_OPTIONS = [
+    { key: 'balanceDesc', label: 'Highest Payable' },
+    { key: 'balanceAsc', label: 'Lowest Payable' },
+    { key: 'nameAsc', label: 'Name (A-Z)' },
+    { key: 'nameDesc', label: 'Name (Z-A)' },
+    { key: 'dateDesc', label: 'Newest First' },
+    { key: 'dateAsc', label: 'Oldest First' },
+];
+
+const FILTER_OPTIONS = [
+    { key: 'all', label: 'All Suppliers' },
+    { key: 'pending', label: 'Pending Payables' },
+    { key: 'cleared', label: 'All Cleared' },
+    { key: 'method_cash', label: 'Cash Suppliers' },
+    { key: 'method_online', label: 'Online Suppliers' },
+    { key: 'method_split', label: 'Split Suppliers' },
+];
+
 export default function SuppliersScreen() {
     const { colors, FONTS } = useAppTheme();
     const styles = useMemo(() => getStyles(colors, FONTS), [colors, FONTS]);
@@ -20,6 +38,10 @@ export default function SuppliersScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
+    const [sortOption, setSortOption] = useState('balanceDesc');
+    const [filterOption, setFilterOption] = useState('all');
+    const [showSortPicker, setShowSortPicker] = useState(false);
+    const [showFilterPicker, setShowFilterPicker] = useState(false);
 
     // Side List State
     const [isSideListVisible, setIsSideListVisible] = useState(false);
@@ -206,11 +228,6 @@ export default function SuppliersScreen() {
         ]);
     };
 
-    const computeDue = (txns) =>
-        (txns || []).reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0);
-
-    const computePaid = (txns) =>
-        (txns || []).reduce((acc, t) => acc + Number(t.paid_amount || 0), 0);
 
     // Check if supplier ID already exists in pending list
     const isSupplierIdInPendingList = (supplierId) => {
@@ -295,30 +312,54 @@ export default function SuppliersScreen() {
         ]);
     };
 
-    const filteredSuppliers = useMemo(() => suppliers
-        .filter(s => {
+    const computeDue = useCallback((txns) =>
+        (txns || []).reduce((acc, t) => acc + (Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0), []);
+
+    const computePaid = useCallback((txns) =>
+        (txns || []).reduce((acc, t) => acc + Number(t.paid_amount || 0), 0), []);
+
+    const filteredSuppliers = useMemo(() => {
+        let list = suppliers.filter(s => {
             const q = search.toLowerCase();
             return (
                 (s.name || '').toLowerCase().includes(q) ||
                 (s.company_name || '').toLowerCase().includes(q) ||
                 (s.phone || '').includes(search)
             );
-        })
-        .sort((a, b) => {
-            // Calculate remaining amounts for both suppliers
-            const aRemaining = computeDue(a.supplier_transactions);
-            const bRemaining = computeDue(b.supplier_transactions);
-            
-            // If one has outstanding and other doesn't, outstanding comes first
-            if (aRemaining > 0 && bRemaining <= 0) return -1;
-            if (aRemaining <= 0 && bRemaining > 0) return 1;
-            
-            // If both have outstanding, sort by higher outstanding amount
-            if (aRemaining > 0 && bRemaining > 0) return bRemaining - aRemaining;
-            
-            // If both are cleared, sort alphabetically
-            return a.name.localeCompare(b.name);
-        }), [suppliers, search]);
+        });
+
+        if (filterOption === 'pending') {
+            list = list.filter(b => computeDue(b.supplier_transactions) > 0);
+        } else if (filterOption === 'cleared') {
+            list = list.filter(b => computeDue(b.supplier_transactions) <= 0);
+        } else if (filterOption === 'method_cash') {
+            list = list.filter(b => (b.supplier_transactions || []).some(t => t.payment_method === 'Cash'));
+        } else if (filterOption === 'method_online') {
+            list = list.filter(b => (b.supplier_transactions || []).some(t => t.payment_method === 'Online'));
+        } else if (filterOption === 'method_split') {
+            list = list.filter(b => (b.supplier_transactions || []).some(t => t.payment_method === 'Split'));
+        }
+
+        return list.sort((a, b) => {
+            const dueA = computeDue(a.supplier_transactions);
+            const dueB = computeDue(b.supplier_transactions);
+
+            if (sortOption === 'balanceDesc') {
+                if (dueA === 0 && dueB === 0) return (a.name || '').localeCompare(b.name || '');
+                return dueB - dueA;
+            }
+            if (sortOption === 'balanceAsc') {
+                if (dueA === 0 && dueB === 0) return (a.name || '').localeCompare(b.name || '');
+                return dueA - dueB;
+            }
+            if (sortOption === 'nameAsc') return (a.name || '').localeCompare(b.name || '');
+            if (sortOption === 'nameDesc') return (b.name || '').localeCompare(a.name || '');
+            if (sortOption === 'dateDesc') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            if (sortOption === 'dateAsc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+
+            return 0;
+        });
+    }, [suppliers, search, filterOption, sortOption, computeDue]);
 
     const filteredPending = useMemo(
         () => filteredSuppliers.reduce((sum, s) => sum + computeDue(s.supplier_transactions), 0),
@@ -337,16 +378,101 @@ export default function SuppliersScreen() {
         <View style={styles.container}>
             <Text style={styles.headerTitle}>Suppliers Directory</Text>
 
-            <View style={styles.searchRow}>
-                <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search name, company, phone..."
-                    placeholderTextColor={colors.text.muted}
-                    value={search}
-                    onChangeText={setSearch}
-                />
+            <View style={[styles.searchSortRow, { paddingHorizontal: 16, marginBottom: 10 }]}>
+                <View style={[styles.searchRow, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
+                    <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search name, company, phone..."
+                        placeholderTextColor={colors.text.muted}
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
             </View>
+
+            {/* Filter and Sort Dropdowns */}
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 }}>
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowFilterPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {FILTER_OPTIONS.find(o => o.key === filterOption)?.label || 'All Suppliers'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowSortPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Arrange by'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+            </View>
+
+            {/* Filter Modal */}
+            <Modal visible={showFilterPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Filter by</Text>
+                            <TouchableOpacity onPress={() => setShowFilterPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={FILTER_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = filterOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setFilterOption(item.key); setShowFilterPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Sort Modal */}
+            <Modal visible={showSortPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Arrange by</Text>
+                            <TouchableOpacity onPress={() => setShowSortPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={SORT_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = sortOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setSortOption(item.key); setShowSortPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
 
             <View style={styles.summaryBar}>
                 <Text style={styles.summaryBarText}>

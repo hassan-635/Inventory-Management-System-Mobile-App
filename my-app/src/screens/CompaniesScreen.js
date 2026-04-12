@@ -11,6 +11,21 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
+const SORT_OPTIONS = [
+    { key: 'balanceDesc', label: 'Highest Payable (Receivable)' },
+    { key: 'balanceAsc', label: 'Lowest Payable (Receivable)' },
+    { key: 'nameAsc', label: 'Name (A-Z)' },
+    { key: 'nameDesc', label: 'Name (Z-A)' },
+    { key: 'salesDesc', label: 'Highest Sales' },
+    { key: 'salesAsc', label: 'Lowest Sales' },
+];
+
+const FILTER_OPTIONS = [
+    { key: 'all', label: 'All Companies' },
+    { key: 'pending', label: 'Pending Receivables' },
+    { key: 'cleared', label: 'Fully Paid' },
+];
+
 export default function CompaniesScreen() {
     const { colors, FONTS } = useAppTheme();
     const { width: SCREEN_WIDTH } = useWindowDimensions();
@@ -20,6 +35,10 @@ export default function CompaniesScreen() {
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
+    const [sortOption, setSortOption] = useState('balanceDesc');
+    const [filterOption, setFilterOption] = useState('all');
+    const [showSortPicker, setShowSortPicker] = useState(false);
+    const [showFilterPicker, setShowFilterPicker] = useState(false);
     const [expandedId, setExpandedId] = useState(null);
     const [payModal, setPayModal] = useState({ visible: false, company: null });
     const [payAmount, setPayAmount] = useState('');
@@ -43,25 +62,37 @@ export default function CompaniesScreen() {
     useRefetchOnFocus(fetchCompanies);
     const onRefresh = () => { setRefreshing(true); fetchCompanies(); };
 
-    const filtered = useMemo(() => companies
-        .filter(c =>
+    const filtered = useMemo(() => {
+        let list = companies.filter(c =>
             (c.company_name || '').toLowerCase().includes(search.toLowerCase())
-        )
-        .sort((a, b) => {
-            // Calculate remaining amounts for both companies
-            const aRemaining = a.total_remaining || 0;
-            const bRemaining = b.total_remaining || 0;
-            
-            // If one has outstanding and other doesn't, outstanding comes first
-            if (aRemaining > 0 && bRemaining <= 0) return -1;
-            if (aRemaining <= 0 && bRemaining > 0) return 1;
-            
-            // If both have outstanding, sort by higher outstanding amount
-            if (aRemaining > 0 && bRemaining > 0) return bRemaining - aRemaining;
-            
-            // If both are cleared, sort alphabetically
-            return a.company_name.localeCompare(b.company_name);
-        }), [companies, search]);
+        );
+
+        if (filterOption === 'pending') {
+            list = list.filter(c => (c.total_remaining || 0) > 0);
+        } else if (filterOption === 'cleared') {
+            list = list.filter(c => (c.total_remaining || 0) <= 0);
+        }
+
+        return list.sort((a,b) => {
+            const remA = a.total_remaining || 0;
+            const remB = b.total_remaining || 0;
+
+            if (sortOption === 'balanceDesc') {
+                if(remA === 0 && remB === 0) return (a.company_name || '').localeCompare(b.company_name || '');
+                return remB - remA;
+            }
+            if (sortOption === 'balanceAsc') {
+                 if(remA === 0 && remB === 0) return (a.company_name || '').localeCompare(b.company_name || '');
+                 return remA - remB;
+            }
+            if (sortOption === 'nameAsc') return (a.company_name || '').localeCompare(b.company_name || '');
+            if (sortOption === 'nameDesc') return (b.company_name || '').localeCompare(a.company_name || '');
+            if (sortOption === 'salesDesc') return (b.total_amount || 0) - (a.total_amount || 0);
+            if (sortOption === 'salesAsc') return (a.total_amount || 0) - (b.total_amount || 0);
+            return 0;
+        });
+
+    }, [companies, search, filterOption, sortOption]);
 
     const handlePay = async () => {
         const amount = parseFloat(payAmount);
@@ -228,15 +259,40 @@ export default function CompaniesScreen() {
             <Text style={styles.title}>Companies (customers owe you)</Text>
 
             {/* Search */}
-            <View style={styles.searchRow}>
-                <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search company name..."
-                    placeholderTextColor={colors.text.muted || colors.text.secondary}
-                    value={search}
-                    onChangeText={setSearch}
-                />
+            <View style={[styles.searchSortRow, { paddingHorizontal: 16, marginBottom: 10 }]}>
+                <View style={[styles.searchRow, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
+                    <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search company name..."
+                        placeholderTextColor={colors.text.muted || colors.text.secondary}
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
+            </View>
+
+            {/* Filter and Sort Dropdowns */}
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 }}>
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowFilterPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {FILTER_OPTIONS.find(o => o.key === filterOption)?.label || 'All Companies'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowSortPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Arrange by'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
             </View>
 
             {/* Summary Bar */}
@@ -324,6 +380,66 @@ export default function CompaniesScreen() {
                                 {paying ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontFamily: FONTS.bold }}>Record</Text>}
                             </TouchableOpacity>
                         </View>
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Filter Modal */}
+            <Modal visible={showFilterPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Filter by</Text>
+                            <TouchableOpacity onPress={() => setShowFilterPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={FILTER_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = filterOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setFilterOption(item.key); setShowFilterPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Sort Modal */}
+            <Modal visible={showSortPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Arrange by</Text>
+                            <TouchableOpacity onPress={() => setShowSortPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={SORT_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = sortOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setSortOption(item.key); setShowSortPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
                     </View>
                 </View>
             </Modal>

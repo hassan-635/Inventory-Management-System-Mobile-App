@@ -13,6 +13,24 @@ import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import GenericSideList from '../components/GenericSideList';
 
+const SORT_OPTIONS = [
+    { key: 'date_desc', label: 'Newest First' },
+    { key: 'date_asc', label: 'Oldest First' },
+    { key: 'nameAsc', label: 'Name (A-Z)' },
+    { key: 'nameDesc', label: 'Name (Z-A)' },
+    { key: 'balanceDesc', label: 'Highest Pending' },
+    { key: 'balanceAsc', label: 'Lowest Pending' },
+];
+
+const FILTER_OPTIONS = [
+    { key: 'all', label: 'All Customers' },
+    { key: 'pending', label: 'Pending Udhar' },
+    { key: 'cleared', label: 'All Cleared' },
+    { key: 'method_cash', label: 'Cash Buyers (History)' },
+    { key: 'method_online', label: 'Online Buyers (History)' },
+    { key: 'method_split', label: 'Split Buyers (History)' },
+];
+
 export default function BuyersScreen() {
     const { colors, FONTS } = useAppTheme();
     const { width: SW } = useWindowDimensions();
@@ -23,6 +41,10 @@ export default function BuyersScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [search, setSearch] = useState('');
     const [expandedId, setExpandedId] = useState(null);
+    const [sortOption, setSortOption] = useState('date_desc');
+    const [filterOption, setFilterOption] = useState('all');
+    const [showSortPicker, setShowSortPicker] = useState(false);
+    const [showFilterPicker, setShowFilterPicker] = useState(false);
 
     // Side List State
     const [isSideListVisible, setIsSideListVisible] = useState(false);
@@ -54,20 +76,50 @@ export default function BuyersScreen() {
     useRefetchOnFocus(fetchBuyers);
     const onRefresh = () => { setRefreshing(true); fetchBuyers(); };
 
-    const filtered = useMemo(() => buyers.filter(b =>
-        (b.name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (b.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
-        (b.phone || '').includes(search)
-    ), [buyers, search]);
+    const computeDue = useCallback((txns = []) => txns.reduce((s, t) => s + Math.max(0, Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0), []);
+    const computePaid = useCallback((txns = []) => txns.reduce((s, t) => s + Number(t.paid_amount || 0), 0), []);
+
+    const filtered = useMemo(() => {
+        let list = buyers.filter(b =>
+            (b.name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (b.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (b.phone || '').includes(search)
+        );
+
+        if (filterOption === 'pending') {
+            list = list.filter(b => computeDue(b.buyer_transactions) > 0);
+        } else if (filterOption === 'cleared') {
+            list = list.filter(b => computeDue(b.buyer_transactions) <= 0);
+        } else if (filterOption === 'method_cash') {
+            list = list.filter(b => (b.buyer_transactions || []).some(t => t.payment_method === 'Cash'));
+        } else if (filterOption === 'method_online') {
+            list = list.filter(b => (b.buyer_transactions || []).some(t => t.payment_method === 'Online'));
+        } else if (filterOption === 'method_split') {
+            list = list.filter(b => (b.buyer_transactions || []).some(t => t.payment_method === 'Split'));
+        }
+
+        return list.sort((a,b) => {
+            if (sortOption === 'date_desc') return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            if (sortOption === 'date_asc') return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+            if (sortOption === 'nameAsc') return (a.name || '').localeCompare(b.name || '');
+            if (sortOption === 'nameDesc') return (b.name || '').localeCompare(a.name || '');
+            
+            const dueA = computeDue(a.buyer_transactions);
+            const dueB = computeDue(b.buyer_transactions);
+
+            if (sortOption === 'balanceDesc') return dueB - dueA;
+            if (sortOption === 'balanceAsc') return dueA - dueB;
+
+            return 0;
+        });
+
+    }, [buyers, search, filterOption, sortOption, computeDue]);
 
     const filteredPending = useMemo(() =>
         filtered.reduce((sum, b) =>
             sum + (b.buyer_transactions || []).reduce((s, t) =>
                 s + Math.max(0, Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0), 0),
         [filtered]);
-
-    const computeDue = (txns = []) => txns.reduce((s, t) => s + Math.max(0, Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0);
-    const computePaid = (txns = []) => txns.reduce((s, t) => s + Number(t.paid_amount || 0), 0);
 
     const openModal = (buyer = null) => {
         if (buyer) {
@@ -435,21 +487,106 @@ export default function BuyersScreen() {
             </View>
 
             {/* Search */}
-            <View style={styles.searchRow}>
-                <Icon name="search-outline" size={17} color={colors.text.secondary} style={{ marginRight: 8 }} />
-                <TextInput
-                    style={styles.searchInput}
-                    placeholder="Search customers, company, phone..."
-                    placeholderTextColor={colors.text.muted}
-                    value={search}
-                    onChangeText={setSearch}
-                />
-                {search.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearch('')}>
-                        <Icon name="close-circle" size={18} color={colors.text.secondary} />
-                    </TouchableOpacity>
-                )}
+            <View style={[styles.searchSortRow, { paddingHorizontal: 16, marginBottom: 10 }]}>
+                <View style={[styles.searchRow, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
+                    <Icon name="search-outline" size={17} color={colors.text.secondary} style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={styles.searchInput}
+                        placeholder="Search customers, company, phone..."
+                        placeholderTextColor={colors.text.muted}
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                    {search.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearch('')}>
+                            <Icon name="close-circle" size={18} color={colors.text.secondary} />
+                        </TouchableOpacity>
+                    )}
+                </View>
             </View>
+
+            {/* Filter and Sort Dropdowns */}
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 10 }}>
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowFilterPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {FILTER_OPTIONS.find(o => o.key === filterOption)?.label || 'All Customers'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.sortDropdown, { flex: 1, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
+                    onPress={() => setShowSortPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Arrange by'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+            </View>
+
+            {/* Filter Modal */}
+            <Modal visible={showFilterPicker} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalBox, { paddingBottom: 24 }]}>
+                        <View style={styles.modalTitleRow}>
+                            <Text style={styles.modalTitle}>Filter by</Text>
+                            <TouchableOpacity onPress={() => setShowFilterPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={FILTER_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = filterOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setFilterOption(item.key); setShowFilterPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Sort Modal */}
+            <Modal visible={showSortPicker} animationType="slide" transparent>
+                <View style={styles.modalOverlay}>
+                    <View style={[styles.modalBox, { paddingBottom: 24 }]}>
+                        <View style={styles.modalTitleRow}>
+                            <Text style={styles.modalTitle}>Arrange by</Text>
+                            <TouchableOpacity onPress={() => setShowSortPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={SORT_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = sortOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setSortOption(item.key); setShowSortPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
 
             {/* Summary — customers owe you (you receive payment from them) */}
             <View style={styles.summaryBar}>

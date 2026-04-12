@@ -12,6 +12,13 @@ import GenericSideList from '../components/GenericSideList';
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
 
+const SORT_OPTIONS = [
+    { key: 'dateDesc', label: 'Newest First' },
+    { key: 'dateAsc', label: 'Oldest First' },
+    { key: 'amountDesc', label: 'Highest Amount' },
+    { key: 'amountAsc', label: 'Lowest Amount' },
+];
+
 export default function ExpensesScreen() {
     const { colors, FONTS } = useAppTheme();
     const { width } = useWindowDimensions();
@@ -22,6 +29,11 @@ export default function ExpensesScreen() {
     const [expenses, setExpenses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [search, setSearch] = useState('');
+    const [sortOption, setSortOption] = useState('dateDesc');
+    const [filterOption, setFilterOption] = useState('all');
+    const [showSortPicker, setShowSortPicker] = useState(false);
+    const [showFilterPicker, setShowFilterPicker] = useState(false);
 
     // Side List State
     const [isSideListVisible, setIsSideListVisible] = useState(false);
@@ -235,7 +247,41 @@ export default function ExpensesScreen() {
         ]);
     };
 
-    const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
+    const categoryFilters = useMemo(() => {
+        const cats = new Set(CATEGORIES);
+        expenses.forEach(e => {
+            if (e.category) cats.add(e.category.trim());
+        });
+        const arr = [{ key: 'all', label: 'All Categories' }];
+        cats.forEach(c => arr.push({ key: c, label: c }));
+        return arr;
+    }, [expenses]);
+
+    const filteredExpenses = useMemo(() => {
+        let list = expenses;
+
+        if (filterOption !== 'all') {
+            list = list.filter(e => e.category === filterOption);
+        }
+
+        if (search) {
+            const q = search.toLowerCase();
+            list = list.filter(e => 
+                (e.category || '').toLowerCase().includes(q) ||
+                (e.description || '').toLowerCase().includes(q)
+            );
+        }
+
+        return list.sort((a,b) => {
+            if (sortOption === 'dateDesc') return new Date(b.date || 0) - new Date(a.date || 0);
+            if (sortOption === 'dateAsc') return new Date(a.date || 0) - new Date(b.date || 0);
+            if (sortOption === 'amountDesc') return Number(b.amount || 0) - Number(a.amount || 0);
+            if (sortOption === 'amountAsc') return Number(a.amount || 0) - Number(b.amount || 0);
+            return 0;
+        });
+    }, [expenses, search, filterOption, sortOption]);
+
+    const totalExpensesFiltered = filteredExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
 
     if (loading && !refreshing) {
         return (
@@ -324,12 +370,49 @@ export default function ExpensesScreen() {
 
             <View style={styles.summaryContainer}>
                 <Text style={styles.summaryLabel}>Total Expenses ({filterMonth}-{filterYear})</Text>
-                <Text style={styles.summaryAmount}>Rs. {totalExpenses.toLocaleString()}</Text>
+                <Text style={styles.summaryAmount}>Rs. {totalExpensesFiltered.toLocaleString()}</Text>
+            </View>
+
+            {/* Search */}
+            <View style={[styles.filterContainer, { marginBottom: 10 }]}>
+                <View style={[styles.filterInputGroup, { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.secondary, borderRadius: 8, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.border.color }]}>
+                    <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
+                    <TextInput
+                        style={{ flex: 1, paddingVertical: 10, color: colors.text.primary, fontFamily: FONTS.regular }}
+                        placeholder="Search category, description..."
+                        placeholderTextColor={colors.text.muted}
+                        value={search}
+                        onChangeText={setSearch}
+                    />
+                </View>
+            </View>
+
+            {/* Filter and Sort Dropdowns */}
+            <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 15 }}>
+                <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: colors.background.secondary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                    onPress={() => setShowFilterPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {categoryFilters.find(o => o.key === filterOption)?.label || 'All Categories'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={{ flex: 1, backgroundColor: colors.background.secondary, borderRadius: 8, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+                    onPress={() => setShowSortPicker(true)}
+                >
+                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 13 }} numberOfLines={1}>
+                        {SORT_OPTIONS.find(o => o.key === sortOption)?.label || 'Arrange by'}
+                    </Text>
+                    <Icon name="chevron-down" size={16} color={colors.text.secondary} />
+                </TouchableOpacity>
             </View>
 
             <FlatList
                 {...flatListPerformanceProps}
-                data={expenses}
+                data={filteredExpenses}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderExpenseItem}
                 contentContainerStyle={styles.listContainer}
@@ -429,6 +512,67 @@ export default function ExpensesScreen() {
                 FONTS={FONTS}
                 entityType="expense"
             />
+
+            {/* Filter Modal */}
+            <Modal visible={showFilterPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24, maxHeight: '80%' }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Filter by</Text>
+                            <TouchableOpacity onPress={() => setShowFilterPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={categoryFilters}
+                            keyExtractor={(item) => item.key}
+                            showsVerticalScrollIndicator={false}
+                            renderItem={({ item }) => {
+                                const selected = filterOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setFilterOption(item.key); setShowFilterPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
+
+            {/* Sort Modal */}
+            <Modal visible={showSortPicker} animationType="slide" transparent>
+                <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'flex-end' }}>
+                    <View style={{ backgroundColor: colors.background.secondary, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 24 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, fontSize: 18 }}>Arrange by</Text>
+                            <TouchableOpacity onPress={() => setShowSortPicker(false)}>
+                                <Icon name="close" size={24} color={colors.text.secondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <FlatList
+                            data={SORT_OPTIONS}
+                            keyExtractor={(item) => item.key}
+                            renderItem={({ item }) => {
+                                const selected = sortOption === item.key;
+                                return (
+                                    <TouchableOpacity
+                                        style={[{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.border.color, flexDirection: 'row', justifyContent: 'space-between' }, selected && { backgroundColor: 'rgba(56, 189, 248, 0.05)' }]}
+                                        onPress={() => { setSortOption(item.key); setShowSortPicker(false); }}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, selected && { color: colors.accent.primary }]}>{item.label}</Text>
+                                        {selected && <Icon name="checkmark-circle" size={20} color={colors.accent.primary} />}
+                                    </TouchableOpacity>
+                                );
+                            }}
+                        />
+                    </View>
+                </View>
+            </Modal>
         </View>
     );
 }
