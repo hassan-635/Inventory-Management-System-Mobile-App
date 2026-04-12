@@ -669,7 +669,16 @@ export default function BillingScreen() {
                                     <Text style={styles.inputLabel}>Cash Amount (Rs)</Text>
                                     <TextInput 
                                         style={styles.textInput} keyboardType="numeric" 
-                                        value={splitCash} onChangeText={setSplitCash} 
+                                        value={splitCash} 
+                                        onChangeText={(val) => {
+                                            setSplitCash(val);
+                                            const targetAmt = billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount;
+                                            if (val === '') {
+                                                setSplitOnline(String(targetAmt));
+                                            } else if (!isNaN(Number(val)) && Number(val) >= 0) {
+                                                setSplitOnline(String(Math.max(0, targetAmt - Number(val))));
+                                            }
+                                        }}
                                         placeholder="0" placeholderTextColor={colors.text.muted} 
                                     />
                                 </View>
@@ -677,7 +686,16 @@ export default function BillingScreen() {
                                     <Text style={styles.inputLabel}>Online Amount (Rs)</Text>
                                     <TextInput 
                                         style={styles.textInput} keyboardType="numeric" 
-                                        value={splitOnline} onChangeText={setSplitOnline} 
+                                        value={splitOnline} 
+                                        onChangeText={(val) => {
+                                            setSplitOnline(val);
+                                            const targetAmt = billType === 'CREDIT' ? Number(paidAmount || 0) : totalAmount;
+                                            if (val === '') {
+                                                setSplitCash(String(targetAmt));
+                                            } else if (!isNaN(Number(val)) && Number(val) >= 0) {
+                                                setSplitCash(String(Math.max(0, targetAmt - Number(val))));
+                                            }
+                                        }}
                                         placeholder="0" placeholderTextColor={colors.text.muted} 
                                     />
                                 </View>
