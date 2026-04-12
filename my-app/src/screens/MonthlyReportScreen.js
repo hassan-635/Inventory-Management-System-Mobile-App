@@ -102,7 +102,8 @@ export default function MonthlyReportScreen() {
         );
     }
 
-    const { summary, expense_breakdown, activity_lists, company_wise_summary } = reportData;
+    const { summary, expense_breakdown, activity_lists, company_wise_summary, product_profit_list, supplier_purchase_summary } = reportData;
+    const paymentSplit = summary.payment_split || { cash: 0, online: 0, split_count: 0 };
     const cashSalesList = activity_lists?.cash_sales_by_salesman || [];
     const creditList = activity_lists?.credit_payments_received || [];
     const supplierPayments = activity_lists?.payments_made_to_suppliers || [];
@@ -181,27 +182,27 @@ export default function MonthlyReportScreen() {
                 <>
                 {/* Key Metrics */}
                 <View style={styles.statsGrid}>
-                    <View style={[styles.statCard, { borderLeftColor: summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444', borderLeftWidth: 4 }]}>
-                        <Icon name={summary.cash_flow_profit >= 0 ? "trending-up" : "trending-down"} size={22} color={summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444'} style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Cash Flow Profit</Text>
-                        <Text style={[styles.statValue, { color: summary.cash_flow_profit >= 0 ? '#22c55e' : '#ef4444' }]}>
-                            Rs. {summary.cash_flow_profit.toLocaleString()}
+                    {/* Net Real Profit */}
+                    <View style={[styles.statCard, { borderLeftColor: (summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444', borderLeftWidth: 4 }]}>
+                        <Icon name={(summary.net_real_profit || 0) >= 0 ? 'trending-up' : 'trending-down'} size={22} color={(summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444'} style={styles.statIcon} />
+                        <Text style={styles.statTitle}>Net Real Profit</Text>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Product Margin:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(summary.product_profit || 0).toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Less Expenses:</Text><Text style={[styles.ledgerAmt, { color: '#ef4444' }]}>- Rs. {summary.total_expenses.toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Less Returns:</Text><Text style={[styles.ledgerAmt, { color: '#ef4444' }]}>- Rs. {(summary.total_returns_this_month || 0).toLocaleString()}</Text></View>
+                        <Text style={[styles.statValue, { color: (summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444', marginTop: 8 }]}>
+                            Rs. {(summary.net_real_profit || 0).toLocaleString()}
                         </Text>
                     </View>
 
-                    <View style={[styles.statCard, { borderLeftColor: '#10b981', borderLeftWidth: 4 }]}>
-                        <Icon name="trending-up" size={22} color="#10b981" style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Product Profit</Text>
-                        <Text style={[styles.statValue, { color: '#10b981' }]}>
-                            Rs. {(summary.product_profit || 0).toLocaleString()}
-                        </Text>
-                    </View>
-
-                    <View style={[styles.statCard, { borderLeftColor: '#3b82f6', borderLeftWidth: 4 }]}>
-                        <Icon name="wallet-outline" size={22} color="#3b82f6" style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Gross Margin</Text>
-                        <Text style={[styles.statValue, { color: '#3b82f6' }]}>
-                            Rs. {summary.accrual_profit.toLocaleString()}
+                    {/* Payment Method Split */}
+                    <View style={[styles.statCard, { borderLeftColor: '#38bdf8', borderLeftWidth: 4 }]}>
+                        <Icon name="card-outline" size={22} color="#38bdf8" style={styles.statIcon} />
+                        <Text style={styles.statTitle}>Payment Received By Method</Text>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>💵 Cash:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(paymentSplit.cash || 0).toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>📱 Online:</Text><Text style={[styles.ledgerAmt, { color: '#38bdf8' }]}>Rs. {(paymentSplit.online || 0).toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Split Txns:</Text><Text style={styles.ledgerAmt}>{paymentSplit.split_count || 0}</Text></View>
+                        <Text style={[styles.statValue, { color: '#38bdf8', marginTop: 8 }]}>
+                            Total: Rs. {((paymentSplit.cash || 0) + (paymentSplit.online || 0)).toLocaleString()}
                         </Text>
                     </View>
 
@@ -209,6 +210,14 @@ export default function MonthlyReportScreen() {
                         <Icon name="wallet" size={22} color="#f97316" style={styles.statIcon} />
                         <Text style={styles.statTitle}>Total Expenses</Text>
                         <Text style={[styles.statValue, { color: '#f97316' }]}>Rs. {summary.total_expenses.toLocaleString()}</Text>
+                    </View>
+
+                    <View style={[styles.statCard, { borderLeftColor: '#a855f7', borderLeftWidth: 4 }]}>
+                        <Icon name="cube-outline" size={22} color="#a855f7" style={styles.statIcon} />
+                        <Text style={styles.statTitle}>Stock Purchased</Text>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Total Bills:</Text><Text style={styles.ledgerAmt}>Rs. {summary.total_purchases_created_value.toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Cash Paid:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {summary.total_purchases_paid_this_month.toLocaleString()}</Text></View>
+                        <Text style={[styles.statValue, { color: '#a855f7', marginTop: 8 }]}>Cr: Rs. {summary.total_credit_taken_this_month.toLocaleString()}</Text>
                     </View>
                 </View>
 
@@ -231,6 +240,14 @@ export default function MonthlyReportScreen() {
                         <View style={styles.ledgerRow}>
                             <Text style={styles.ledgerText}>Credit Installments Received</Text>
                             <Text style={[styles.ledgerAmt, { color: '#a78bfa' }]}>Rs. {summary.total_sales_collected_this_month.toLocaleString()}</Text>
+                        </View>
+                        <View style={styles.ledgerRow}>
+                            <Text style={styles.ledgerText}>💵 Cash Received:</Text>
+                            <Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(paymentSplit.cash || 0).toLocaleString()}</Text>
+                        </View>
+                        <View style={styles.ledgerRow}>
+                            <Text style={styles.ledgerText}>📱 Online Received:</Text>
+                            <Text style={[styles.ledgerAmt, { color: '#38bdf8' }]}>Rs. {(paymentSplit.online || 0).toLocaleString()}</Text>
                         </View>
                         <View style={[styles.ledgerRow, styles.ledgerRowBorder]}>
                             <Text style={styles.ledgerText}>New Credit Given</Text>
@@ -362,6 +379,76 @@ export default function MonthlyReportScreen() {
                     </View>
                 )}
 
+                {/* Product-Wise Profit */}
+                {product_profit_list && product_profit_list.length > 0 && (
+                    <View style={styles.whiteCard}>
+                        <View style={styles.cardHeaderRow}>
+                            <Icon name="trending-up" size={18} color="#10b981" />
+                            <Text style={[styles.cardHeader, { color: '#10b981' }]}>Product-Wise Profit</Text>
+                        </View>
+                        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator>
+                            <View>
+                                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                                    <Text style={[styles.tableHeaderText, { width: 120 }]}>Product</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 50, textAlign: 'center' }]}>Qty</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 80, textAlign: 'right' }]}>Sale Rate</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 80, textAlign: 'right' }]}>Buy Rate</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 80, textAlign: 'right' }]}>Profit/Unit</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 90, textAlign: 'right' }]}>Total Profit</Text>
+                                </View>
+                                {product_profit_list.map((p, i) => (
+                                    <View key={i} style={styles.tableRow}>
+                                        <Text style={[styles.tableCell, { width: 120, fontFamily: FONTS.medium }]} numberOfLines={1}>{p.product_name}</Text>
+                                        <Text style={[styles.tableCell, { width: 50, textAlign: 'center', color: colors.text.secondary }]}>{p.total_qty_sold}</Text>
+                                        <Text style={[styles.tableCell, { width: 80, textAlign: 'right' }]}>Rs.{p.sale_rate.toLocaleString()}</Text>
+                                        <Text style={[styles.tableCell, { width: 80, textAlign: 'right', color: '#ef4444' }]}>Rs.{p.purchase_rate.toLocaleString()}</Text>
+                                        <Text style={[styles.tableCell, { width: 80, textAlign: 'right', color: (p.sale_rate - p.purchase_rate) >= 0 ? '#22c55e' : '#ef4444', fontFamily: FONTS.medium }]}>Rs.{(p.sale_rate - p.purchase_rate).toLocaleString()}</Text>
+                                        <Text style={[styles.tableCell, { width: 90, textAlign: 'right', color: p.total_profit >= 0 ? '#22c55e' : '#ef4444', fontFamily: FONTS.bold }]}>Rs.{p.total_profit.toLocaleString()}</Text>
+                                    </View>
+                                ))}
+                                <View style={[styles.tableRow, styles.totalRow]}>
+                                    <Text style={[styles.totalText, { width: 120 }]}>Total</Text>
+                                    <Text style={[styles.totalText, { width: 50, textAlign: 'center' }]}>{product_profit_list.reduce((s, p) => s + p.total_qty_sold, 0)}</Text>
+                                    <Text style={[styles.totalText, { width: 80 }]}></Text>
+                                    <Text style={[styles.totalText, { width: 80 }]}></Text>
+                                    <Text style={[styles.totalText, { width: 80 }]}></Text>
+                                    <Text style={[styles.totalText, { width: 90, textAlign: 'right', color: '#22c55e' }]}>Rs.{product_profit_list.reduce((s, p) => s + p.total_profit, 0).toLocaleString()}</Text>
+                                </View>
+                            </View>
+                        </ScrollView>
+                    </View>
+                )}
+
+                {/* Supplier Purchase Summary */}
+                {supplier_purchase_summary && supplier_purchase_summary.length > 0 && (
+                    <View style={styles.whiteCard}>
+                        <View style={styles.cardHeaderRow}>
+                            <Icon name="cube" size={18} color="#a855f7" />
+                            <Text style={[styles.cardHeader, { color: '#a855f7' }]}>Supplier-Wise Purchases</Text>
+                        </View>
+                        <ScrollView horizontal nestedScrollEnabled showsHorizontalScrollIndicator>
+                            <View>
+                                <View style={[styles.tableRow, styles.tableHeaderRow]}>
+                                    <Text style={[styles.tableHeaderText, { width: 110 }]}>Supplier</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 90, textAlign: 'right' }]}>Total Bought</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 80, textAlign: 'right' }]}>Cash Paid</Text>
+                                    <Text style={[styles.tableHeaderText, { width: 80, textAlign: 'right' }]}>Remaining</Text>
+                                </View>
+                                {supplier_purchase_summary.map((s, i) => (
+                                    <View key={i} style={styles.tableRow}>
+                                        <Text style={[styles.tableCell, { width: 110, fontFamily: FONTS.medium }]} numberOfLines={1}>{s.supplier_name}</Text>
+                                        <Text style={[styles.tableCell, { width: 90, textAlign: 'right', fontFamily: FONTS.medium }]}>Rs.{s.total_purchased.toLocaleString()}</Text>
+                                        <Text style={[styles.tableCell, { width: 80, textAlign: 'right', color: '#22c55e' }]}>Rs.{s.total_paid.toLocaleString()}</Text>
+                                        <Text style={[styles.tableCell, { width: 80, textAlign: 'right', color: s.total_outstanding > 0 ? '#ef4444' : '#22c55e', fontFamily: FONTS.bold }]}>
+                                            {s.total_outstanding > 0 ? `Rs.${s.total_outstanding.toLocaleString()}` : '✓'}
+                                        </Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
+                )}
+
                 {/* Company-Wise Summary */}
                 {companySummary.length > 0 && (
                     <View style={styles.whiteCard}>
@@ -387,7 +474,6 @@ export default function MonthlyReportScreen() {
                                 </Text>
                             </View>
                         ))}
-                        {/* Grand Total */}
                         <View style={[styles.tableRow, styles.totalRow]}>
                             <Text style={[styles.totalText, { flex: 2 }]}>Total</Text>
                             <Text style={[styles.totalText, { flex: 2, textAlign: 'right' }]}>
@@ -428,12 +514,14 @@ export default function MonthlyReportScreen() {
                                 <View style={{ minWidth: Math.max(width - 32, 720) }}>
                                     <View style={[styles.tableRow, styles.tableHeaderRow]}>
                                         <Text style={[styles.tableHeaderText, styles.dailyColDate]}>Date</Text>
-                                        <Text style={[styles.tableHeaderText, styles.dailyColNum]}>Sales #</Text>
-                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Total sale</Text>
-                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Cash in</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColNum]}>Sales</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Total Sale</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>💵 Cash</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>📱 Online</Text>
                                         <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Credit</Text>
                                         <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Returns</Text>
                                         <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Expenses</Text>
+                                        <Text style={[styles.tableHeaderText, styles.dailyColMoney]}>Profit</Text>
                                     </View>
                                     {reportData.daily_breakdown.map((day, idx) => (
                                         <View key={idx} style={styles.tableRow}>
@@ -447,7 +535,10 @@ export default function MonthlyReportScreen() {
                                                 {Number(day.total_sales || 0) > 0 ? `Rs.${Number(day.total_sales).toLocaleString()}` : '-'}
                                             </Text>
                                             <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: '#22c55e' }]}>
-                                                {day.cash_in > 0 ? `Rs.${day.cash_in.toLocaleString()}` : '-'}
+                                                {(day.cash_received || 0) > 0 ? `Rs.${(day.cash_received).toLocaleString()}` : '-'}
+                                            </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: '#38bdf8' }]}>
+                                                {(day.online_received || 0) > 0 ? `Rs.${(day.online_received).toLocaleString()}` : '-'}
                                             </Text>
                                             <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: day.credit_given > 0 ? '#f59e0b' : colors.text.secondary }]}>
                                                 {day.credit_given > 0 ? `Rs.${day.credit_given.toLocaleString()}` : '-'}
@@ -458,10 +549,13 @@ export default function MonthlyReportScreen() {
                                             <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: day.expenses > 0 ? '#ef4444' : colors.text.secondary }]}>
                                                 {day.expenses > 0 ? `Rs.${day.expenses.toLocaleString()}` : '-'}
                                             </Text>
+                                            <Text style={[styles.tableCell, styles.dailyColMoney, { textAlign: 'right', color: (day.daily_profit || 0) >= 0 ? '#22c55e' : '#ef4444', fontFamily: FONTS.bold }]}>
+                                                {(day.daily_profit || 0) !== 0 ? `Rs.${(day.daily_profit || 0).toLocaleString()}` : '-'}
+                                            </Text>
                                         </View>
                                     ))}
                                     <View style={[styles.tableRow, styles.dailyTotalRow]}>
-                                        <Text style={[styles.totalText, styles.dailyColDate]}>Month total</Text>
+                                        <Text style={[styles.totalText, styles.dailyColDate]}>Month</Text>
                                         <Text style={[styles.totalText, styles.dailyColNum, { textAlign: 'right' }]}>
                                             {reportData.daily_breakdown.reduce((s, d) => s + d.num_new_sales, 0)}
                                         </Text>
@@ -469,7 +563,10 @@ export default function MonthlyReportScreen() {
                                             Rs.{reportData.daily_breakdown.reduce((s, d) => s + Number(d.total_sales || 0), 0).toLocaleString()}
                                         </Text>
                                         <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#22c55e' }]}>
-                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.cash_in, 0).toLocaleString()}
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + (d.cash_received || 0), 0).toLocaleString()}
+                                        </Text>
+                                        <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#38bdf8' }]}>
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + (d.online_received || 0), 0).toLocaleString()}
                                         </Text>
                                         <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#f59e0b' }]}>
                                             Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.credit_given, 0).toLocaleString()}
@@ -479,6 +576,9 @@ export default function MonthlyReportScreen() {
                                         </Text>
                                         <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#ef4444' }]}>
                                             Rs.{reportData.daily_breakdown.reduce((s, d) => s + d.expenses, 0).toLocaleString()}
+                                        </Text>
+                                        <Text style={[styles.totalText, styles.dailyColMoney, { textAlign: 'right', color: '#22c55e' }]}>
+                                            Rs.{reportData.daily_breakdown.reduce((s, d) => s + (d.daily_profit || 0), 0).toLocaleString()}
                                         </Text>
                                     </View>
                                 </View>

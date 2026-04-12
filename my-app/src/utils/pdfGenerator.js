@@ -105,13 +105,51 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
     const totalSalesAmount = salesToday.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
     const totalCashPaid = salesToday.reduce((sum, s) => sum + Number(s.paid_amount || 0), 0);
     const totalCreditGiven = totalSalesAmount - totalCashPaid;
-    
+
+    // Payment method split
+    const cashReceived = salesToday.reduce((sum, s) => {
+        const m = (s.payment_method || 'Cash').toLowerCase();
+        if (m === 'cash') return sum + Number(s.paid_amount || 0);
+        if (m === 'split') return sum + Number(s.cash_amount || 0);
+        return sum;
+    }, 0);
+    const onlineReceived = salesToday.reduce((sum, s) => {
+        const m = (s.payment_method || 'Cash').toLowerCase();
+        if (m === 'online') return sum + Number(s.paid_amount || 0);
+        if (m === 'split') return sum + Number(s.online_amount || 0);
+        return sum;
+    }, 0);
+
+    // Product profit
+    const totalProductProfit = salesToday.reduce((sum, s) => {
+        const saleRate = Number(s.products?.price || 0);
+        const purchaseRate = Number(s.products?.purchase_rate || 0);
+        const qty = Number(s.quantity || 0);
+        return sum + ((saleRate - purchaseRate) * qty);
+    }, 0);
+
     const totalReturnsAmount = returnsToday.reduce((sum, r) => sum + Number(r.total_amount || 0), 0);
     const totalReturnsQty = returnsToday.reduce((sum, r) => sum + Number(r.quantity || 0), 0);
-    
+    const netRealProfit = totalProductProfit - totalReturnsAmount;
+
     const supplierTotalAmount = supplierTxns.reduce((sum, t) => sum + Number(t.total_amount || 0), 0);
     const supplierTotalPaid = supplierTxns.reduce((sum, t) => sum + Number(t.paid_amount || 0), 0);
     const totalCreditToSuppliers = supplierTotalAmount - supplierTotalPaid;
+
+    // Product-wise profit data
+    const productProfitMap = salesToday.reduce((acc, s) => {
+        const name = s.products?.name || `Product #${s.product_id}`;
+        const key = s.product_id || name;
+        const saleRate = Number(s.products?.price || 0);
+        const purchaseRate = Number(s.products?.purchase_rate || 0);
+        const qty = Number(s.quantity || 0);
+        if (!acc[key]) acc[key] = { name, saleRate, purchaseRate, qty: 0, revenue: 0, profit: 0 };
+        acc[key].qty += qty;
+        acc[key].revenue += Number(s.total_amount || 0);
+        acc[key].profit += (saleRate - purchaseRate) * qty;
+        return acc;
+    }, {});
+    const productProfitList = Object.values(productProfitMap).sort((a, b) => b.profit - a.profit);
 
     const htmlContent = `
         <html>
@@ -122,34 +160,39 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
         <body>
             <h1>${shopSettings.name}</h1>
             <p style="text-align:center; font-size:16px; margin:0 0 5px 0; font-weight:bold; color:#1e3a8a;">Daily Report</p>
-            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Date: <strong>${new Date(reportDate).toLocaleDateString('en-GB')}</strong></p>
+            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Date: <strong>${new Date(reportDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></p>
 
             <div class="report-hero-stats">
                 <div class="stat-card-premium blue">
-                    <div class="stat-header">
-                        <div class="stat-icon-wrapper">T</div>
-                        <h3 class="stat-title">Total Sales Overview</h3>
-                    </div>
+                    <div class="stat-header"><div class="stat-icon-wrapper">T</div><h3 class="stat-title">Total Sales Overview</h3></div>
                     <div class="stat-row"><span>Total Selling Amount:</span><span class="stat-value">Rs. ${totalSalesAmount.toLocaleString()}</span></div>
                     <div class="stat-row"><span>Cash Received:</span><span class="stat-value text-success">Rs. ${totalCashPaid.toLocaleString()}</span></div>
                     <div class="stat-row highlight"><span>Given on Credit:</span><span class="stat-value ${totalCreditGiven > 0 ? 'text-danger' : ''}">Rs. ${totalCreditGiven.toLocaleString()}</span></div>
                 </div>
 
+                <div class="stat-card-premium green">
+                    <div class="stat-header"><div class="stat-icon-wrapper">P</div><h3 class="stat-title">Payment Method Split</h3></div>
+                    <div class="stat-row"><span>&#x1F4B5; Cash Received:</span><span class="stat-value text-success">Rs. ${cashReceived.toLocaleString()}</span></div>
+                    <div class="stat-row"><span>&#x1F4F1; Online Received:</span><span class="stat-value" style="color:#38bdf8;">Rs. ${onlineReceived.toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>Total Collected:</span><span class="stat-value">Rs. ${(cashReceived + onlineReceived).toLocaleString()}</span></div>
+                </div>
+
+                <div class="stat-card-premium ${netRealProfit >= 0 ? 'green' : 'red'}">
+                    <div class="stat-header"><div class="stat-icon-wrapper">N</div><h3 class="stat-title">Today's Net Profit</h3></div>
+                    <div class="stat-row"><span>Product Margin Profit:</span><span class="stat-value text-success">Rs. ${totalProductProfit.toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Less Returns:</span><span class="stat-value text-danger">- Rs. ${totalReturnsAmount.toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span><strong>Net Real Profit:</strong></span><span class="stat-value ${netRealProfit >= 0 ? 'text-success' : 'text-danger'}"><strong>Rs. ${netRealProfit.toLocaleString()}</strong></span></div>
+                </div>
+
                 <div class="stat-card-premium purple">
-                    <div class="stat-header">
-                        <div class="stat-icon-wrapper">S</div>
-                        <h3 class="stat-title">Supplier Payables (Today)</h3>
-                    </div>
+                    <div class="stat-header"><div class="stat-icon-wrapper">S</div><h3 class="stat-title">Stock Purchased (Saman Daala)</h3></div>
                     <div class="stat-row"><span>Total Bill (Purchases):</span><span class="stat-value">Rs. ${supplierTotalAmount.toLocaleString()}</span></div>
                     <div class="stat-row"><span>Cash Paid:</span><span class="stat-value text-success">Rs. ${supplierTotalPaid.toLocaleString()}</span></div>
                     <div class="stat-row highlight"><span>Owed to Suppliers:</span><span class="stat-value ${totalCreditToSuppliers > 0 ? 'text-danger' : ''}">Rs. ${totalCreditToSuppliers.toLocaleString()}</span></div>
                 </div>
 
                 <div class="stat-card-premium red">
-                    <div class="stat-header">
-                        <div class="stat-icon-wrapper">R</div>
-                        <h3 class="stat-title">Returns Overview</h3>
-                    </div>
+                    <div class="stat-header"><div class="stat-icon-wrapper">R</div><h3 class="stat-title">Returns Overview</h3></div>
                     <div class="stat-row"><span>Total Returns Value:</span><span class="stat-value">Rs. ${totalReturnsAmount.toLocaleString()}</span></div>
                     <div class="stat-row highlight"><span>Total Items Returned:</span><span class="stat-value">${totalReturnsQty}</span></div>
                 </div>
@@ -182,7 +225,7 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
                 <ul class="premium-list">
                     ${returnsToday.map(r => `
                         <li class="premium-list-item">
-                            <strong class="text-danger">${r.product_name}</strong> - Qty: ${r.quantity} 
+                            <strong class="text-danger">${r.product_name}</strong> - Qty: ${r.quantity}
                             <strong>(Refunded: Rs.${Number(r.total_amount).toLocaleString()})</strong>
                             ${r.buyer_name ? '<span class="text-muted">from ' + r.buyer_name + '</span>' : ''}
                         </li>
@@ -191,24 +234,56 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
             </div>
             ` : ''}
 
+            ${productProfitList.length > 0 ? `
+            <h2>Product-Wise Profit Today</h2>
+            <div class="premium-table-wrap">
+                <table class="premium-table">
+                    <thead><tr><th>Product</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Sale Rate</th><th style="text-align:right;">Buy Rate</th><th style="text-align:right;">Profit/Unit</th><th style="text-align:right;">Total Revenue</th><th style="text-align:right;">Total Profit</th></tr></thead>
+                    <tbody>
+                        ${productProfitList.map(p => `<tr>
+                            <td><strong>${p.name}</strong></td>
+                            <td style="text-align:center;">${p.qty}</td>
+                            <td style="text-align:right;">Rs. ${p.saleRate.toLocaleString()}</td>
+                            <td style="text-align:right;" class="text-danger">Rs. ${p.purchaseRate.toLocaleString()}</td>
+                            <td style="text-align:right;" class="${(p.saleRate - p.purchaseRate) >= 0 ? 'text-success' : 'text-danger'}"><strong>Rs. ${(p.saleRate - p.purchaseRate).toLocaleString()}</strong></td>
+                            <td style="text-align:right;">Rs. ${p.revenue.toLocaleString()}</td>
+                            <td style="text-align:right;" class="${p.profit >= 0 ? 'text-success' : 'text-danger'}"><strong>Rs. ${p.profit.toLocaleString()}</strong></td>
+                        </tr>`).join('')}
+                    </tbody>
+                    <tfoot><tr>
+                        <td><strong>Grand Total</strong></td>
+                        <td style="text-align:center;"><strong>${productProfitList.reduce((s, p) => s + p.qty, 0)}</strong></td>
+                        <td colspan="3"></td>
+                        <td style="text-align:right;"><strong>Rs. ${productProfitList.reduce((s, p) => s + p.revenue, 0).toLocaleString()}</strong></td>
+                        <td style="text-align:right;" class="text-success"><strong>Rs. ${productProfitList.reduce((s, p) => s + p.profit, 0).toLocaleString()}</strong></td>
+                    </tr></tfoot>
+                </table>
+            </div>
+            ` : ''}
+
             <h2>Detailed Sales Log (${salesToday.length} records)</h2>
             ${salesToday.length === 0 ? '<p class="text-muted">No sales recorded today.</p>' : `
             <div class="premium-table-wrap">
                 <table class="premium-table">
-                    <thead><tr><th>Customer</th><th>Product Info</th><th>Qty</th><th>Total Amount</th><th>Paid Amount</th><th>Method</th><th>Condition</th></tr></thead>
+                    <thead><tr><th>Customer</th><th>Product</th><th>Qty</th><th>Total</th><th>Paid</th><th>Method</th><th>Profit</th><th>Status</th></tr></thead>
                     <tbody>
                         ${salesToday.map(sale => {
                             const t = Number(sale.total_amount || 0); const p = Number(sale.paid_amount || 0); const u = t - p;
                             const m = sale.payment_method || 'Cash';
+                            const saleRate = Number(sale.products?.price || 0);
+                            const purchaseRate = Number(sale.products?.purchase_rate || 0);
+                            const qty = Number(sale.quantity || 0);
+                            const saleProfit = (saleRate - purchaseRate) * qty;
                             const splitDetails = m === 'Split' ? `<br/><small style="color:#64748b; font-size: 10px;">C:${sale.cash_amount} O:${sale.online_amount}</small>` : '';
                             const methodHtml = m === 'Online' ? `<span style="color:#38bdf8;">Online</span>` : m === 'Split' ? `<span style="color:#f59e0b;">Split</span>${splitDetails}` : `<span style="color:#22c55e;">Cash</span>`;
                             return `<tr>
-                                <td>${sale.buyer_name || (sale.buyers && sale.buyers.name) || 'Walk-in Customer'}</td>
+                                <td>${sale.buyer_name || (sale.buyers && sale.buyers.name) || 'Walk-in'}</td>
                                 <td><strong>${(sale.products && sale.products.name) || ('Product ID ' + sale.product_id)}</strong></td>
                                 <td>${sale.quantity}</td>
                                 <td><strong>Rs. ${t.toLocaleString()}</strong></td>
                                 <td class="text-success"><strong>Rs. ${p.toLocaleString()}</strong></td>
                                 <td style="text-align:center;"><strong>${methodHtml}</strong></td>
+                                <td class="${saleProfit >= 0 ? 'text-success' : 'text-danger'}"><strong>Rs. ${saleProfit.toLocaleString()}</strong></td>
                                 <td>${u > 0 ? '<span class="text-danger">Credit: Rs.' + u.toLocaleString() + '</span>' : '<span class="text-success">Clear</span>'}</td>
                             </tr>`;
                         }).join('')}
@@ -506,7 +581,266 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
 
 export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYear, isDailySummary) => {
     const shopSettings = await getShopSettings();
-    const { summary, expense_breakdown, activity_lists, company_wise_summary, daily_breakdown } = reportData;
+    const { summary, expense_breakdown, activity_lists, company_wise_summary, daily_breakdown, product_profit_list, supplier_purchase_summary } = reportData;
+    const paymentSplit = summary.payment_split || { cash: 0, online: 0, split_count: 0 };
+
+    let overviewHtml = ``;
+    let dailySummaryHtml = ``;
+
+    if (!isDailySummary) {
+        overviewHtml = `
+            <div class="report-hero-stats">
+                <div class="stat-card-premium ${(summary.net_real_profit || 0) >= 0 ? 'green' : 'red'}">
+                    <div class="stat-header"><div class="stat-icon-wrapper">N</div><h3 class="stat-title">Net Real Profit</h3></div>
+                    <div class="stat-row"><span>Product Profit:</span><span class="stat-value text-success">Rs. ${(summary.product_profit || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Less Expenses:</span><span class="stat-value text-danger">- Rs. ${(summary.total_expenses || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Less Returns:</span><span class="stat-value text-danger">- Rs. ${(summary.total_returns_this_month || 0).toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span><strong>Net Real Profit:</strong></span><span class="stat-value ${(summary.net_real_profit || 0) >= 0 ? 'text-success' : 'text-danger'}"><strong>Rs. ${(summary.net_real_profit || 0).toLocaleString()}</strong></span></div>
+                </div>
+
+                <div class="stat-card-premium ${summary.cash_flow_profit >= 0 ? 'blue' : 'red'}">
+                    <div class="stat-header"><div class="stat-icon-wrapper">C</div><h3 class="stat-title">Cash Flow (In Hand)</h3></div>
+                    <div class="stat-row"><span>Cash In (Sales+Credit):</span><span class="stat-value text-success">Rs. ${(summary.total_cash_sales_this_month + summary.total_sales_collected_this_month).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Cash Out (Suppliers):</span><span class="stat-value text-danger">Rs. ${summary.total_purchases_paid_this_month.toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>Net Cash Flow:</span><span class="stat-value ${summary.cash_flow_profit >= 0 ? 'text-success' : 'text-danger'}">Rs. ${(summary.cash_flow_profit || 0).toLocaleString()}</span></div>
+                </div>
+
+                <div class="stat-card-premium purple">
+                    <div class="stat-header"><div class="stat-icon-wrapper">P</div><h3 class="stat-title">Payment Received By Method</h3></div>
+                    <div class="stat-row"><span>&#x1F4B5; Cash Received:</span><span class="stat-value text-success">Rs. ${(paymentSplit.cash || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>&#x1F4F1; Online Received:</span><span class="stat-value" style="color:#38bdf8;">Rs. ${(paymentSplit.online || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Split Transactions:</span><span class="stat-value">${paymentSplit.split_count || 0}</span></div>
+                    <div class="stat-row highlight"><span>Total Collected:</span><span class="stat-value">Rs. ${((paymentSplit.cash || 0) + (paymentSplit.online || 0)).toLocaleString()}</span></div>
+                </div>
+
+                <div class="stat-card-premium orange">
+                    <div class="stat-header"><div class="stat-icon-wrapper">S</div><h3 class="stat-title">Stock Purchased</h3></div>
+                    <div class="stat-row"><span>Total Invoices Made:</span><span class="stat-value">Rs. ${(summary.total_purchases_created_value || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>Cash Paid to Suppliers:</span><span class="stat-value text-danger">Rs. ${(summary.total_purchases_paid_this_month || 0).toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>Credit Taken:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_credit_taken_this_month || 0).toLocaleString()}</span></div>
+                </div>
+
+                <div class="stat-card-premium red">
+                    <div class="stat-header"><div class="stat-icon-wrapper">R</div><h3 class="stat-title">Returns & Dues</h3></div>
+                    <div class="stat-row"><span>Returns Refunded:</span><span class="stat-value text-danger">Rs. ${(summary.total_returns_this_month || 0).toLocaleString()}</span></div>
+                    <div class="stat-row"><span>New Credit Given:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_credit_given_this_month || 0).toLocaleString()}</span></div>
+                    <div class="stat-row highlight"><span>All-Time Customer Dues:</span><span class="stat-value text-danger">Rs. ${(summary.total_all_time_dues_from_buyers || 0).toLocaleString()}</span></div>
+                </div>
+
+                <div class="stat-card-premium blue">
+                    <div class="stat-header"><div class="stat-icon-wrapper">E</div><h3 class="stat-title">Shop Expenses</h3></div>
+                    <div class="stat-row highlight"><span>Total Expenses:</span><span class="stat-value text-danger">Rs. ${(summary.total_expenses || 0).toLocaleString()}</span></div>
+                    ${Object.entries(expense_breakdown || {}).slice(0, 4).map(([cat, amt]) => `<div class="stat-row"><span>${cat}:</span><span class="stat-value">Rs. ${Number(amt).toLocaleString()}</span></div>`).join('')}
+                </div>
+            </div>
+
+            ${product_profit_list && product_profit_list.length > 0 ? `
+            <h2>Product-Wise Profit Breakdown</h2>
+            <div class="premium-table-wrap">
+                <table class="premium-table">
+                    <thead><tr><th>Product</th><th style="text-align:center;">Qty Sold</th><th style="text-align:right;">Sale Rate</th><th style="text-align:right;">Buy Rate</th><th style="text-align:right;">Profit/Unit</th><th style="text-align:right;">Total Revenue</th><th style="text-align:right;">Total Profit</th></tr></thead>
+                    <tbody>
+                        ${product_profit_list.map(p => `<tr>
+                            <td><strong>${p.product_name}</strong></td>
+                            <td style="text-align:center;">${p.total_qty_sold}</td>
+                            <td style="text-align:right;">Rs. ${p.sale_rate.toLocaleString()}</td>
+                            <td style="text-align:right;" class="text-danger">Rs. ${p.purchase_rate.toLocaleString()}</td>
+                            <td style="text-align:right;" class="${(p.sale_rate - p.purchase_rate) >= 0 ? 'text-success' : 'text-danger'}"><strong>Rs. ${(p.sale_rate - p.purchase_rate).toLocaleString()}</strong></td>
+                            <td style="text-align:right;">Rs. ${p.total_revenue.toLocaleString()}</td>
+                            <td style="text-align:right;" class="${p.total_profit >= 0 ? 'text-success' : 'text-danger'}"><strong>Rs. ${p.total_profit.toLocaleString()}</strong></td>
+                        </tr>`).join('')}
+                    </tbody>
+                    <tfoot><tr>
+                        <td><strong>Grand Total</strong></td>
+                        <td style="text-align:center;"><strong>${product_profit_list.reduce((s, p) => s + p.total_qty_sold, 0)}</strong></td>
+                        <td colspan="3"></td>
+                        <td style="text-align:right;"><strong>Rs. ${product_profit_list.reduce((s, p) => s + p.total_revenue, 0).toLocaleString()}</strong></td>
+                        <td style="text-align:right;" class="text-success"><strong>Rs. ${product_profit_list.reduce((s, p) => s + p.total_profit, 0).toLocaleString()}</strong></td>
+                    </tr></tfoot>
+                </table>
+            </div>
+            ` : ''}
+
+            ${supplier_purchase_summary && supplier_purchase_summary.length > 0 ? `
+            <h2>Supplier-Wise Purchase Summary</h2>
+            <div class="premium-table-wrap">
+                <table class="premium-table">
+                    <thead><tr><th>Supplier Name</th><th style="text-align:center;">Transactions</th><th style="text-align:right;">Total Purchased</th><th style="text-align:right;">Cash Paid</th><th style="text-align:right;">Remaining (Credit)</th></tr></thead>
+                    <tbody>
+                        ${supplier_purchase_summary.map(s => `<tr>
+                            <td><strong>${s.supplier_name}</strong></td>
+                            <td style="text-align:center;">${s.num_transactions}</td>
+                            <td style="text-align:right;"><strong>Rs. ${s.total_purchased.toLocaleString()}</strong></td>
+                            <td style="text-align:right;" class="text-success">Rs. ${s.total_paid.toLocaleString()}</td>
+                            <td style="text-align:right;" class="${s.total_outstanding > 0 ? 'text-danger' : 'text-success'}"><strong>${s.total_outstanding > 0 ? 'Rs. ' + s.total_outstanding.toLocaleString() : '✓ Clear'}</strong></td>
+                        </tr>`).join('')}
+                    </tbody>
+                    <tfoot><tr>
+                        <td><strong>Grand Total</strong></td>
+                        <td style="text-align:center;"><strong>${supplier_purchase_summary.reduce((s, x) => s + x.num_transactions, 0)}</strong></td>
+                        <td style="text-align:right;"><strong>Rs. ${supplier_purchase_summary.reduce((s, x) => s + x.total_purchased, 0).toLocaleString()}</strong></td>
+                        <td style="text-align:right;" class="text-success"><strong>Rs. ${supplier_purchase_summary.reduce((s, x) => s + x.total_paid, 0).toLocaleString()}</strong></td>
+                        <td style="text-align:right;" class="text-danger"><strong>Rs. ${supplier_purchase_summary.reduce((s, x) => s + x.total_outstanding, 0).toLocaleString()}</strong></td>
+                    </tr></tfoot>
+                </table>
+            </div>
+            ` : ''}
+
+            <div style="display:flex; gap: 20px;">
+                <div style="flex:1;">
+                    <h2 style="color:#38bdf8;">Income &amp; Receivables</h2>
+                    <div class="premium-list-container">
+                        <div class="stat-row"><span>Total Sales Invoices Made:</span><span class="stat-value">Rs. ${(summary.total_sales_created_value || 0).toLocaleString()}</span></div>
+                        <div class="stat-row"><span>Cash Sales (Fully Paid):</span><span class="stat-value text-success">Rs. ${(summary.total_cash_sales_this_month || 0).toLocaleString()}</span></div>
+                        <div class="stat-row"><span>Credit Installments Received:</span><span class="stat-value" style="color:#0ea5e9;">Rs. ${(summary.total_sales_collected_this_month || 0).toLocaleString()}</span></div>
+                        <div class="stat-row"><span>&#x1F4B5; Cash Received:</span><span class="stat-value text-success">Rs. ${(paymentSplit.cash || 0).toLocaleString()}</span></div>
+                        <div class="stat-row"><span>&#x1F4F1; Online Received:</span><span class="stat-value" style="color:#38bdf8;">Rs. ${(paymentSplit.online || 0).toLocaleString()}</span></div>
+                        <div class="stat-row highlight"><span>New Credit Given This Month:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_credit_given_this_month || 0).toLocaleString()}</span></div>
+                    </div>
+                    
+                    <div class="premium-table-wrap">
+                        <h3>Cash Collected (by Salesman)</h3>
+                        <table class="premium-table">
+                            <thead><tr><th>Salesman</th><th style="text-align:center;">Bills</th><th style="text-align:right;">Collected</th></tr></thead>
+                            <tbody>
+                                ${activity_lists?.cash_sales_by_salesman?.map(s => `
+                                    <tr>
+                                        <td>${s.salesman_name}</td>
+                                        <td style="text-align:center;">${s.num_cash_bills}</td>
+                                        <td style="text-align:right;" class="text-success">+Rs. ${(s.total_cash_collected || 0).toLocaleString()}</td>
+                                    </tr>
+                                `).join('') || ''}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="flex:1;">
+                    <h2 style="color:#ef4444;">Expenses &amp; Payables</h2>
+                    <div class="premium-list-container">
+                        <div class="stat-row"><span>Total Purchase Invoices Made:</span><span class="stat-value">Rs. ${(summary.total_purchases_created_value || 0).toLocaleString()}</span></div>
+                        <div class="stat-row"><span>Actual Cash Paid to Suppliers:</span><span class="stat-value text-danger">Rs. ${(summary.total_purchases_paid_this_month || 0).toLocaleString()}</span></div>
+                        <div class="stat-row highlight"><span>Total Shop Expenses:</span><span class="stat-value" style="color:#f59e0b;">Rs. ${(summary.total_expenses || 0).toLocaleString()}</span></div>
+                        <div class="stat-row highlight"><span>New Credit Taken This Month:</span><span class="stat-value" style="color:#0ea5e9;">Rs. ${(summary.total_credit_taken_this_month || 0).toLocaleString()}</span></div>
+                    </div>
+
+                    <div class="premium-table-wrap">
+                        <h3>Expense Breakdown</h3>
+                        <table class="premium-table">
+                            <tbody>
+                                ${Object.entries(expense_breakdown || {}).map(([category, amount]) => `
+                                    <tr>
+                                        <td>${category}</td>
+                                        <td style="text-align:right;">Rs. ${Number(amount).toLocaleString()}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="premium-table-wrap">
+                <h3>Company-Wise Sales Summary (This Month)</h3>
+                <table class="premium-table">
+                    <thead><tr><th>Company Name</th><th style="text-align:center;">Txns</th><th style="text-align:right;">Total Sales</th><th style="text-align:right;">Collected</th><th style="text-align:right;">Outstanding</th></tr></thead>
+                    <tbody>
+                        ${company_wise_summary?.map(c => `
+                            <tr>
+                                <td>${c.company_name}</td>
+                                <td style="text-align:center;">${c.num_transactions}</td>
+                                <td style="text-align:right;">Rs. ${c.total_sales.toLocaleString()}</td>
+                                <td style="text-align:right;" class="text-success">Rs. ${c.total_collected.toLocaleString()}</td>
+                                <td style="text-align:right;" class="${c.total_outstanding > 0 ? 'text-danger' : 'text-success'}">${c.total_outstanding > 0 ? 'Rs. ' + c.total_outstanding.toLocaleString() : '✓ Clear'}</td>
+                            </tr>
+                        `).join('') || ''}
+                    </tbody>
+                </table>
+            </div>
+            
+            ${activity_lists?.all_time_buyers_with_dues?.length > 0 ? `
+            <div class="premium-table-wrap" style="border-color:#eab308;">
+                <h3 style="background:#fefce8; color:#ca8a04;">&#x26A0;&#xFE0F; Customers with Outstanding Dues (All-Time)</h3>
+                <table class="premium-table">
+                    <thead><tr><th>Customer Name</th><th>Phone Number</th><th style="text-align:right;">Total Remaining</th></tr></thead>
+                    <tbody>
+                        ${activity_lists?.all_time_buyers_with_dues?.map(b => `
+                            <tr>
+                                <td>${b.name}</td>
+                                <td>${b.phone}</td>
+                                <td style="text-align:right;" class="text-danger">Rs. ${b.remaining_due.toLocaleString()}</td>
+                            </tr>
+                        `).join('') || ''}
+                    </tbody>
+                </table>
+            </div>
+            ` : ''}
+        `;
+    } else {
+        dailySummaryHtml = `
+            <div class="premium-table-wrap">
+                <table class="premium-table">
+                    <thead>
+                        <tr><th>Date</th><th style="text-align:right;">Sales (#)</th><th style="text-align:right;">Total Sale Value</th><th style="text-align:right;">&#x1F4B5; Cash</th><th style="text-align:right;">&#x1F4F1; Online</th><th style="text-align:right;">New Credit</th><th style="text-align:right;">Returns</th><th style="text-align:right;">Expenses</th><th style="text-align:right;">Profit</th></tr>
+                    </thead>
+                    <tbody>
+                        ${daily_breakdown?.map(day => `
+                            <tr>
+                                <td><strong>${new Date(day.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</strong></td>
+                                <td style="text-align:right;">${day.num_new_sales || '-'}</td>
+                                <td style="text-align:right; color:#0ea5e9;">${day.total_sales ? 'Rs. ' + day.total_sales.toLocaleString() : '-'}</td>
+                                <td style="text-align:right;" class="text-success">${(day.cash_received || 0) > 0 ? 'Rs. ' + day.cash_received.toLocaleString() : '-'}</td>
+                                <td style="text-align:right; color:#38bdf8;">${(day.online_received || 0) > 0 ? 'Rs. ' + day.online_received.toLocaleString() : '-'}</td>
+                                <td style="text-align:right; color:#f59e0b;">${day.credit_given ? 'Rs. ' + day.credit_given.toLocaleString() : '-'}</td>
+                                <td style="text-align:right;" class="text-danger">${day.returned_sales_value ? 'Rs. ' + day.returned_sales_value.toLocaleString() : '-'}</td>
+                                <td style="text-align:right;" class="text-danger">${day.expenses ? 'Rs. ' + day.expenses.toLocaleString() : '-'}</td>
+                                <td style="text-align:right;" class="${(day.daily_profit || 0) >= 0 ? 'text-success' : 'text-danger'}"><strong>${(day.daily_profit || 0) !== 0 ? 'Rs. ' + (day.daily_profit || 0).toLocaleString() : '-'}</strong></td>
+                            </tr>
+                        `).join('') || ''}
+                    </tbody>
+                    <tfoot><tr>
+                        <td><strong>Month Total</strong></td>
+                        <td style="text-align:right;"><strong>${daily_breakdown?.reduce((s, d) => s + d.num_new_sales, 0) || 0}</strong></td>
+                        <td style="text-align:right; color:#0ea5e9;"><strong>Rs. ${daily_breakdown?.reduce((s, d) => s + Number(d.total_sales || 0), 0).toLocaleString() || 0}</strong></td>
+                        <td style="text-align:right;" class="text-success"><strong>Rs. ${daily_breakdown?.reduce((s, d) => s + (d.cash_received || 0), 0).toLocaleString() || 0}</strong></td>
+                        <td style="text-align:right; color:#38bdf8;"><strong>Rs. ${daily_breakdown?.reduce((s, d) => s + (d.online_received || 0), 0).toLocaleString() || 0}</strong></td>
+                        <td style="text-align:right; color:#f59e0b;"><strong>Rs. ${daily_breakdown?.reduce((s, d) => s + d.credit_given, 0).toLocaleString() || 0}</strong></td>
+                        <td style="text-align:right;" class="text-danger"><strong>Rs. ${daily_breakdown?.reduce((s, d) => s + Number(d.returned_sales_value || 0), 0).toLocaleString() || 0}</strong></td>
+                        <td style="text-align:right;" class="text-danger"><strong>Rs. ${daily_breakdown?.reduce((s, d) => s + d.expenses, 0).toLocaleString() || 0}</strong></td>
+                        <td style="text-align:right;" class="text-success"><strong>Rs. ${daily_breakdown?.reduce((s, d) => s + (d.daily_profit || 0), 0).toLocaleString() || 0}</strong></td>
+                    </tr></tfoot>
+                </table>
+            </div>
+        `;
+    }
+
+    const htmlContent = `
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>${PDF_CSS} .pdf-mode-active { zoom: 0.8; }</style>
+        </head>
+        <body class="pdf-mode-active">
+            <h1>${shopSettings.name}</h1>
+            <p style="text-align:center; font-size:16px; margin:0 0 5px 0; font-weight:bold; color:#1e3a8a;">${isDailySummary ? 'Day-by-Day Monthly Summary' : 'Monthly Financial Overview'}</p>
+            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Period: <strong>${filterMonth}/${filterYear}</strong></p>
+
+            ${isDailySummary ? dailySummaryHtml : overviewHtml}
+
+            <div class="footer">
+                <h3 style="margin-bottom: 4px;">Software Developed by Hassan Ali Abrar</h3>
+                <p style="margin: 0;">Instagram: <strong>hassan.secure</strong> | WhatsApp: <strong>+92 348 5055098</strong></p>
+            </div>
+        </body>
+        </html>
+    `;
+
+    const yyyymm = `${filterYear}-${String(filterMonth).padStart(2, '0')}`;
+    const fileName = isDailySummary
+        ? `InventoryPro_MonthlyFinancial_DayByDay_${yyyymm}.pdf`
+        : `InventoryPro_MonthlyFinancial_Overview_${yyyymm}.pdf`;
+    return sharePdf(htmlContent, fileName);
+};
 
     let overviewHtml = ``;
     let dailySummaryHtml = ``;
