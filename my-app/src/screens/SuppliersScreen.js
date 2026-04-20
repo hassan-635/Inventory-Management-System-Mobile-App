@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, TextInput, TouchableOpacity, Modal, Alert, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { suppliersService } from '../api/suppliers';
+import apiClient from '../api/apiClient';
 import { useAppTheme } from '../theme/useAppTheme';
 import ExpandableItem from '../components/ExpandableItem';
 import { flatListPerformanceProps } from '../utils/listPerf';
@@ -115,7 +116,40 @@ export default function SuppliersScreen() {
                 useToastStore.getState().showToast('Error', 'This supplier is already in the pending list.', 'error'); return;
             }
             const payload = { name: String(formItem.name).trim(), phone: String(formItem.phone || '').trim(), company_name: String(formItem.company_name || '').trim() };
-            setPendingItems(prev => [...prev, { action: 'add', name: formItem.name.trim(), data: payload }]);
+            
+            const newItem = { action: 'add', name: formItem.name.trim(), data: payload };
+
+            // Check if user entered total_amount (opening balance OR product purchase)
+            const totalAmt = Number(formItem.total_amount || 0);
+            const hasProduct = String(formItem.product_name || '').trim() !== '' && Number(formItem.quantity) > 0;
+            const isOpeningBalance = !hasProduct && totalAmt > 0;
+
+            if (isOpeningBalance || hasProduct) {
+                const paidAmt = Number(formItem.purchase_paid_amount || 0);
+                if (paidAmt > totalAmt) {
+                    useToastStore.getState().showToast('Error', 'Paid amount cannot exceed total amount.', 'error'); return;
+                }
+                const pm = formItem.purchase_payment_method || 'Cash';
+                if (pm === 'Split' && paidAmt > 0) {
+                    const pc = Number(formItem.purchase_cash_amount || 0);
+                    const po = Number(formItem.purchase_online_amount || 0);
+                    if (Math.abs((pc + po) - paidAmt) > 0.01) {
+                        useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${paidAmt}).`, 'error'); return;
+                    }
+                }
+                newItem.purchaseData = {
+                    product_name: hasProduct ? String(formItem.product_name).trim() : 'Opening Balance',
+                    quantity: hasProduct ? Number(formItem.quantity) : 1,
+                    total_amount: totalAmt,
+                    paid_amount: paidAmt,
+                    purchase_date: formItem.purchase_date.toISOString().split('T')[0],
+                    payment_method: pm,
+                    cash_amount: Number(formItem.purchase_cash_amount || 0),
+                    online_amount: Number(formItem.purchase_online_amount || 0),
+                };
+            }
+
+            setPendingItems(prev => [...prev, newItem]);
             setIsSideListVisible(true);
             setModalVisible(false);
             useToastStore.getState().showToast('Added to Pending', 'Supplier added to pending list.', 'success');
@@ -173,11 +207,14 @@ export default function SuppliersScreen() {
             }
             await suppliersService.update(formItem.id, basicPayload);
 
-            if (hasProduct) {
-                await api.post('/purchases', {
+            const totalAmt = Number(formItem.total_amount || 0);
+            const isOpeningBalance = !hasProduct && totalAmt > 0;
+
+            if (hasProduct || isOpeningBalance) {
+                await apiClient.post('/purchases', {
                     supplier_id: formItem.id,
-                    product_name: String(formItem.product_name).trim(),
-                    quantity: Number(formItem.quantity),
+                    product_name: hasProduct ? String(formItem.product_name).trim() : 'Opening Balance',
+                    quantity: hasProduct ? Number(formItem.quantity) : 1,
                     total_amount: Number(formItem.total_amount || 0),
                     paid_amount: Number(formItem.purchase_paid_amount || 0),
                     purchase_date: formItem.purchase_date.toISOString().split('T')[0],
@@ -278,7 +315,12 @@ export default function SuppliersScreen() {
                         for (const item of pendingItems) {
                             try {
                                 if (item.action === 'add') {
-                                    await suppliersService.create(item.data);
+                                    const res = await suppliersService.create(item.data);
+                                    // suppliersService.create returns response.data which is { message, data: [supplier] }
+                                    const newSupplier = Array.isArray(res?.data) ? res.data[0] : (res?.data || res);
+                                    if (newSupplier?.id && item.purchaseData) {
+                                        await apiClient.post('/purchases', { ...item.purchaseData, supplier_id: newSupplier.id });
+                                    }
                                     successCount++;
                                 } else if (item.action === 'delete') {
                                     await suppliersService.delete(item.data.id);
@@ -529,13 +571,15 @@ export default function SuppliersScreen() {
                                         <View style={{ marginTop: 10 }}>
                                             <Text style={[styles.inputLabel, { marginBottom: 6, fontSize: 12, letterSpacing: 0.5 }]}>📦 PURCHASE HISTORY</Text>
                                             {item.supplier_transactions.map((txn, idx) => {
+                                                const isOpeningBalance = txn.products?.name === '__opening_balance__';
+                                                const displayProductName = isOpeningBalance ? '💰 Opening Balance' : (txn.products?.name || `Product #${txn.product_id}`);
                                                 const purchaseRate = txn.quantity > 0 ? Math.round(Number(txn.total_amount) / Number(txn.quantity)) : 0;
                                                 const remaining = Number(txn.total_amount || 0) - Number(txn.paid_amount || 0);
                                                 return (
                                                     <View key={txn.id || idx} style={styles.txnCard}>
                                                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                                                             <View style={{ flex: 1, marginRight: 8 }}>
-                                                                <Text style={styles.txnProduct}>{txn.products?.name || `Product #${txn.product_id}`}</Text>
+                                                                <Text style={styles.txnProduct}>{displayProductName}</Text>
                                                                 {txn.payment_method && (
                                                                     <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 }}>
                                                                         <View style={[{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
@@ -562,14 +606,18 @@ export default function SuppliersScreen() {
                                                             </Text>
                                                         </View>
                                                         <View style={styles.txnRow}>
-                                                            <View style={styles.txnCell}>
-                                                                <Text style={styles.txnLabel}>Qty</Text>
-                                                                <Text style={styles.txnValue}>{txn.quantity}</Text>
-                                                            </View>
-                                                            <View style={styles.txnCell}>
-                                                                <Text style={styles.txnLabel}>Rate/Unit</Text>
-                                                                <Text style={styles.txnValue}>Rs. {purchaseRate.toLocaleString()}</Text>
-                                                            </View>
+                                                            {!isOpeningBalance && (
+                                                                <>
+                                                                    <View style={styles.txnCell}>
+                                                                        <Text style={styles.txnLabel}>Qty</Text>
+                                                                        <Text style={styles.txnValue}>{txn.quantity}</Text>
+                                                                    </View>
+                                                                    <View style={styles.txnCell}>
+                                                                        <Text style={styles.txnLabel}>Rate/Unit</Text>
+                                                                        <Text style={styles.txnValue}>Rs. {purchaseRate.toLocaleString()}</Text>
+                                                                    </View>
+                                                                </>
+                                                            )}
                                                             <View style={styles.txnCell}>
                                                                 <Text style={styles.txnLabel}>Total</Text>
                                                                 <Text style={styles.txnValue}>Rs. {Number(txn.total_amount).toLocaleString()}</Text>
@@ -704,17 +752,17 @@ export default function SuppliersScreen() {
                                 </>
                             )}
 
-                            {!!formItem.id && (
+                            {true && (
                                 <>
                                     <View style={{ height: 1, backgroundColor: colors.border.color, marginVertical: 10 }} />
-                                    <Text style={[styles.inputLabel, { color: colors.accent.primary, fontFamily: FONTS.bold, marginBottom: 4 }]}>Add New Purchase (Optional)</Text>
+                                    <Text style={[styles.inputLabel, { color: colors.accent.primary, fontFamily: FONTS.bold, marginBottom: 4 }]}>{formItem.id ? '📦 Add New Purchase (Optional)' : '💰 Balance / Purchase Details (Optional)'}</Text>
 
-                                    <Text style={styles.inputLabel}>Product Name</Text>
+                                    <Text style={styles.inputLabel}>Product Name (Optional)</Text>
                                     <TextInput
                                         style={styles.input}
                                         value={formItem.product_name}
                                         onChangeText={t => setFormItem({...formItem, product_name: t})}
-                                        placeholder="Enter product name..."
+                                        placeholder="Leave blank for Opening Balance"
                                         placeholderTextColor={colors.text.muted}
                                     />
 
@@ -755,10 +803,11 @@ export default function SuppliersScreen() {
                                         <View style={{ flex: 1 }}>
                                             <Text style={[styles.inputLabel, { fontSize: 12 }]}>Total Amount (Rs)</Text>
                                             <TextInput
-                                                style={[styles.input, { marginBottom: 0, color: colors.text.muted }]}
+                                                style={[styles.input, { marginBottom: 0 }]}
                                                 value={formItem.total_amount}
-                                                editable={false}
-                                                placeholder="Auto calculated"
+                                                onChangeText={t => setFormItem({...formItem, total_amount: t})}
+                                                keyboardType="numeric"
+                                                placeholder="0"
                                                 placeholderTextColor={colors.text.muted}
                                             />
                                         </View>
