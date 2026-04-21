@@ -27,6 +27,9 @@ const FILTER_OPTIONS = [
     { key: 'method_cash', label: 'Cash Suppliers' },
     { key: 'method_online', label: 'Online Suppliers' },
     { key: 'method_split', label: 'Split Suppliers' },
+    { key: 'cat_hardware', label: 'Category: Hardware' },
+    { key: 'cat_electric', label: 'Category: Electric' },
+    { key: 'cat_paint', label: 'Category: Paint' },
 ];
 
 export default function SuppliersScreen() {
@@ -55,7 +58,7 @@ export default function SuppliersScreen() {
     const [showDatePicker, setShowDatePicker] = useState(false);
     const [showPurchaseDatePicker, setShowPurchaseDatePicker] = useState(false);
     const [formItem, setFormItem] = useState({
-        id: null, name: '', phone: '', company_name: '',
+        id: null, name: '', phone: '', company_name: '', category: '',
         payment_amount: '', txn_due: 0, payment_date: new Date(),
         payment_method: 'Cash', cash_amount: '', online_amount: '',
         product_name: '', quantity: '', unit_price: '', total_amount: '',
@@ -92,6 +95,7 @@ export default function SuppliersScreen() {
                 name: supplier.name || '',
                 phone: supplier.phone || '',
                 company_name: supplier.company_name || '',
+                category: supplier.category || '',
                 payment_amount: '',
                 payment_date: new Date(),
                 txn_due: txnDue,
@@ -101,7 +105,7 @@ export default function SuppliersScreen() {
                 ...extra
             });
         } else {
-            setFormItem({ id: null, name: '', phone: '', company_name: '', payment_amount: '', txn_due: 0, payment_date: new Date(), payment_method: 'Cash', cash_amount: '', online_amount: '', ...extra });
+            setFormItem({ id: null, name: '', phone: '', company_name: '', category: '', payment_amount: '', txn_due: 0, payment_date: new Date(), payment_method: 'Cash', cash_amount: '', online_amount: '', ...extra });
         }
         setModalVisible(true);
     };
@@ -115,7 +119,7 @@ export default function SuppliersScreen() {
             if (isSupplierIdInPendingList(formItem.name.trim())) {
                 useToastStore.getState().showToast('Error', 'This supplier is already in the pending list.', 'error'); return;
             }
-            const payload = { name: String(formItem.name).trim(), phone: String(formItem.phone || '').trim(), company_name: String(formItem.company_name || '').trim() };
+            const payload = { name: String(formItem.name).trim(), phone: String(formItem.phone || '').trim(), company_name: String(formItem.company_name || '').trim(), category: formItem.category };
             
             const newItem = { action: 'add', name: formItem.name.trim(), data: payload };
 
@@ -197,6 +201,7 @@ export default function SuppliersScreen() {
                 name: String(formItem.name).trim(),
                 phone: String(formItem.phone || '').trim(),
                 company_name: String(formItem.company_name || '').trim(),
+                category: formItem.category,
             };
             if (hasPayment) {
                 basicPayload.payment_amount = Number(payStr);
@@ -380,6 +385,12 @@ export default function SuppliersScreen() {
             list = list.filter(b => (b.supplier_transactions || []).some(t => t.payment_method === 'Online'));
         } else if (filterOption === 'method_split') {
             list = list.filter(b => (b.supplier_transactions || []).some(t => t.payment_method === 'Split'));
+        } else if (filterOption === 'cat_hardware') {
+            list = list.filter(b => b.category === 'Hardware');
+        } else if (filterOption === 'cat_electric') {
+            list = list.filter(b => b.category === 'Electric');
+        } else if (filterOption === 'cat_paint') {
+            list = list.filter(b => b.category === 'Paint');
         }
 
         return list.sort((a, b) => {
@@ -540,7 +551,7 @@ export default function SuppliersScreen() {
                     return (
                         <ExpandableItem
                             title={item.name}
-                            subtitle={item.company_name || item.phone || null}
+                            subtitle={[item.category, item.company_name, item.phone].filter(Boolean).join(' • ') || null}
                             rightText={hasDue ? `Rs. ${due.toLocaleString()}` : '✓ Clear'}
                             rightSubText={`Total: Rs. ${totalVol.toLocaleString()}`}
                             rightTextColor={hasDue ? colors.status.danger : colors.status.success}
@@ -689,6 +700,19 @@ export default function SuppliersScreen() {
 
                             <Text style={styles.inputLabel}>Company Name</Text>
                             <TextInput style={styles.input} value={formItem.company_name} onChangeText={t => setFormItem({...formItem, company_name: t})} placeholder="Company Name (optional)" placeholderTextColor={colors.text.muted} />
+                            
+                            <Text style={styles.inputLabel}>Category</Text>
+                            <View style={{ flexDirection: 'row', gap: 10, marginTop: 4, marginBottom: 16 }}>
+                                {[ { l: 'Hardware', v: 'Hardware' }, { l: 'Electric', v: 'Electric' }, { l: 'Paint', v: 'Paint' }, { l: 'None', v: '' } ].map(cat => (
+                                    <TouchableOpacity
+                                        key={cat.v}
+                                        style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, formItem.category === cat.v && { backgroundColor: 'rgba(99,102,241,0.1)', borderColor: '#6366f1' }]}
+                                        onPress={() => setFormItem({...formItem, category: cat.v})}
+                                    >
+                                        <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 11 }, formItem.category === cat.v && { color: '#6366f1', fontFamily: FONTS.bold }]}>{cat.l}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                             
                             {!!formItem.id && formItem.txn_due > 0 && (
                                 <>
