@@ -175,7 +175,8 @@ export default function SalesScreen() {
             const withinDate = saleDate >= threshold;
             const matchSearch =
                 (s.products?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-                (s.buyers?.name || '').toLowerCase().includes(search.toLowerCase());
+                (s.buyers?.name || '').toLowerCase().includes(search.toLowerCase()) ||
+                (s.product_id && String(s.product_id).toLowerCase().includes(search.toLowerCase()));
             return withinDate && matchSearch;
         });
 
@@ -335,7 +336,7 @@ export default function SalesScreen() {
                     const hasBalance = remaining > 0;
                     return (
                         <ExpandableItem
-                            title={item.products?.name || 'Unknown Product'}
+                            title={`[${formatProductId(item.product_id) || '-'}] ${item.products?.name || 'Unknown Product'}`}
                             subtitle={item.buyers?.name ? `Customer · ${item.buyers.name}` : 'Walk-in'}
                             rightText={hasBalance ? `Rs. ${remaining.toLocaleString()}` : '✓ Clear'}
                             rightSubText={`Total: Rs. ${total.toLocaleString()}`}
