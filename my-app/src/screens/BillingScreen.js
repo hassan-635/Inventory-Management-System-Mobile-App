@@ -579,27 +579,11 @@ export default function BillingScreen() {
                     <Text style={styles.inputLabel}>{billType === 'CREDIT' ? 'Customer Name *' : 'Customer Name'}</Text>
                     <TextInput
                         style={styles.textInput}
-                        placeholder={billType === 'CREDIT' ? 'Enter customer name (required)' : 'Search or type customer...'}
+                        placeholder={billType === 'CREDIT' ? 'Enter customer name (required)' : 'Enter customer name'}
                         placeholderTextColor={colors.text.muted}
                         value={buyerSearch}
-                        onChangeText={t => { setBuyerSearch(t); setShowBuyerDD(true); setSelectedBuyer(null); }}
-                        onFocus={() => setShowBuyerDD(true)}
+                        onChangeText={t => { setBuyerSearch(t); setSelectedBuyer(null); }}
                     />
-                    {showBuyerDD && buyerSearch.length > 0 && (
-                        <View style={styles.dropdown}>
-                            {filteredBuyers.slice(0, 5).map(b => (
-                                <TouchableOpacity key={b.id} style={styles.dropdownItem} onPress={() => handleSelectBuyer(b)}>
-                                    <Text style={styles.dropdownItemTxt} numberOfLines={1}>{b.name}</Text>
-                                    <Text style={styles.dropdownItemSub}>
-                                        {b.company_name ? `🏢 ${b.company_name}` : (b.phone || 'No phone')}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
-                            {filteredBuyers.length === 0 && (
-                                <Text style={styles.dropdownEmpty}>Will auto-create as new customer</Text>
-                            )}
-                        </View>
-                    )}
                 </View>
 
                 {/* Company Name */}
