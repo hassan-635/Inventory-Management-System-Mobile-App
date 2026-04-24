@@ -90,7 +90,8 @@ export default function BuyersScreen() {
         let list = buyers.filter(b =>
             (b.name || '').toLowerCase().includes(search.toLowerCase()) ||
             (b.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
-            (b.phone || '').includes(search)
+            (b.phone || '').includes(search) ||
+            String(b.id).includes(search)
         );
 
         if (filterOption === 'pending') {
@@ -510,7 +511,7 @@ export default function BuyersScreen() {
                     <Icon name="search-outline" size={17} color={colors.text.secondary} style={{ marginRight: 8 }} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search customers, company, phone..."
+                        placeholder="Search by ID, name, company, phone..."
                         placeholderTextColor={colors.text.muted}
                         value={search}
                         onChangeText={setSearch}
