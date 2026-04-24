@@ -38,16 +38,32 @@ const GenericSideList = ({
     const styles = getStyles(colors, FONTS);
 
     // Helper component for detail rows
-    const DetailRow = ({ label, value, colors, FONTS }) => (
-        <View style={detailStyles.row}>
-            <Text style={[detailStyles.label, { color: colors.text.secondary, fontFamily: FONTS.medium }]}>
-                {label}:
-            </Text>
-            <Text style={[detailStyles.value, { color: colors.text.primary, fontFamily: FONTS.regular }]}>
-                {value}
-            </Text>
-        </View>
-    );
+    const DetailRow = ({ label, value, isMaskable, colors, FONTS }) => {
+        const [show, setShow] = useState(false);
+        const displayValue = (isMaskable && value && value !== 'N/A' && !show) 
+            ? value.replace(/./g, '*') 
+            : value;
+
+        return (
+            <View style={detailStyles.row}>
+                <Text style={[detailStyles.label, { color: colors.text.secondary, fontFamily: FONTS.medium }]}>
+                    {label}:
+                </Text>
+                {isMaskable && value && value !== 'N/A' ? (
+                    <Text 
+                        style={[detailStyles.value, { color: colors.text.primary, fontFamily: FONTS.regular, paddingVertical: 2 }]}
+                        onPress={() => setShow(!show)}
+                    >
+                        {displayValue}
+                    </Text>
+                ) : (
+                    <Text style={[detailStyles.value, { color: colors.text.primary, fontFamily: FONTS.regular }]}>
+                        {value}
+                    </Text>
+                )}
+            </View>
+        );
+    };
 
     const renderItemDetails = (item) => {
         if (item.action === 'add' && item.data) {
@@ -57,7 +73,7 @@ const GenericSideList = ({
                     return (
                         <>
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} isMaskable={true} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Email" value={item.data.email || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Company" value={item.data.company_name || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Address" value={item.data.address || 'N/A'} colors={colors} FONTS={FONTS} />
@@ -67,7 +83,7 @@ const GenericSideList = ({
                     return (
                         <>
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} isMaskable={true} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Company" value={item.data.company_name || 'N/A'} colors={colors} FONTS={FONTS} />
                         </>
                     );
@@ -112,7 +128,7 @@ const GenericSideList = ({
                         <>
                             <DetailRow label="ID" value={item.data.id} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} isMaskable={true} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Email" value={item.data.email || 'N/A'} colors={colors} FONTS={FONTS} />
                             {item.data.balance !== undefined && (
                                 <DetailRow label="Balance" value={formatCurrency(item.data.balance)} colors={colors} FONTS={FONTS} />
@@ -124,7 +140,7 @@ const GenericSideList = ({
                         <>
                             <DetailRow label="ID" value={item.data.id} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} isMaskable={true} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Company" value={item.data.company_name || 'N/A'} colors={colors} FONTS={FONTS} />
                             {item.data.balance !== undefined && (
                                 <DetailRow label="Balance" value={formatCurrency(item.data.balance)} colors={colors} FONTS={FONTS} />
@@ -137,7 +153,7 @@ const GenericSideList = ({
                             <DetailRow label="ID" value={item.data.id} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Name" value={item.data.name || 'N/A'} colors={colors} FONTS={FONTS} />
                             <DetailRow label="Contact" value={item.data.contact || 'N/A'} colors={colors} FONTS={FONTS} />
-                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} colors={colors} FONTS={FONTS} />
+                            <DetailRow label="Phone" value={item.data.phone || 'N/A'} isMaskable={true} colors={colors} FONTS={FONTS} />
                             {item.data.balance !== undefined && (
                                 <DetailRow label="Balance" value={formatCurrency(item.data.balance)} colors={colors} FONTS={FONTS} />
                             )}

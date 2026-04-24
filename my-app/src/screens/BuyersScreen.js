@@ -51,6 +51,13 @@ export default function BuyersScreen() {
     const [pendingItems, setPendingItems] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // Masking State
+    const [showPhones, setShowPhones] = useState({});
+
+    const togglePhone = (id) => {
+        setShowPhones(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
     // Form modal
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -392,7 +399,18 @@ export default function BuyersScreen() {
 
                         {/* Details */}
                         <View style={styles.detailRows}>
-                            {item.phone && <View style={styles.detailRow}><Icon name="call-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>{item.phone}</Text></View>}
+                            {item.phone && (
+                                <TouchableOpacity 
+                                    style={styles.detailRow} 
+                                    activeOpacity={0.7} 
+                                    onPress={() => togglePhone(item.id)}
+                                >
+                                    <Icon name="call-outline" size={14} color={colors.text.secondary} />
+                                    <Text style={styles.detailText}>
+                                        {showPhones[item.id] ? item.phone : item.phone.replace(/./g, '*')}
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
                             {item.address && <View style={styles.detailRow}><Icon name="location-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>{item.address}</Text></View>}
                             <View style={styles.detailRow}><Icon name="calendar-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>Since {new Date(item.created_at).toLocaleDateString()}</Text></View>
                         </View>

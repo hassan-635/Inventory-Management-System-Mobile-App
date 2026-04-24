@@ -52,6 +52,13 @@ export default function SuppliersScreen() {
     const [pendingItems, setPendingItems] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
 
+    // Masking State
+    const [showPhones, setShowPhones] = useState({});
+
+    const togglePhone = (id) => {
+        setShowPhones(prev => ({ ...prev, [id]: !prev[id] }));
+    };
+
     // CRUD State
     const [modalVisible, setModalVisible] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -573,7 +580,11 @@ export default function SuppliersScreen() {
                             iconName="storefront-outline"
                             containerStyle={hasDue ? { borderColor: 'rgba(239,68,68,0.3)' } : undefined}
                             detailsData={{
-                                'Phone': item.phone || 'N/A',
+                                'Phone': item.phone ? (
+                                    <Text onPress={() => togglePhone(item.id)} style={{ paddingVertical: 2 }}>
+                                        {showPhones[item.id] ? item.phone : item.phone.replace(/./g, '*')}
+                                    </Text>
+                                ) : 'N/A',
                                 'Company': item.company_name || 'N/A',
                             }}
                             renderExtra={() => (
