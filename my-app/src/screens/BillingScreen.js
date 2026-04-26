@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { productsService } from '../api/products';
 import { buyersService } from '../api/buyers';
 import { salesService } from '../api/sales';
+import { billingService } from '../api/billing';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -92,6 +93,7 @@ export default function BillingScreen() {
     const [paymentMethod, setPaymentMethod] = useState('Cash');
     const [splitCash, setSplitCash] = useState('');
     const [splitOnline, setSplitOnline] = useState('');
+    const [invoiceId, setInvoiceId] = useState('');
     
     // Cart State
     const [cart, setCart] = useState([]);
@@ -122,12 +124,24 @@ export default function BillingScreen() {
     const inventoryTick = useDataRefreshStore((s) => s.inventoryTick);
     const billingFirstFocus = useRef(true);
 
+    const fetchNextInvoiceId = async () => {
+        try {
+            const data = await billingService.getNextInvoiceId();
+            if (data?.nextInvoiceId) {
+                setInvoiceId(data.nextInvoiceId);
+            }
+        } catch (e) {
+            console.error('Failed to fetch invoice id', e);
+        }
+    };
+
     const loadData = useCallback(async (opts = { showLoading: true }) => {
         try {
             if (opts.showLoading) setLoading(true);
             const [p, b] = await Promise.all([productsService.getAll(), buyersService.getAll()]);
             setProducts(p);
             setBuyers(b);
+            await fetchNextInvoiceId();
         } catch (e) {
             console.error('Failed to load data', e);
         } finally {
@@ -319,31 +333,6 @@ export default function BillingScreen() {
 
         try {
             setSubmitting(true);
-            let activeBuyerId = selectedBuyer?.id || null;
-
-            // Credit Auto-Create Buyer (Frontend Parity)
-            if (isCreditBill && !activeBuyerId) {
-                const buyerPayload = {
-                    name: buyerSearch.trim(),
-                    phone: buyerPhone.trim(),
-                    company_name: companyName.trim() || null
-                };
-                const buyerRes = await buyersService.create(buyerPayload);
-                // Depending on backend response format
-                activeBuyerId = buyerRes.data?.[0]?.id || buyerRes.data?.id || buyerRes.id;
-                
-                if (!activeBuyerId) {
-                    throw new Error("Failed to auto-create customer for Credit bill");
-                }
-            }
-
-            // Prepare common sale data
-            const actualBillType = isCreditBill ? 'CREDIT' : 'REAL';
-            const userPaid = isCreditBill ? Number(paidAmount || 0) : null;
-            const bName = buyerSearch.trim() || 'Walk-in Customer';
-
-            const activePaymentAmt = isCreditBill ? Number(paidAmount || 0) : totalAmount;
-            const derivedSplitOnline = paymentMethod === 'Split' ? Number(splitOnline || 0) : 0;
 
             // If editing a previously generated bill, delete the old sale records first
             if (isEditingGeneratedBill && recentGeneratedBill?.cart) {
@@ -358,52 +347,75 @@ export default function BillingScreen() {
                 }
             }
 
-            // Submit each cart item individually to match backend constraints
-            const generatedCartItems = [...cart];
-            for (let i = 0; i < generatedCartItems.length; i++) {
-                const item = generatedCartItems[i];
-                const itemTotal = item.price * item.quantity;
-                
-                // Proportion logic for split payment
-                let proportion = 1;
-                if (paymentMethod === 'Split' && activePaymentAmt > 0) {
-                    proportion = isCreditBill ? (itemTotal / totalAmount) : (itemTotal / activePaymentAmt);
-                    if (!isCreditBill) proportion = itemTotal / activePaymentAmt;
-                } else if (paymentMethod === 'Split' && activePaymentAmt > 0 && isCreditBill) {
-                     proportion = itemTotal / totalAmount; // Actually, paid proportionally to item total's share of grand total
-                }
-                
-                let proportionRatio = 1;
-                if (activePaymentAmt > 0) {
-                     // For both real and credit, the proportion of this item's contribution to the total
-                     proportionRatio = itemTotal / totalAmount;
-                }
-                
-                const currentItemPaid = isCreditBill ? activePaymentAmt * proportionRatio : itemTotal;
-                
-                const itemCashAmount = paymentMethod === 'Split' ? Math.round(Number(splitCash || 0) * proportionRatio * 100) / 100 : (paymentMethod === 'Cash' ? currentItemPaid : 0);
-                const itemOnlineAmount = paymentMethod === 'Split' ? Math.round(derivedSplitOnline * proportionRatio * 100) / 100 : (paymentMethod === 'Online' ? currentItemPaid : 0);
+            const activePaymentAmt = isCreditBill ? Number(paidAmount || 0) : totalAmount;
+            const parsedCash = Number(splitCash || 0);
+            const parsedOnline = Number(splitOnline || 0);
+            
+            let currentCashPool = paymentMethod === 'Split' ? parsedCash : (paymentMethod === 'Cash' ? activePaymentAmt : 0);
+            let currentOnlinePool = paymentMethod === 'Split' ? parsedOnline : (paymentMethod === 'Online' ? activePaymentAmt : 0);
 
-                const payload = {
+            const bName = buyerSearch.trim() || 'Walk-in Customer';
+
+            const computedCart = cart.map((item, i) => {
+                const itemTotal = item.price * item.quantity;
+                const isLastItem = i === cart.length - 1;
+
+                let itemPaidAmount;
+                if (isCreditBill) {
+                    const ratio = totalAmount > 0 ? (itemTotal / totalAmount) : 0;
+                    itemPaidAmount = isLastItem
+                        ? (activePaymentAmt - cart.slice(0, i).reduce((s, it) => s + Math.round((it.price * it.quantity / totalAmount) * activePaymentAmt), 0))
+                        : Math.round(ratio * activePaymentAmt);
+                } else {
+                    itemPaidAmount = itemTotal;
+                }
+
+                let thisCash = 0;
+                let thisOnline = 0;
+                if (paymentMethod === 'Split') {
+                    const ratio = activePaymentAmt > 0 ? (itemPaidAmount / activePaymentAmt) : 0;
+                    thisCash = isLastItem ? currentCashPool : Math.round(ratio * parsedCash);
+                    thisOnline = isLastItem ? currentOnlinePool : Math.round(ratio * parsedOnline);
+                    currentCashPool -= thisCash;
+                    currentOnlinePool -= thisOnline;
+                } else if (paymentMethod === 'Cash') {
+                    thisCash = itemPaidAmount;
+                } else if (paymentMethod === 'Online') {
+                    thisOnline = itemPaidAmount;
+                }
+
+                return {
                     product_id: item.id,
                     product_name: item.name,
                     quantity: item.quantity,
-                    total_amount: itemTotal,
-                    bill_type: actualBillType,
-                    buyer_id: activeBuyerId,
-                    buyer_name: bName,
-                    company_name: companyName.trim() || null,
-                    paid_amount: currentItemPaid,
-                    quantity_unit: item.cart_unit,
-                    payment_method: paymentMethod,
-                    cash_amount: itemCashAmount,
-                    online_amount: itemOnlineAmount
+                    price: item.price,
+                    cart_unit: item.cart_unit || 'Per Piece',
+                    itemPaidAmount,
+                    thisCash,
+                    thisOnline
                 };
-                
-                const res = await salesService.create(payload);
-                // Capture txn id for future edit/reversal
-                generatedCartItems[i].txn_id = res?.data?.id || res?.id || res?.data?.[0]?.id;
-            }
+            });
+
+            const payload = {
+                billType: isCreditBill ? 'credit' : 'original',
+                customerName: buyerSearch.trim() || null,
+                buyerPhone: buyerPhone.trim() || null,
+                companyName: companyName.trim() || null,
+                paymentMethod,
+                paidAmount: activePaymentAmt,
+                cashAmount: parsedCash,
+                onlineAmount: parsedOnline,
+                invoiceId: invoiceId,
+                billTimestamp: new Date().toISOString(),
+                cart: computedCart
+            };
+
+            const res = await billingService.createBill(payload);
+
+            const generatedCartItems = cart.map((item, i) => ({
+                ...item,
+                txn_id: res?.items?.[i]?.txn_id
+            }));
 
             useToastStore.getState().showToast('Success', `${isCreditBill ? 'Credit' : 'Original'} Bill saved successfully!`, 'success');
             useDataRefreshStore.getState().bumpInventory();
