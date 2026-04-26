@@ -27,17 +27,61 @@ const UNIT_OPTIONS = ['Per Piece', 'Per Dozen', 'Per Box', 'Per Kg', 'Per Liter'
 // Remove "Per " prefix for bill display (e.g. "Per Piece" → "Piece")
 const stripPer = (unit) => unit ? unit.replace(/^Per\s+/i, '') : '';
 
+// ─── FUZZY SEARCH LOGIC ───
+const levenshtein = (a, b) => {
+    if (a.length === 0) return b.length;
+    if (b.length === 0) return a.length;
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(matrix[i - 1][j - 1] + 1, Math.min(matrix[i][j - 1] + 1, matrix[i - 1][j] + 1));
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+};
+
+const fuzzySearch = (query, item, searchKey) => {
+    if (!query) return true;
+    query = query.toLowerCase();
+    
+    let text = typeof item === 'string' ? item : (item[searchKey] || '');
+    let id = typeof item === 'string' ? '' : (item.id ? String(item.id) : '');
+    let formattedId = typeof item === 'string' ? '' : (item.id ? `PROD-${String(item.id).padStart(4, '0')}` : '');
+    
+    text = text.toLowerCase();
+    id = id.toLowerCase();
+    formattedId = formattedId.toLowerCase();
+
+    if (text.includes(query) || id.includes(query) || formattedId.includes(query)) return true;
+
+    const queryWords = query.split(/\s+/).filter(Boolean);
+    const textWords = text.split(/\s+/).filter(Boolean);
+    if (id) textWords.push(id, formattedId);
+
+    return queryWords.every(qw => {
+        return textWords.some(tw => {
+            if (tw.includes(qw)) return true;
+            const allowedTypos = qw.length > 5 ? 2 : (qw.length > 3 ? 1 : 0);
+            return levenshtein(qw, tw) <= allowedTypos;
+        });
+    });
+};
+// ──────────────────────────
+
 // A searchable modal picker for Products and Companies
 const PickerModal = ({ visible, onClose, items, onSelect, title, searchKey = 'name', renderSub, isStringList = false, colors, FONTS }) => {
     const [q, setQ] = useState('');
     const modalStyles = useMemo(() => getModalStyles(colors, FONTS), [colors, FONTS]);
 
     const filtered = useMemo(() => {
-        if (isStringList) {
-            return items.filter(i => i.toLowerCase().includes(q.toLowerCase()));
-        }
-        return items.filter(i => (i[searchKey] || '').toLowerCase().includes(q.toLowerCase()));
-    }, [items, q, isStringList, searchKey]);
+        return items.filter(i => fuzzySearch(q, i, searchKey));
+    }, [items, q, searchKey]);
 
     return (
         <Modal visible={visible} animationType="slide" transparent>
