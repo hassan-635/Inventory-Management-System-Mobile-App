@@ -212,6 +212,87 @@ export default function SalesScreen() {
 
     }, [sales, activeFilter, search, categoryFilterOption, sortOption]);
 
+    const groupedSales = useMemo(() => {
+        // 1. Sort the raw filtered list by date first to group chronologically
+        const sortedList = [...filteredSales].sort((a, b) => {
+            const dA = a.purchase_date ? new Date(a.purchase_date).getTime() : 0;
+            const dB = b.purchase_date ? new Date(b.purchase_date).getTime() : 0;
+            if (dA === dB) return b.id - a.id;
+            return dB - dA;
+        });
+
+        // 2. Group adjacent sales
+        const groups = [];
+        let currentGroup = null;
+
+        sortedList.forEach((sale) => {
+            const saleTime = sale.purchase_date ? new Date(sale.purchase_date).getTime() : 0;
+            const buyerName = sale.buyers?.name || sale.buyer_name || 'Walk-in';
+            const salesman = sale.users?.name || '-';
+            
+            if (!currentGroup) {
+                currentGroup = {
+                    id: sale.invoice_id || sale.id,
+                    invoice_id: sale.invoice_id,
+                    buyerName,
+                    phone: sale.buyers?.phone || '',
+                    date: sale.purchase_date,
+                    time: saleTime,
+                    salesman,
+                    items: [sale],
+                    totalAmount: Number(sale.total_amount || 0)
+                };
+            } else {
+                const timeDiff = Math.abs(currentGroup.time - saleTime);
+                const isSameBuyer = currentGroup.buyerName === buyerName;
+                const isSameSalesman = currentGroup.salesman === salesman;
+                
+                const shouldGroup = (sale.invoice_id && currentGroup.invoice_id)
+                    ? (sale.invoice_id === currentGroup.invoice_id)
+                    : (isSameBuyer && isSameSalesman && timeDiff <= 120000);
+
+                if (shouldGroup) {
+                    currentGroup.items.push(sale);
+                    currentGroup.totalAmount += Number(sale.total_amount || 0);
+                    if (!currentGroup.invoice_id && sale.id < currentGroup.id) {
+                        currentGroup.id = sale.id;
+                    }
+                } else {
+                    groups.push(currentGroup);
+                    currentGroup = {
+                        id: sale.invoice_id || sale.id,
+                        invoice_id: sale.invoice_id,
+                        buyerName,
+                        phone: sale.buyers?.phone || '',
+                        date: sale.purchase_date,
+                        time: saleTime,
+                        salesman,
+                        items: [sale],
+                        totalAmount: Number(sale.total_amount || 0)
+                    };
+                }
+            }
+        });
+        if (currentGroup) groups.push(currentGroup);
+
+        // 3. Sort groups based on user sort option
+        groups.sort((a, b) => {
+            if (sortOption === 'dateDesc') {
+                if (b.time === a.time) return b.id - a.id;
+                return b.time - a.time;
+            }
+            if (sortOption === 'dateAsc') {
+                if (a.time === b.time) return a.id - b.id;
+                return a.time - b.time;
+            }
+            if (sortOption === 'amountDesc') return b.totalAmount - a.totalAmount;
+            if (sortOption === 'amountAsc') return a.totalAmount - b.totalAmount;
+            return 0;
+        });
+
+        return groups;
+    }, [filteredSales, sortOption]);
+
     const totalRevenue = filteredSales.reduce((sum, s) => sum + Number(s.total_amount || 0), 0);
 
     const handleDownloadPdf = async () => {
@@ -324,28 +405,32 @@ export default function SalesScreen() {
             <Text style={styles.headerTitle}>Recent Sales</Text>
             <FlatList
                 {...flatListPerformanceProps}
-                data={filteredSales}
-                keyExtractor={(item, index) => (item.id != null ? String(item.id) : `s-${index}`)}
+                data={groupedSales}
+                keyExtractor={(item, index) => (item.id != null ? String(item.id) : `g-${index}`)}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent.primary} />}
                 contentContainerStyle={[styles.listContainer, isTablet && { paddingHorizontal: 32 }]}
                 ListHeaderComponent={<ListHeader />}
                 renderItem={({ item }) => {
-                    const total = Number(item.total_amount || 0);
-                    const paid = Number(item.paid_amount || 0);
-                    const remaining = total - paid;
+                    const groupTotalAmount = item.items.reduce((s, x) => s + Number(x.total_amount || 0), 0);
+                    const groupPaidAmount = item.items.reduce((s, x) => s + Number(x.paid_amount || 0), 0);
+                    const remaining = groupTotalAmount - groupPaidAmount;
                     const hasBalance = remaining > 0;
+                    const groupMethod = item.items[0]?.payment_method || 'Cash';
+                    const groupCash = item.items.reduce((s, x) => s + Number(x.cash_amount || 0), 0);
+                    const groupOnline = item.items.reduce((s, x) => s + Number(x.online_amount || 0), 0);
+
                     return (
                         <ExpandableItem
-                            title={`[${formatProductId(item.product_id) || '-'}] ${item.products?.name || 'Unknown Product'}`}
-                            subtitle={item.buyers?.name ? `Customer · ${item.buyers.name}` : 'Walk-in'}
+                            title={item.invoice_id ? `Invoice #${item.invoice_id}` : `Invoice #${item.id}`}
+                            subtitle={item.buyerName ? `Customer · ${item.buyerName}` : 'Walk-in'}
                             rightText={hasBalance ? `Rs. ${remaining.toLocaleString()}` : '✓ Clear'}
-                            rightSubText={`Total: Rs. ${total.toLocaleString()}`}
+                            rightSubText={`Total: Rs. ${groupTotalAmount.toLocaleString()}`}
                             rightTextColor={hasBalance ? colors.status.danger : colors.status.success}
                             summaryBoxes={[
-                                { label: 'Total Sale', value: `Rs. ${total.toLocaleString()}` },
+                                { label: 'Total Sale', value: `Rs. ${groupTotalAmount.toLocaleString()}` },
                                 {
                                     label: 'Paid',
-                                    value: `Rs. ${paid.toLocaleString()}`,
+                                    value: `Rs. ${groupPaidAmount.toLocaleString()}`,
                                     valueColor: colors.status.success,
                                     borderColor: colors.status.success,
                                 },
@@ -359,34 +444,36 @@ export default function SalesScreen() {
                             iconName="receipt-outline"
                             containerStyle={hasBalance ? { borderColor: 'rgba(239,68,68,0.3)' } : undefined}
                             detailsData={{
-                                'Txn ID': `#${item.id}`,
-                                'Product ID': formatProductId(item.product_id),
-                                'Customer': item.buyers?.name || 'Walk-in',
-                                'Quantity': `${item.quantity} ${item.quantity_unit ? `(${item.quantity_unit})` : ''}`,
-                                'Method': item.payment_method === 'Split' ? `Split (C: ${item.cash_amount} | O: ${item.online_amount})` : (item.payment_method || 'Cash'),
-                                'Price/Unit': `Rs. ${item.products?.price || '-'}`,
-                                'Date': new Date(item.purchase_date).toLocaleDateString()
+                                'Date': new Date(item.date).toLocaleDateString(),
+                                'Items Count': `${item.items.length} Product(s)`,
+                                'Method': groupMethod === 'Split' ? `Split (C: ${groupCash} | O: ${groupOnline})` : groupMethod,
+                                'Salesman': item.salesman
                             }}
-                            renderActions={() => (
-                                <View style={{ flexDirection: 'row', flex: 1, minWidth: '100%', gap: 8 }}>
-                                    <TouchableOpacity
-                                        style={[styles.actionBtn, { flex: 1, justifyContent: 'center', borderWidth: 1, borderColor: colors.border.color }]}
-                                        onPress={() => openPartialReturnModal(item)}
-                                    >
-                                        <Icon name="swap-vertical-outline" size={18} color={colors.accent.primary} />
-                                        <Text style={[styles.actionBtnTxt, { color: colors.accent.primary, fontSize: 12 }]} numberOfLines={2}>
-                                            Partial return
-                                        </Text>
-                                    </TouchableOpacity>
-                                    <TouchableOpacity
-                                        style={[styles.actionBtn, styles.actionBtnDanger, { flex: 1, justifyContent: 'center' }]}
-                                        onPress={() => handleFullUndo(item)}
-                                    >
-                                        <Icon name="arrow-undo-outline" size={18} color={colors.status.danger} />
-                                        <Text style={[styles.actionBtnTxt, { color: colors.status.danger, fontSize: 12 }]} numberOfLines={2}>
-                                            Full return
-                                        </Text>
-                                    </TouchableOpacity>
+                            renderExtra={() => (
+                                <View style={{ marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border.color, paddingTop: 12 }}>
+                                    <Text style={{ color: colors.text.primary, fontFamily: FONTS.bold, marginBottom: 8, fontSize: 13 }}>Products in this Invoice:</Text>
+                                    {item.items.map((sale, idx) => (
+                                        <View key={sale.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottomWidth: idx === item.items.length - 1 ? 0 : 1, borderBottomColor: colors.border.color }}>
+                                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                                                <Text style={{ color: colors.text.primary, fontFamily: FONTS.medium, flex: 1, fontSize: 13 }}>{sale.products?.name}</Text>
+                                                <Text style={{ color: colors.text.secondary, fontFamily: FONTS.bold, fontSize: 13 }}>Rs. {Number(sale.total_amount).toLocaleString()}</Text>
+                                            </View>
+                                            <Text style={{ color: colors.text.muted, fontSize: 12, fontFamily: FONTS.regular }}>
+                                                Qty: {sale.quantity} {sale.quantity_unit} | Price: Rs. {Number(sale.products?.price || 0).toLocaleString()}
+                                            </Text>
+                                            
+                                            <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                                                <TouchableOpacity style={[styles.actionBtn, { flex: 1, justifyContent: 'center', paddingVertical: 8, borderWidth: 1, borderColor: colors.border.color }]} onPress={() => openPartialReturnModal(sale)}>
+                                                    <Icon name="swap-vertical-outline" size={14} color={colors.accent.primary} />
+                                                    <Text style={[styles.actionBtnTxt, { color: colors.accent.primary, fontSize: 12 }]}>Return</Text>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity style={[styles.actionBtn, styles.actionBtnDanger, { flex: 1, justifyContent: 'center', paddingVertical: 8 }]} onPress={() => handleFullUndo(sale)}>
+                                                    <Icon name="arrow-undo-outline" size={14} color={colors.status.danger} />
+                                                    <Text style={[styles.actionBtnTxt, { color: colors.status.danger, fontSize: 12 }]}>Undo</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        </View>
+                                    ))}
                                 </View>
                             )}
                         />

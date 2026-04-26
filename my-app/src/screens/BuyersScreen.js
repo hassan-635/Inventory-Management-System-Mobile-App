@@ -345,11 +345,34 @@ export default function BuyersScreen() {
     }
 
     const renderBuyer = ({ item }) => {
-        const due = computeDue(item.buyer_transactions);
-        const paid = computePaid(item.buyer_transactions);
+        const txns = item.buyer_transactions || [];
+        const due = computeDue(txns);
+        const paid = computePaid(txns);
         const total = due + paid;
         const isExpanded = expandedId === item.id;
         const hasDue = due > 0;
+
+        let totalCash = 0;
+        let totalOnline = 0;
+        const methods = new Set();
+        txns.forEach(t => {
+            if (t.payment_method) methods.add(t.payment_method);
+            if (t.payment_method === 'Split') {
+                totalCash += Number(t.cash_amount || 0);
+                totalOnline += Number(t.online_amount || 0);
+            } else if (t.payment_method === 'Online') {
+                totalOnline += Number(t.paid_amount || 0);
+            } else {
+                totalCash += Number(t.paid_amount || 0);
+            }
+        });
+
+        let mergedMethod = 'Cash';
+        if (methods.has('Split') || (methods.has('Cash') && methods.has('Online'))) {
+            mergedMethod = 'Split';
+        } else if (methods.has('Online')) {
+            mergedMethod = 'Online';
+        }
 
         return (
             <TouchableOpacity
@@ -414,6 +437,27 @@ export default function BuyersScreen() {
                             )}
                             {item.address && <View style={styles.detailRow}><Icon name="location-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>{item.address}</Text></View>}
                             <View style={styles.detailRow}><Icon name="calendar-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>Since {new Date(item.created_at).toLocaleDateString()}</Text></View>
+                            <View style={styles.detailRow}>
+                                <Icon name="card-outline" size={14} color={colors.text.secondary} />
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    <View style={[{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+                                        mergedMethod === 'Cash' ? { backgroundColor: 'rgba(74,222,128,0.15)' } :
+                                        mergedMethod === 'Online' ? { backgroundColor: 'rgba(56,189,248,0.15)' } :
+                                        { backgroundColor: 'rgba(251,191,36,0.15)' }
+                                    ]}>
+                                        <Text style={[{ fontSize: 10, fontFamily: FONTS.bold },
+                                            mergedMethod === 'Cash' ? { color: '#4ade80' } :
+                                            mergedMethod === 'Online' ? { color: '#38bdf8' } :
+                                            { color: '#fbbf24' }
+                                        ]}>{mergedMethod}</Text>
+                                    </View>
+                                    {mergedMethod === 'Split' && (
+                                        <Text style={{ fontSize: 10, color: colors.text.muted, fontFamily: FONTS.regular }}>
+                                            C:{totalCash} | O:{totalOnline}
+                                        </Text>
+                                    )}
+                                </View>
+                            </View>
                         </View>
 
                         {/* Transaction History mapped similarly to Suppliers */}
@@ -428,30 +472,7 @@ export default function BuyersScreen() {
                                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                                                 <View style={{ flex: 1, marginRight: 8 }}>
                                                     <Text style={styles.txnProduct}>{txn.products?.name || `Product #${txn.product_id}`}</Text>
-                                                    {txn.payment_method && (
-                                                        <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2, gap: 4 }}>
-                                                            <View style={[{ paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
-                                                                txn.payment_method === 'Cash' ? { backgroundColor: 'rgba(74,222,128,0.15)' } :
-                                                                txn.payment_method === 'Online' ? { backgroundColor: 'rgba(56,189,248,0.15)' } :
-                                                                { backgroundColor: 'rgba(251,191,36,0.15)' }
-                                                            ]}>
-                                                                <Text style={[{ fontSize: 10, fontFamily: FONTS.bold },
-                                                                    txn.payment_method === 'Cash' ? { color: '#4ade80' } :
-                                                                    txn.payment_method === 'Online' ? { color: '#38bdf8' } :
-                                                                    { color: '#fbbf24' }
-                                                                ]}>{txn.payment_method}</Text>
-                                                            </View>
-                                                            {txn.payment_method === 'Split' && (
-                                                                <Text style={{ fontSize: 10, color: colors.text.muted, fontFamily: FONTS.regular }}>
-                                                                    C:{txn.cash_amount} | O:{txn.online_amount}
-                                                                </Text>
-                                                            )}
-                                                        </View>
-                                                    )}
                                                 </View>
-                                                <Text style={[styles.txnRemaining, { color: remaining > 0 ? colors.status.danger : colors.status.success }]}>
-                                                    {remaining > 0 ? `Due: Rs. ${remaining.toLocaleString()}` : '✅ Paid'}
-                                                </Text>
                                             </View>
                                             <View style={styles.txnRow}>
                                                 <View style={styles.txnCell}>
@@ -463,12 +484,8 @@ export default function BuyersScreen() {
                                                     <Text style={styles.txnValue}>Rs. {saleRate.toLocaleString()}</Text>
                                                 </View>
                                                 <View style={styles.txnCell}>
-                                                    <Text style={styles.txnLabel}>Total</Text>
+                                                    <Text style={styles.txnLabel}>Price</Text>
                                                     <Text style={styles.txnValue}>Rs. {Number(txn.total_amount).toLocaleString()}</Text>
-                                                </View>
-                                                <View style={styles.txnCell}>
-                                                    <Text style={styles.txnLabel}>Paid</Text>
-                                                    <Text style={[styles.txnValue, { color: colors.status.success }]}>Rs. {Number(txn.paid_amount).toLocaleString()}</Text>
                                                 </View>
                                             </View>
                                         </View>
