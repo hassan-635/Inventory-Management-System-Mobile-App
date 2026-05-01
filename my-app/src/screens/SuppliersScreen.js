@@ -503,8 +503,16 @@ export default function SuppliersScreen() {
             }
             if (sortOption === 'nameAsc') return (a.name || '').localeCompare(b.name || '');
             if (sortOption === 'nameDesc') return (b.name || '').localeCompare(a.name || '');
-            if (sortOption === 'dateDesc') return (b.id || 0) - (a.id || 0);
-            if (sortOption === 'dateAsc') return (a.id || 0) - (b.id || 0);
+            if (sortOption === 'dateDesc') {
+                const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return dateB - dateA || (b.id || 0) - (a.id || 0);
+            }
+            if (sortOption === 'dateAsc') {
+                const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return dateA - dateB || (a.id || 0) - (b.id || 0);
+            }
 
             return 0;
         });
