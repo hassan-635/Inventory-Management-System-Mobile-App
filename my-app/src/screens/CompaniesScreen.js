@@ -292,10 +292,10 @@ export default function CompaniesScreen() {
         <View style={styles.container}>
             <Text style={styles.title}>Companies (customers owe you)</Text>
 
-            {/* Search */}
-            <View style={[styles.searchSortRow, { paddingHorizontal: 16, marginBottom: 10 }]}>
-                <View style={[styles.searchRow, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
-                    <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
+            {/* Enhanced Search Bar */}
+            <View style={styles.searchContainer}>
+                <View style={styles.searchRow}>
+                    <Icon name="search" size={22} color={colors.accent.primary} />
                     <TextInput
                         style={styles.searchInput}
                         placeholder="Search company name..."
@@ -303,6 +303,11 @@ export default function CompaniesScreen() {
                         value={search}
                         onChangeText={setSearch}
                     />
+                    {search.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearch('')} style={styles.clearBtn}>
+                            <Icon name="close-circle" size={20} color={colors.text.secondary} />
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
@@ -493,14 +498,24 @@ const getStyles = (colors, FONTS, SCREEN_WIDTH) => StyleSheet.create({
         paddingBottom: 8,
     },
 
-    searchRow: {
-        flexDirection: 'row', alignItems: 'center',
-        marginHorizontal: 16, marginBottom: 8,
-        backgroundColor: colors.background.secondary,
-        borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
-        borderWidth: 1, borderColor: colors.border.color,
+    searchContainer: { paddingHorizontal: 16, marginBottom: 16 },
+    searchRow: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: '#ffffff', 
+        borderRadius: 16, 
+        paddingHorizontal: 16, 
+        paddingVertical: 14, 
+        borderWidth: 1, 
+        borderColor: '#e5e7eb',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 3,
     },
-    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 15, marginLeft: 10, paddingVertical: 0 },
+    clearBtn: { padding: 4, marginLeft: 8 },
 
     summaryBar: {
         marginHorizontal: 16, marginBottom: 10,
