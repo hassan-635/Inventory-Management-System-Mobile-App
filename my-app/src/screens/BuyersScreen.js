@@ -578,20 +578,20 @@ export default function BuyersScreen() {
                 </TouchableOpacity>
             </View>
 
-            {/* Search */}
-            <View style={[styles.searchSortRow, { paddingHorizontal: 16, marginBottom: 10 }]}>
-                <View style={[styles.searchRow, { flex: 1, marginHorizontal: 0, marginBottom: 0 }]}>
-                    <Icon name="search-outline" size={17} color={colors.text.secondary} style={{ marginRight: 8 }} />
+            {/* Enhanced Search Bar */}
+            <View style={styles.searchContainer}>
+                <View style={styles.searchRow}>
+                    <Icon name="search" size={22} color={colors.accent.primary} />
                     <TextInput
                         style={styles.searchInput}
-                        placeholder="Search by ID, name, company, phone..."
+                        placeholder="Search customers by name, phone..."
                         placeholderTextColor={colors.text.muted}
                         value={search}
                         onChangeText={setSearch}
                     />
                     {search.length > 0 && (
-                        <TouchableOpacity onPress={() => setSearch('')}>
-                            <Icon name="close-circle" size={18} color={colors.text.secondary} />
+                        <TouchableOpacity onPress={() => setSearch('')} style={styles.clearBtn}>
+                            <Icon name="close-circle" size={20} color={colors.text.secondary} />
                         </TouchableOpacity>
                     )}
                 </View>
@@ -832,8 +832,24 @@ const getStyles = (colors, FONTS, SW) => StyleSheet.create({
     addBtn: { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: colors.accent.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10, shadowColor: colors.accent.primary, shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.3, shadowRadius: 5, elevation: 4 },
     addBtnTxt: { color: '#fff', fontFamily: FONTS.bold, fontSize: 13 },
 
-    searchRow: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 10, backgroundColor: colors.background.secondary, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, borderWidth: 1, borderColor: colors.border.color },
-    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.regular, fontSize: 14 },
+    searchContainer: { paddingHorizontal: 16, marginBottom: 16 },
+    searchRow: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: '#ffffff', 
+        borderRadius: 16, 
+        paddingHorizontal: 16, 
+        paddingVertical: 14, 
+        borderWidth: 1, 
+        borderColor: '#e5e7eb',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 15, marginLeft: 10, paddingVertical: 0 },
+    clearBtn: { padding: 4, marginLeft: 8 },
 
     summaryBar: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 10, backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' },
     summaryBarText: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 13 },
