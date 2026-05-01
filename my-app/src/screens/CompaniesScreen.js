@@ -64,7 +64,9 @@ export default function CompaniesScreen() {
 
     const filtered = useMemo(() => {
         let list = companies.filter(c =>
-            (c.company_name || '').toLowerCase().includes(search.toLowerCase())
+            (c.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (c.buyers || []).some(b => (b.name || '').toLowerCase().includes(search.toLowerCase())) ||
+            (c.buyers || []).some(b => (b.phone || '').includes(search))
         );
 
         if (filterOption === 'pending') {
@@ -94,8 +96,40 @@ export default function CompaniesScreen() {
 
     }, [companies, search, filterOption, sortOption]);
 
+    const handlePayAmountChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let numVal = parsed ? parseInt(parsed, 10) : '';
+        setPayAmount(String(numVal));
+        if (paymentMethod === 'Split' && numVal !== '') {
+            setCashAmount(String(numVal));
+            setOnlineAmount('0');
+        }
+    };
+
+    const handleCashChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let cAmt = parsed ? parseInt(parsed, 10) : 0;
+        setCashAmount(String(cAmt));
+        setOnlineAmount(String(Math.max(0, (parseInt(payAmount) || 0) - cAmt)));
+    };
+
+    const handleOnlineChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let oAmt = parsed ? parseInt(parsed, 10) : 0;
+        setOnlineAmount(String(oAmt));
+        setCashAmount(String(Math.max(0, (parseInt(payAmount) || 0) - oAmt)));
+    };
+
+    const handlePaymentMethodChange = (pm) => {
+        setPaymentMethod(pm);
+        if (pm === 'Split' && payAmount) {
+            setCashAmount(String(payAmount));
+            setOnlineAmount('0');
+        }
+    };
+
     const handlePay = async () => {
-        const amount = parseFloat(payAmount);
+        const amount = Math.round(Number(payAmount));
         if (!amount || amount <= 0) {
             useToastStore.getState().showToast('Invalid Amount', 'Please enter a valid amount', 'error');
             return;
@@ -107,13 +141,13 @@ export default function CompaniesScreen() {
         }
 
         if (paymentMethod === 'Split') {
-            const parsedCash = Number(cashAmount || 0);
-            const parsedOnline = Number(onlineAmount || 0);
+            const parsedCash = Math.round(Number(cashAmount || 0));
+            const parsedOnline = Math.round(Number(onlineAmount || 0));
             if (parsedCash < 0 || parsedOnline < 0) {
                 useToastStore.getState().showToast('Invalid Amount', 'Split amounts cannot be negative', 'error');
                 return;
             }
-            if (Math.abs((parsedCash + parsedOnline) - amount) > 0.01) {
+            if (Math.abs((parsedCash + parsedOnline) - amount) !== 0) {
                 useToastStore.getState().showToast('Invalid Amount', `Split amounts (${parsedCash} + ${parsedOnline}) must equal the paid amount (${amount})`, 'error');
                 return;
             }
@@ -135,8 +169,8 @@ export default function CompaniesScreen() {
                                 payment_amount: amount,
                                 date: new Date().toISOString().split('T')[0],
                                 payment_method: paymentMethod,
-                                cash_amount: Number(cashAmount || 0),
-                                online_amount: Number(onlineAmount || 0)
+                                cash_amount: Math.round(Number(cashAmount || 0)),
+                                online_amount: Math.round(Number(onlineAmount || 0))
                             });
                             
                             useToastStore.getState().showToast('Payment Successful!', `Rs. ${amount} distributed across ${company.buyers.length} customers`, 'success');
@@ -333,11 +367,11 @@ export default function CompaniesScreen() {
                             placeholder="Enter amount"
                             placeholderTextColor={colors.text.muted || colors.text.secondary}
                             keyboardType="numeric"
-                            value={payAmount}
-                            onChangeText={setPayAmount}
+                            value={String(payAmount)}
+                            onChangeText={handlePayAmountChange}
                         />
 
-                        {payAmount > 0 && (
+                        {Number(payAmount) > 0 && (
                             <View style={{ marginBottom: 16 }}>
                                 <Text style={{ color: colors.text.secondary, fontSize: 13, marginBottom: 6, fontFamily: FONTS.medium }}>Payment Method</Text>
                                 <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -345,7 +379,7 @@ export default function CompaniesScreen() {
                                         <TouchableOpacity
                                             key={pm}
                                             style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, paymentMethod === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
-                                            onPress={() => setPaymentMethod(pm)}
+                                            onPress={() => handlePaymentMethodChange(pm)}
                                         >
                                             <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 11, textAlign: 'center' }, paymentMethod === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>
                                                 {pm === 'Company Payment' ? '🏢 Default' : pm === 'Online' ? '📱 Online' : (pm === 'Cash' ? '💵 Cash' : '🔀 Split')}
@@ -358,11 +392,11 @@ export default function CompaniesScreen() {
                                     <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                                         <View style={{ flex: 1 }}>
                                             <Text style={{ color: colors.text.secondary, fontSize: 11, marginBottom: 4 }}>Cash Amount</Text>
-                                            <TextInput style={[styles.modalInput, { marginBottom: 0 }]} value={cashAmount} onChangeText={setCashAmount} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted || colors.text.secondary} />
+                                            <TextInput style={[styles.modalInput, { marginBottom: 0 }]} value={String(cashAmount)} onChangeText={handleCashChange} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted || colors.text.secondary} />
                                         </View>
                                         <View style={{ flex: 1 }}>
                                             <Text style={{ color: colors.text.secondary, fontSize: 11, marginBottom: 4 }}>Online Amount</Text>
-                                            <TextInput style={[styles.modalInput, { marginBottom: 0 }]} value={onlineAmount} onChangeText={setOnlineAmount} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted || colors.text.secondary} />
+                                            <TextInput style={[styles.modalInput, { marginBottom: 0 }]} value={String(onlineAmount)} onChangeText={handleOnlineChange} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted || colors.text.secondary} />
                                         </View>
                                     </View>
                                 )}
