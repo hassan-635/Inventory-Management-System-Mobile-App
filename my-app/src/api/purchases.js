@@ -1,4 +1,4 @@
-import api from './axiosConfig';
+import api from './apiClient';
 
 export const purchasesService = {
     getAll: async () => {
