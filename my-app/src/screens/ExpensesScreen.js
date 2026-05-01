@@ -267,8 +267,14 @@ export default function ExpensesScreen() {
         }
 
         return list.sort((a,b) => {
-            if (sortOption === 'dateDesc') return new Date(b.date || 0) - new Date(a.date || 0);
-            if (sortOption === 'dateAsc') return new Date(a.date || 0) - new Date(b.date || 0);
+            if (sortOption === 'dateDesc') {
+                const diff = new Date(b.date || 0) - new Date(a.date || 0);
+                return diff !== 0 ? diff : (b.id || 0) - (a.id || 0);
+            }
+            if (sortOption === 'dateAsc') {
+                const diff = new Date(a.date || 0) - new Date(b.date || 0);
+                return diff !== 0 ? diff : (a.id || 0) - (b.id || 0);
+            }
             if (sortOption === 'amountDesc') return Number(b.amount || 0) - Number(a.amount || 0);
             if (sortOption === 'amountAsc') return Number(a.amount || 0) - Number(b.amount || 0);
             return 0;
@@ -367,17 +373,22 @@ export default function ExpensesScreen() {
                 <Text style={styles.summaryAmount}>Rs. {totalExpensesFiltered.toLocaleString()}</Text>
             </View>
 
-            {/* Search */}
-            <View style={[styles.filterContainer, { marginBottom: 10 }]}>
-                <View style={[styles.filterInputGroup, { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background.secondary, borderRadius: 8, paddingHorizontal: 10, borderWidth: 1, borderColor: colors.border.color }]}>
-                    <Icon name="search-outline" size={18} color={colors.text.secondary} style={{ marginRight: 8 }} />
+            {/* Enhanced Search */}
+            <View style={styles.searchContainer}>
+                <View style={styles.searchRow}>
+                    <Icon name="search" size={22} color={colors.accent.primary} />
                     <TextInput
-                        style={{ flex: 1, paddingVertical: 10, color: colors.text.primary, fontFamily: FONTS.regular }}
+                        style={styles.searchInput}
                         placeholder="Search category, description..."
                         placeholderTextColor={colors.text.muted}
                         value={search}
                         onChangeText={setSearch}
                     />
+                    {search.length > 0 && (
+                        <TouchableOpacity onPress={() => setSearch('')} style={styles.clearBtn}>
+                            <Icon name="close-circle" size={20} color={colors.text.secondary} />
+                        </TouchableOpacity>
+                    )}
                 </View>
             </View>
 
@@ -407,6 +418,7 @@ export default function ExpensesScreen() {
             <FlatList
                 {...flatListPerformanceProps}
                 data={filteredExpenses}
+                extraData={sortOption}
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={renderExpenseItem}
                 contentContainerStyle={styles.listContainer}
@@ -577,6 +589,25 @@ const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
     header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 16 },
     headerTitle: { fontSize: 24, color: colors.text.primary, fontFamily: FONTS.bold },
     addBtn: { backgroundColor: colors.accent.primary, width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' },
+
+    searchContainer: { paddingHorizontal: 16, marginBottom: 16 },
+    searchRow: { 
+        flexDirection: 'row', 
+        alignItems: 'center', 
+        backgroundColor: '#ffffff', 
+        borderRadius: 16, 
+        paddingHorizontal: 16, 
+        paddingVertical: 14, 
+        borderWidth: 1, 
+        borderColor: '#e5e7eb',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.04,
+        shadowRadius: 6,
+        elevation: 3,
+    },
+    searchInput: { flex: 1, color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 15, marginLeft: 10, paddingVertical: 0 },
+    clearBtn: { padding: 4, marginLeft: 8 },
 
     filterContainer: { flexDirection: 'row', paddingHorizontal: 16, marginBottom: 15, gap: 15 },
     filterInputGroup: { flex: 1 },
