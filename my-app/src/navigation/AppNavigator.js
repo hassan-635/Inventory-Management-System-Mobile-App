@@ -25,6 +25,7 @@ import MonthlyReportScreen from '../screens/MonthlyReportScreen';
 import DailyReportScreen from '../screens/DailyReportScreen';
 import CompaniesScreen from '../screens/CompaniesScreen';
 import DatabaseExportScreen from '../screens/DatabaseExportScreen';
+import DeveloperDashboardScreen from '../screens/DeveloperDashboardScreen';
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
@@ -282,7 +283,7 @@ function getDrawerContentStyles(colors, FONTS) {
 }
 
 export default function AppNavigator() {
-    const { token, isLoading, setAuth, setLoading } = useAuthStore();
+    const { token, user, isLoading, setAuth, setLoading } = useAuthStore();
     const { colors, isDarkMode } = useAppTheme();
 
     useEffect(() => {
@@ -319,6 +320,8 @@ export default function AppNavigator() {
             <Stack.Navigator screenOptions={{ headerShown: false }}>
                 {token == null ? (
                     <Stack.Screen name="Login" component={LoginScreen} />
+                ) : user?.role === 'developer' ? (
+                    <Stack.Screen name="DeveloperDashboard" component={DeveloperDashboardScreen} />
                 ) : (
                     <Stack.Screen name="MainDrawer" component={DrawerNavigator} />
                 )}
