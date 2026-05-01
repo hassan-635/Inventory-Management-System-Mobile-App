@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../api/auth';
 import { tokenStorage } from '../utils/tokenStorage';
@@ -39,6 +40,7 @@ export default function LoginScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <LinearGradient colors={['#e0e7ff', '#c7d2fe', '#f3f4f6']} style={StyleSheet.absoluteFillObject} />
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
                 <View style={styles.formContainer}>
                     <View style={styles.brandRow}>
@@ -69,7 +71,7 @@ export default function LoginScreen() {
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your email"
-                            placeholderTextColor={COLORS.text.muted}
+                            placeholderTextColor="#9ca3af"
                             value={email}
                             onChangeText={setEmail}
                             autoCapitalize="none"
@@ -82,7 +84,7 @@ export default function LoginScreen() {
                         <TextInput
                             style={styles.input}
                             placeholder="Enter your password"
-                            placeholderTextColor={COLORS.text.muted}
+                            placeholderTextColor="#9ca3af"
                             value={password}
                             onChangeText={setPassword}
                             secureTextEntry
@@ -105,7 +107,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background.primary,
+        backgroundColor: '#f3f4f6',
     },
     keyboardView: {
         flex: 1,
@@ -113,14 +115,14 @@ const styles = StyleSheet.create({
     },
     formContainer: {
         padding: 28,
-        backgroundColor: COLORS.glass.bg || 'rgba(25, 26, 35, 0.85)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
         marginHorizontal: 20,
         borderRadius: 24,
         borderWidth: 1,
-        borderColor: COLORS.glass.border || 'rgba(255, 255, 255, 0.1)',
-        shadowColor: COLORS.accent.primary || '#6366f1',
+        borderColor: '#e5e7eb',
+        shadowColor: '#a78bfa',
         shadowOffset: { width: 0, height: 8 },
-        shadowOpacity: 0.25,
+        shadowOpacity: 0.2,
         shadowRadius: 20,
         elevation: 10,
     },
@@ -132,32 +134,34 @@ const styles = StyleSheet.create({
         width: 56,
         height: 56,
         borderRadius: 14,
-        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 12,
         borderWidth: 1,
-        borderColor: 'rgba(99, 102, 241, 0.28)',
+        borderColor: 'rgba(99, 102, 241, 0.2)',
     },
     title: {
-        color: '#fff',
+        color: '#1f2937',
         fontSize: 28,
         fontFamily: FONTS.bold,
         marginBottom: 8,
         textAlign: 'center',
     },
     subtitle: {
-        color: COLORS.text.secondary,
+        color: '#6b7280',
         fontSize: 14,
         marginBottom: 20,
         textAlign: 'center',
     },
     roleSelector: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: '#f3f4f6',
         borderRadius: 12,
         marginBottom: 20,
         padding: 4,
+        borderWidth: 1,
+        borderColor: '#e5e7eb',
     },
     roleTab: {
         flex: 1,
@@ -167,9 +171,14 @@ const styles = StyleSheet.create({
     },
     activeRoleTab: {
         backgroundColor: COLORS.accent.primary,
+        shadowColor: COLORS.accent.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 2,
     },
     roleTabText: {
-        color: COLORS.text.secondary,
+        color: '#6b7280',
         fontFamily: FONTS.medium,
         fontSize: 14,
     },
@@ -181,16 +190,17 @@ const styles = StyleSheet.create({
         marginBottom: 20,
     },
     label: {
-        color: COLORS.text.secondary,
+        color: '#374151',
         marginBottom: 8,
         fontSize: 14,
+        fontFamily: FONTS.medium,
     },
     input: {
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        backgroundColor: '#fff',
         borderWidth: 1,
-        borderColor: COLORS.border.color || 'rgba(255,255,255,0.1)',
+        borderColor: '#d1d5db',
         borderRadius: 12,
-        color: '#fff',
+        color: '#1f2937',
         padding: 16,
         fontSize: 16,
     },
