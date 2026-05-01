@@ -111,8 +111,16 @@ export default function BuyersScreen() {
         }
 
         return list.sort((a,b) => {
-            if (sortOption === 'date_desc') return (b.id || 0) - (a.id || 0);
-            if (sortOption === 'date_asc') return (a.id || 0) - (b.id || 0);
+            if (sortOption === 'date_desc') {
+                const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return dateB - dateA || (b.id || 0) - (a.id || 0);
+            }
+            if (sortOption === 'date_asc') {
+                const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+                const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+                return dateA - dateB || (a.id || 0) - (b.id || 0);
+            }
             if (sortOption === 'nameAsc') return (a.name || '').localeCompare(b.name || '');
             if (sortOption === 'nameDesc') return (b.name || '').localeCompare(a.name || '');
             
