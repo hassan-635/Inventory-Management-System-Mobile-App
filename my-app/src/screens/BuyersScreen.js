@@ -83,7 +83,11 @@ export default function BuyersScreen() {
     useRefetchOnFocus(fetchBuyers);
     const onRefresh = () => { setRefreshing(true); fetchBuyers(); };
 
-    const computeDue = useCallback((txns = []) => txns.reduce((s, t) => s + Math.max(0, Number(t.total_amount || 0) - Number(t.paid_amount || 0)), 0), []);
+    const computeDue = useCallback((txns = []) => {
+        const total = txns.reduce((s, t) => s + Number(t.total_amount || 0), 0);
+        const paid = txns.reduce((s, t) => s + Number(t.paid_amount || 0), 0);
+        return Math.max(0, total - paid);
+    }, []);
     const computePaid = useCallback((txns = []) => txns.reduce((s, t) => s + Number(t.paid_amount || 0), 0), []);
 
     const filtered = useMemo(() => {
@@ -681,6 +685,7 @@ export default function BuyersScreen() {
             <FlatList
                 {...flatListPerformanceProps}
                 data={filtered}
+                extraData={sortOption}
                 keyExtractor={item => item.id.toString()}
                 renderItem={renderBuyer}
                 contentContainerStyle={[styles.listContent, SW > 768 && { paddingHorizontal: 32 }]}
