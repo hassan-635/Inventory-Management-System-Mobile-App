@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
     View, Text, StyleSheet, TouchableOpacity, TextInput, 
-    ScrollView, Alert, ActivityIndicator, SafeAreaView, Platform, KeyboardAvoidingView 
+    ScrollView, Alert, ActivityIndicator, SafeAreaView, Platform, KeyboardAvoidingView, ImageBackground 
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { tokenStorage } from '../utils/tokenStorage';
@@ -46,7 +47,7 @@ export default function DeveloperDashboardScreen() {
     const handleLogout = useCallback(async () => {
         clearTimeout(logoutTimer.current);
         clearInterval(countdownTimer.current);
-        await tokenStorage.removeItemAsync('token');
+        await tokenStorage.deleteItemAsync('token');
         setAuth(null, null);
     }, [setAuth]);
 
@@ -175,22 +176,28 @@ export default function DeveloperDashboardScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
+            <LinearGradient colors={['#3f36c0ff', '#6b6a8fff', COLORS.background.primary]} style={StyleSheet.absoluteFillObject} />
+            
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
-                    <Icon name="hardware-chip" size={28} color={COLORS.accent.primary} />
-                    <View style={{ marginLeft: 10 }}>
+                    <View style={styles.iconGlow}>
+                        <Icon name="hardware-chip" size={32} color={COLORS.accent.primary} />
+                    </View>
+                    <View style={{ marginLeft: 14 }}>
                         <Text style={styles.headerTitle}>Developer Panel</Text>
                         <Text style={styles.headerSubtitle}>{user?.email}</Text>
                     </View>
                 </View>
                 <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-                    <Icon name="log-out-outline" size={20} color="#ef4444" />
+                    <LinearGradient colors={['#ef4444', '#b91c1c']} style={styles.logoutGradient}>
+                        <Icon name="log-out-outline" size={20} color="#fff" />
+                    </LinearGradient>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.timerBanner}>
-                <Icon name="time-outline" size={16} color="#fff" />
-                <Text style={styles.timerText}>Auto-logout in: {formatTime(timeLeft)}</Text>
+                <Icon name="shield-checkmark" size={18} color="#fff" />
+                <Text style={styles.timerText}>Secure Session: {formatTime(timeLeft)}</Text>
             </View>
 
             <View style={styles.tabContainer}>
@@ -327,68 +334,105 @@ const styles = StyleSheet.create({
     },
     header: {
         flexDirection: 'row',
-        padding: 20,
-        justifyContent: 'space-between',
         alignItems: 'center',
-        borderBottomWidth: 1,
-        borderBottomColor: COLORS.border.color,
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingTop: Platform.OS === 'android' ? 40 : 20,
+        paddingBottom: 20,
     },
     headerLeft: {
         flexDirection: 'row',
         alignItems: 'center',
     },
+    iconGlow: {
+        width: 50,
+        height: 50,
+        borderRadius: 16,
+        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(58, 60, 150, 0.3)',
+        shadowColor: COLORS.accent.primary,
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.5,
+        shadowRadius: 10,
+        elevation: 5,
+    },
     headerTitle: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 22,
         fontFamily: FONTS.bold,
+        letterSpacing: 0.5,
     },
     headerSubtitle: {
         color: COLORS.text.secondary,
-        fontSize: 12,
-        fontFamily: FONTS.regular,
+        fontSize: 13,
+        fontFamily: FONTS.medium,
+        marginTop: 2,
     },
     logoutBtn: {
-        padding: 8,
-        backgroundColor: 'rgba(239,68,68,0.1)',
-        borderRadius: 8,
+        borderRadius: 12,
+        overflow: 'hidden',
+        shadowColor: '#ef4444',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
+    },
+    logoutGradient: {
+        padding: 10,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     timerBanner: {
-        backgroundColor: '#ef4444',
-        padding: 8,
+        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        paddingVertical: 10,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
+        borderTopWidth: 1,
+        borderBottomWidth: 1,
+        borderColor: 'rgba(16, 185, 129, 0.3)',
     },
     timerText: {
-        color: '#fff',
-        fontSize: 12,
+        color: '#10b981',
+        fontSize: 13,
         fontFamily: FONTS.bold,
-        marginLeft: 6,
+        marginLeft: 8,
+        letterSpacing: 0.5,
     },
     tabContainer: {
         flexDirection: 'row',
         marginHorizontal: 16,
-        marginTop: 16,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 12,
-        padding: 4,
+        marginTop: 20,
+        backgroundColor: 'rgba(255,255,255,0.06)',
+        borderRadius: 16,
+        padding: 6,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     tab: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 10,
-        borderRadius: 8,
+        paddingVertical: 12,
+        borderRadius: 12,
     },
     activeTab: {
         backgroundColor: COLORS.accent.primary,
+        shadowColor: COLORS.accent.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.4,
+        shadowRadius: 8,
+        elevation: 6,
     },
     tabText: {
         color: COLORS.text.secondary,
         fontFamily: FONTS.medium,
         fontSize: 13,
-        marginLeft: 6,
+        marginLeft: 8,
     },
     activeTabText: {
         color: '#fff',
@@ -396,85 +440,109 @@ const styles = StyleSheet.create({
     },
     content: {
         padding: 16,
+        paddingBottom: 40,
     },
     card: {
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        borderRadius: 16,
-        padding: 20,
+        backgroundColor: 'rgba(17, 24, 39, 0.7)',
+        borderRadius: 24,
+        padding: 24,
         borderWidth: 1,
-        borderColor: COLORS.border.color,
+        borderColor: 'rgba(255,255,255,0.08)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 10,
     },
     cardTitle: {
         color: '#fff',
-        fontSize: 18,
+        fontSize: 20,
         fontFamily: FONTS.bold,
-        marginBottom: 4,
+        marginBottom: 6,
     },
     cardSubtitle: {
         color: COLORS.text.secondary,
-        fontSize: 13,
-        marginBottom: 20,
+        fontSize: 14,
+        fontFamily: FONTS.regular,
+        marginBottom: 24,
     },
     label: {
         color: COLORS.text.secondary,
         fontSize: 13,
         marginBottom: 8,
         fontFamily: FONTS.medium,
+        textTransform: 'uppercase',
+        letterSpacing: 0.5,
     },
     input: {
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(0,0,0,0.2)',
         borderWidth: 1,
-        borderColor: COLORS.border.color,
-        borderRadius: 10,
-        padding: 14,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 14,
+        padding: 16,
         color: '#fff',
-        marginBottom: 16,
-        fontSize: 15,
+        marginBottom: 20,
+        fontSize: 16,
+        fontFamily: FONTS.regular,
     },
     pwdWrapper: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: 'rgba(0,0,0,0.2)',
         borderWidth: 1,
-        borderColor: COLORS.border.color,
-        borderRadius: 10,
-        marginBottom: 20,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderRadius: 14,
+        marginBottom: 24,
         alignItems: 'center',
     },
     pwdInput: {
         flex: 1,
-        padding: 14,
+        padding: 16,
         color: '#fff',
-        fontSize: 15,
+        fontSize: 16,
+        fontFamily: FONTS.regular,
     },
     pwdToggle: {
-        padding: 14,
+        padding: 16,
     },
     actionBtn: {
         backgroundColor: COLORS.accent.primary,
-        padding: 16,
-        borderRadius: 10,
+        padding: 18,
+        borderRadius: 14,
         alignItems: 'center',
+        marginTop: 10,
+        shadowColor: COLORS.accent.primary,
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.4,
+        shadowRadius: 12,
+        elevation: 8,
     },
     actionBtnText: {
         color: '#fff',
         fontFamily: FONTS.bold,
-        fontSize: 15,
+        fontSize: 16,
+        letterSpacing: 0.5,
     },
     smChip: {
-        paddingHorizontal: 16,
-        paddingVertical: 8,
+        paddingHorizontal: 18,
+        paddingVertical: 10,
         backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 20,
-        marginRight: 10,
+        borderRadius: 24,
+        marginRight: 12,
         borderWidth: 1,
-        borderColor: COLORS.border.color,
+        borderColor: 'rgba(255,255,255,0.1)',
     },
     smChipSelected: {
         backgroundColor: '#10b981',
-        borderColor: '#10b981',
+        borderColor: '#059669',
+        shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 5,
     },
     smChipText: {
         color: COLORS.text.secondary,
         fontFamily: FONTS.medium,
+        fontSize: 14,
     }
 });
