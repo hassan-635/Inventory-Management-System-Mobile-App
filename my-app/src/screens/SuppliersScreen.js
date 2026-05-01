@@ -117,6 +117,94 @@ export default function SuppliersScreen() {
         setModalVisible(true);
     };
 
+    const handlePaymentChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let numVal = parsed ? parseInt(parsed, 10) : '';
+        setFormItem(prev => {
+            let updates = { payment_amount: String(numVal) };
+            if (prev.payment_method === 'Split' && numVal !== '') {
+                updates.cash_amount = String(numVal);
+                updates.online_amount = '0';
+            }
+            return { ...prev, ...updates };
+        });
+    };
+
+    const handleCashChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let cAmt = parsed ? parseInt(parsed, 10) : 0;
+        setFormItem(prev => ({
+            ...prev,
+            cash_amount: String(cAmt),
+            online_amount: String(Math.max(0, (parseInt(prev.payment_amount) || 0) - cAmt))
+        }));
+    };
+
+    const handleOnlineChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let oAmt = parsed ? parseInt(parsed, 10) : 0;
+        setFormItem(prev => ({
+            ...prev,
+            online_amount: String(oAmt),
+            cash_amount: String(Math.max(0, (parseInt(prev.payment_amount) || 0) - oAmt))
+        }));
+    };
+
+    const handlePaymentMethodChange = (pm) => {
+        setFormItem(prev => {
+            let updates = { payment_method: pm };
+            if (pm === 'Split' && prev.payment_amount) {
+                updates.cash_amount = String(prev.payment_amount);
+                updates.online_amount = '0';
+            }
+            return { ...prev, ...updates };
+        });
+    };
+
+    const handlePurchasePaymentChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let numVal = parsed ? parseInt(parsed, 10) : '';
+        setFormItem(prev => {
+            let updates = { purchase_paid_amount: String(numVal) };
+            if (prev.purchase_payment_method === 'Split' && numVal !== '') {
+                updates.purchase_cash_amount = String(numVal);
+                updates.purchase_online_amount = '0';
+            }
+            return { ...prev, ...updates };
+        });
+    };
+
+    const handlePurchaseCashChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let cAmt = parsed ? parseInt(parsed, 10) : 0;
+        setFormItem(prev => ({
+            ...prev,
+            purchase_cash_amount: String(cAmt),
+            purchase_online_amount: String(Math.max(0, (parseInt(prev.purchase_paid_amount) || 0) - cAmt))
+        }));
+    };
+
+    const handlePurchaseOnlineChange = (val) => {
+        let parsed = val.replace(/[^0-9]/g, '');
+        let oAmt = parsed ? parseInt(parsed, 10) : 0;
+        setFormItem(prev => ({
+            ...prev,
+            purchase_online_amount: String(oAmt),
+            purchase_cash_amount: String(Math.max(0, (parseInt(prev.purchase_paid_amount) || 0) - oAmt))
+        }));
+    };
+
+    const handlePurchasePaymentMethodChange = (pm) => {
+        setFormItem(prev => {
+            let updates = { purchase_payment_method: pm };
+            if (pm === 'Split' && prev.purchase_paid_amount) {
+                updates.purchase_cash_amount = String(prev.purchase_paid_amount);
+                updates.purchase_online_amount = '0';
+            }
+            return { ...prev, ...updates };
+        });
+    };
+
     const handleSave = async () => {
         if (!formItem.name || !String(formItem.name).trim()) {
             useToastStore.getState().showToast('Error', 'Supplier name is required.', 'error'); return;
@@ -142,9 +230,9 @@ export default function SuppliersScreen() {
                 }
                 const pm = formItem.purchase_payment_method || 'Cash';
                 if (pm === 'Split' && paidAmt > 0) {
-                    const pc = Number(formItem.purchase_cash_amount || 0);
-                    const po = Number(formItem.purchase_online_amount || 0);
-                    if (Math.abs((pc + po) - paidAmt) > 0.01) {
+                    const pc = Math.round(Number(formItem.purchase_cash_amount || 0));
+                    const po = Math.round(Number(formItem.purchase_online_amount || 0));
+                    if (Math.abs((pc + po) - paidAmt) !== 0) {
                         useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${paidAmt}).`, 'error'); return;
                     }
                 }
@@ -155,8 +243,8 @@ export default function SuppliersScreen() {
                     paid_amount: paidAmt,
                     purchase_date: formItem.purchase_date.toISOString().split('T')[0],
                     payment_method: pm,
-                    cash_amount: Number(formItem.purchase_cash_amount || 0),
-                    online_amount: Number(formItem.purchase_online_amount || 0),
+                    cash_amount: Math.round(Number(formItem.purchase_cash_amount || 0)),
+                    online_amount: Math.round(Number(formItem.purchase_online_amount || 0)),
                 };
             }
 
@@ -174,7 +262,7 @@ export default function SuppliersScreen() {
 
         // Validate payment
         if (hasPayment) {
-            const payAmt = Number(payStr);
+            const payAmt = Math.round(Number(payStr));
             if (!Number.isFinite(payAmt) || payAmt <= 0) {
                 useToastStore.getState().showToast('Error', 'Enter a valid payment amount.', 'error'); return;
             }
@@ -182,23 +270,23 @@ export default function SuppliersScreen() {
                 useToastStore.getState().showToast('Error', 'Payment cannot exceed remaining amount: Rs. ' + formItem.txn_due, 'error'); return;
             }
             if (formItem.payment_method === 'Split') {
-                const pc = Number(formItem.cash_amount || 0);
-                const po = Number(formItem.online_amount || 0);
+                const pc = Math.round(Number(formItem.cash_amount || 0));
+                const po = Math.round(Number(formItem.online_amount || 0));
                 if (pc < 0 || po < 0) { useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error'); return; }
-                if (Math.abs((pc + po) - payAmt) > 0.01) { useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${payAmt}).`, 'error'); return; }
+                if (Math.abs((pc + po) - payAmt) !== 0) { useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${payAmt}).`, 'error'); return; }
             }
         }
 
         // Validate product
         if (hasProduct) {
-            const pPaid = Number(formItem.purchase_paid_amount || 0);
-            const pTotal = Number(formItem.total_amount || 0);
+            const pPaid = Math.round(Number(formItem.purchase_paid_amount || 0));
+            const pTotal = Math.round(Number(formItem.total_amount || 0));
             if (pPaid > pTotal) { useToastStore.getState().showToast('Error', 'Paid amount cannot exceed total amount.', 'error'); return; }
             if (formItem.purchase_payment_method === 'Split') {
-                const pc = Number(formItem.purchase_cash_amount || 0);
-                const po = Number(formItem.purchase_online_amount || 0);
+                const pc = Math.round(Number(formItem.purchase_cash_amount || 0));
+                const po = Math.round(Number(formItem.purchase_online_amount || 0));
                 if (pc < 0 || po < 0) { useToastStore.getState().showToast('Error', 'Split amounts cannot be negative.', 'error'); return; }
-                if (pPaid > 0 && Math.abs((pc + po) - pPaid) > 0.01) { useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${pPaid}).`, 'error'); return; }
+                if (pPaid > 0 && Math.abs((pc + po) - pPaid) !== 0) { useToastStore.getState().showToast('Error', `Split amounts (${pc}+${po}) must equal paid amount (${pPaid}).`, 'error'); return; }
             }
         }
 
@@ -211,11 +299,11 @@ export default function SuppliersScreen() {
                 category: formItem.category,
             };
             if (hasPayment) {
-                basicPayload.payment_amount = Number(payStr);
+                basicPayload.payment_amount = Math.round(Number(payStr));
                 basicPayload.date = formItem.payment_date.toISOString().split('T')[0];
                 basicPayload.payment_method = formItem.payment_method;
-                basicPayload.cash_amount = Number(formItem.cash_amount || 0);
-                basicPayload.online_amount = Number(formItem.online_amount || 0);
+                basicPayload.cash_amount = Math.round(Number(formItem.cash_amount || 0));
+                basicPayload.online_amount = Math.round(Number(formItem.online_amount || 0));
             }
             await suppliersService.update(formItem.id, basicPayload);
 
@@ -227,12 +315,12 @@ export default function SuppliersScreen() {
                     supplier_id: formItem.id,
                     product_name: hasProduct ? String(formItem.product_name).trim() : 'Opening Balance',
                     quantity: hasProduct ? Number(formItem.quantity) : 1,
-                    total_amount: Number(formItem.total_amount || 0),
-                    paid_amount: Number(formItem.purchase_paid_amount || 0),
+                    total_amount: Math.round(Number(formItem.total_amount || 0)),
+                    paid_amount: Math.round(Number(formItem.purchase_paid_amount || 0)),
                     purchase_date: formItem.purchase_date.toISOString().split('T')[0],
                     payment_method: formItem.purchase_payment_method,
-                    cash_amount: Number(formItem.purchase_cash_amount || 0),
-                    online_amount: Number(formItem.purchase_online_amount || 0)
+                    cash_amount: Math.round(Number(formItem.purchase_cash_amount || 0)),
+                    online_amount: Math.round(Number(formItem.purchase_online_amount || 0))
                 });
             }
 
@@ -378,7 +466,8 @@ export default function SuppliersScreen() {
             return (
                 (s.name || '').toLowerCase().includes(q) ||
                 (s.company_name || '').toLowerCase().includes(q) ||
-                (s.phone || '').includes(search)
+                (s.phone || '').includes(search) ||
+                String(s.id).includes(search)
             );
         });
 
@@ -558,7 +647,7 @@ export default function SuppliersScreen() {
                     return (
                         <ExpandableItem
                             title={item.name}
-                            subtitle={[item.category, item.company_name, item.phone].filter(Boolean).join(' • ') || null}
+                            subtitle={[item.category, item.company_name, item.phone ? (showPhones[item.id] ? item.phone : item.phone.replace(/./g, '*')) : null].filter(Boolean).join(' • ') || null}
                             rightText={hasDue ? `Rs. ${due.toLocaleString()}` : '✓ Clear'}
                             rightSubText={`Total: Rs. ${totalVol.toLocaleString()}`}
                             rightTextColor={hasDue ? colors.status.danger : colors.status.success}
@@ -730,9 +819,9 @@ export default function SuppliersScreen() {
                                     <View style={{ height: 1, backgroundColor: colors.border.color, marginVertical: 10 }} />
                                     <Text style={[styles.inputLabel, { color: colors.accent.primary, fontFamily: FONTS.bold }]}>Pay supplier (Rs) <Text style={{color: colors.text.muted, fontSize: 12, fontFamily: FONTS.regular}}>(max: {formItem.txn_due})</Text></Text>
                                     <Text style={{ fontSize: 11, color: colors.text.muted, marginBottom: 8 }}>Aap supplier ko pay karte hain — sab se purani unpaid entries pehle clear hoti hain.</Text>
-                                    <TextInput style={styles.input} value={formItem.payment_amount} onChangeText={t => setFormItem({...formItem, payment_amount: t})} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={colors.text.muted} />
+                                    <TextInput style={styles.input} value={String(formItem.payment_amount)} onChangeText={handlePaymentChange} keyboardType="numeric" placeholder="Enter amount..." placeholderTextColor={colors.text.muted} />
 
-                                    {formItem.payment_amount > 0 && (
+                                    {Number(formItem.payment_amount) > 0 && (
                                         <View style={{ marginBottom: 16 }}>
                                             <Text style={styles.inputLabel}>Payment Method</Text>
                                             <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
@@ -740,7 +829,7 @@ export default function SuppliersScreen() {
                                                     <TouchableOpacity
                                                         key={pm}
                                                         style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, formItem.payment_method === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
-                                                        onPress={() => setFormItem({...formItem, payment_method: pm})}
+                                                        onPress={() => handlePaymentMethodChange(pm)}
                                                     >
                                                         <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary }, formItem.payment_method === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>{pm === 'Online' ? '📱 Online' : (pm === 'Cash' ? '💵 Cash' : '🔀 Split')}</Text>
                                                     </TouchableOpacity>
@@ -751,11 +840,11 @@ export default function SuppliersScreen() {
                                                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                                                     <View style={{ flex: 1 }}>
                                                         <Text style={[styles.inputLabel, { fontSize: 11 }]}>Cash Amount</Text>
-                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.cash_amount} onChangeText={t => setFormItem({...formItem, cash_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={String(formItem.cash_amount)} onChangeText={handleCashChange} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                                     </View>
                                                     <View style={{ flex: 1 }}>
                                                         <Text style={[styles.inputLabel, { fontSize: 11 }]}>Online Amount</Text>
-                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.online_amount} onChangeText={t => setFormItem({...formItem, online_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={String(formItem.online_amount)} onChangeText={handleOnlineChange} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                                     </View>
                                                 </View>
                                             )}
@@ -850,8 +939,8 @@ export default function SuppliersScreen() {
                                             <Text style={[styles.inputLabel, { fontSize: 12 }]}>Paid Amount (Rs)</Text>
                                             <TextInput
                                                 style={[styles.input, { marginBottom: 0 }]}
-                                                value={formItem.purchase_paid_amount}
-                                                onChangeText={t => setFormItem({...formItem, purchase_paid_amount: t})}
+                                                value={String(formItem.purchase_paid_amount)}
+                                                onChangeText={handlePurchasePaymentChange}
                                                 keyboardType="numeric"
                                                 placeholder="0"
                                                 placeholderTextColor={colors.text.muted}
@@ -867,7 +956,7 @@ export default function SuppliersScreen() {
                                                     <TouchableOpacity
                                                         key={pm}
                                                         style={[{ flex: 1, paddingVertical: 10, borderRadius: 8, alignItems: 'center', backgroundColor: colors.background.primary, borderWidth: 1, borderColor: colors.border.color }, formItem.purchase_payment_method === pm && { backgroundColor: 'rgba(56,189,248,0.1)', borderColor: '#38bdf8' }]}
-                                                        onPress={() => setFormItem({...formItem, purchase_payment_method: pm})}
+                                                        onPress={() => handlePurchasePaymentMethodChange(pm)}
                                                     >
                                                         <Text style={[{ fontFamily: FONTS.medium, color: colors.text.primary, fontSize: 12 }, formItem.purchase_payment_method === pm && { color: '#38bdf8', fontFamily: FONTS.bold }]}>
                                                             {pm === 'Online' ? '📱 Online' : pm === 'Cash' ? '💵 Cash' : '🔀 Split'}
@@ -880,11 +969,11 @@ export default function SuppliersScreen() {
                                                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                                                     <View style={{ flex: 1 }}>
                                                         <Text style={[styles.inputLabel, { fontSize: 11 }]}>Cash Amount</Text>
-                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.purchase_cash_amount} onChangeText={t => setFormItem({...formItem, purchase_cash_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={String(formItem.purchase_cash_amount)} onChangeText={handlePurchaseCashChange} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                                     </View>
                                                     <View style={{ flex: 1 }}>
                                                         <Text style={[styles.inputLabel, { fontSize: 11 }]}>Online Amount</Text>
-                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={formItem.purchase_online_amount} onChangeText={t => setFormItem({...formItem, purchase_online_amount: t})} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
+                                                        <TextInput style={[styles.input, { marginBottom: 0 }]} value={String(formItem.purchase_online_amount)} onChangeText={handlePurchaseOnlineChange} keyboardType="numeric" placeholder="0" placeholderTextColor={colors.text.muted} />
                                                     </View>
                                                 </View>
                                             )}
