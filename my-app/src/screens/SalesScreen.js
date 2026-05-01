@@ -213,55 +213,48 @@ export default function SalesScreen() {
     }, [sales, activeFilter, search, categoryFilterOption, sortOption]);
 
     const groupedSales = useMemo(() => {
-        // 1. Sort the raw filtered list by date first to group chronologically
-        const sortedList = [...filteredSales].sort((a, b) => {
-            const dA = a.purchase_date ? new Date(a.purchase_date).getTime() : 0;
-            const dB = b.purchase_date ? new Date(b.purchase_date).getTime() : 0;
-            if (dA === dB) return b.id - a.id;
-            return dB - dA;
-        });
+        const groupsMap = new Map();
+        const legacyGroups = [];
 
-        // 2. Group adjacent sales
-        const groups = [];
-        let currentGroup = null;
-
-        sortedList.forEach((sale) => {
+        filteredSales.forEach((sale) => {
             const saleTime = sale.purchase_date ? new Date(sale.purchase_date).getTime() : 0;
             const buyerName = sale.buyers?.name || sale.buyer_name || 'Walk-in';
             const salesman = sale.users?.name || '-';
-            
-            if (!currentGroup) {
-                currentGroup = {
-                    id: sale.invoice_id || sale.id,
-                    invoice_id: sale.invoice_id,
-                    buyerName,
-                    phone: sale.buyers?.phone || '',
-                    date: sale.purchase_date,
-                    time: saleTime,
-                    salesman,
-                    items: [sale],
-                    totalAmount: Number(sale.total_amount || 0)
-                };
-            } else {
-                const timeDiff = Math.abs(currentGroup.time - saleTime);
-                const isSameBuyer = currentGroup.buyerName === buyerName;
-                const isSameSalesman = currentGroup.salesman === salesman;
-                
-                const shouldGroup = (sale.invoice_id && currentGroup.invoice_id)
-                    ? (sale.invoice_id === currentGroup.invoice_id)
-                    : (isSameBuyer && isSameSalesman && timeDiff <= 120000);
 
-                if (shouldGroup) {
-                    currentGroup.items.push(sale);
-                    currentGroup.totalAmount += Number(sale.total_amount || 0);
-                    if (!currentGroup.invoice_id && sale.id < currentGroup.id) {
-                        currentGroup.id = sale.id;
+            if (sale.invoice_id) {
+                if (!groupsMap.has(sale.invoice_id)) {
+                    groupsMap.set(sale.invoice_id, {
+                        id: sale.invoice_id,
+                        invoice_id: sale.invoice_id,
+                        buyerName,
+                        phone: sale.buyers?.phone || '',
+                        date: sale.purchase_date,
+                        time: saleTime,
+                        salesman,
+                        items: [],
+                        totalAmount: 0
+                    });
+                }
+                const group = groupsMap.get(sale.invoice_id);
+                group.items.push(sale);
+                group.totalAmount += Number(sale.total_amount || 0);
+            } else {
+                const existingGroup = legacyGroups.find(g => 
+                    g.buyerName === buyerName &&
+                    g.salesman === salesman &&
+                    Math.abs(g.time - saleTime) <= 120000
+                );
+
+                if (existingGroup) {
+                    existingGroup.items.push(sale);
+                    existingGroup.totalAmount += Number(sale.total_amount || 0);
+                    if (sale.id < existingGroup.id) {
+                        existingGroup.id = sale.id;
                     }
                 } else {
-                    groups.push(currentGroup);
-                    currentGroup = {
-                        id: sale.invoice_id || sale.id,
-                        invoice_id: sale.invoice_id,
+                    legacyGroups.push({
+                        id: sale.id,
+                        invoice_id: null,
                         buyerName,
                         phone: sale.buyers?.phone || '',
                         date: sale.purchase_date,
@@ -269,11 +262,12 @@ export default function SalesScreen() {
                         salesman,
                         items: [sale],
                         totalAmount: Number(sale.total_amount || 0)
-                    };
+                    });
                 }
             }
         });
-        if (currentGroup) groups.push(currentGroup);
+
+        const groups = [...Array.from(groupsMap.values()), ...legacyGroups];
 
         // 3. Sort groups based on user sort option
         groups.sort((a, b) => {
