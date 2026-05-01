@@ -39,8 +39,7 @@ export default function DatabaseExportScreen({ navigation }) {
     const [isClearing, setIsClearing] = useState(false);
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [confirmCode, setConfirmCode] = useState('');
-    
-    const lockTimer = useRef(null);
+
     /* ── archive state ── */
     const [archiveTimeframe, setArchiveTimeframe] = useState('1_year');
     const [isArchiving, setIsArchiving] = useState(false);
@@ -55,7 +54,7 @@ export default function DatabaseExportScreen({ navigation }) {
         { id: '1_year', label: '1 Year' },
         { id: '2_years', label: '2 Years' }
     ];
-    
+
     const lockTimer = useRef(null);
     const countdownTimer = useRef(null);
 
@@ -134,7 +133,7 @@ export default function DatabaseExportScreen({ navigation }) {
             const token = await tokenStorage.getItemAsync('token');
             const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
             const endpoint = `${apiUrl}/export/export-csv`;
-            
+
             const fileUri = FileSystem.documentDirectory + `database_export_${new Date().toISOString().split('T')[0]}.csv`;
 
             const downloadRes = await FileSystem.downloadAsync(endpoint, fileUri, {
@@ -164,7 +163,7 @@ export default function DatabaseExportScreen({ navigation }) {
             const token = await tokenStorage.getItemAsync('token');
             const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:5000/api';
             const endpoint = `${apiUrl}/export/download-archive?timeframe=${archiveTimeframe}`;
-            
+
             const fileUri = FileSystem.documentDirectory + `archive_${archiveTimeframe}_${new Date().toISOString().split('T')[0]}.json`;
 
             const downloadRes = await FileSystem.downloadAsync(endpoint, fileUri, {
@@ -190,7 +189,7 @@ export default function DatabaseExportScreen({ navigation }) {
 
     const handleDeleteArchive = async () => {
         if (archiveConfirmCode !== 'DELETE_MY_DATA') return;
-        
+
         try {
             setIsDeletingArchive(true);
             await api.post('/export/delete-archive', { timeframe: archiveTimeframe, confirmCode: 'DELETE_MY_DATA' });
@@ -206,14 +205,14 @@ export default function DatabaseExportScreen({ navigation }) {
 
     const handleClearData = async () => {
         if (confirmCode !== 'DELETE_MY_DATA') return;
-        
+
         try {
             setIsClearing(true);
             await api.post('/export/clear-data', { confirmCode: 'DELETE_MY_DATA' });
             Alert.alert("Success", "✅ All data cleared successfully!");
             setShowClearConfirm(false);
             setConfirmCode('');
-            
+
             // Wait shortly, then logout
             setTimeout(async () => {
                 await tokenStorage.deleteItemAsync('token');
@@ -258,19 +257,19 @@ export default function DatabaseExportScreen({ navigation }) {
 
                     {pwError ? <Text style={styles.pwErrorText}>⚠️ {pwError}</Text> : null}
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
                         style={[styles.submitBtn, (pwLoading || !enteredPassword.trim()) ? styles.submitBtnDisabled : null]}
                         onPress={handlePasswordSubmit}
                         disabled={pwLoading || !enteredPassword.trim()}
                     >
                         {pwLoading ? (
                             <>
-                                <ActivityIndicator size="small" color="#fff" style={{marginRight: 8}}/>
+                                <ActivityIndicator size="small" color="#fff" style={{ marginRight: 8 }} />
                                 <Text style={styles.submitBtnText}>Verifying...</Text>
                             </>
                         ) : (
                             <>
-                                <Icon name="key" size={16} color="#fff" style={{marginRight: 6}} />
+                                <Icon name="key" size={16} color="#fff" style={{ marginRight: 6 }} />
                                 <Text style={styles.submitBtnText}>Unlock Screen</Text>
                             </>
                         )}
@@ -284,20 +283,20 @@ export default function DatabaseExportScreen({ navigation }) {
         <View style={styles.unlockedWrapper}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.header}>
-                    <View style={{flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8}}>
-                        <Icon name="server" size={28} color={colors.text.primary} style={{marginRight: 10}}/>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 8 }}>
+                        <Icon name="server" size={28} color={colors.text.primary} style={{ marginRight: 10 }} />
                         <Text style={styles.headerTitle}>Database Management</Text>
                     </View>
                     <Text style={styles.headerSubtitle}>Export your complete data or clear everything</Text>
                 </View>
 
                 {/* Export Section */}
-                <View style={[styles.actionCard, {borderColor: 'rgba(59, 130, 246, 0.3)'}]}>
+                <View style={[styles.actionCard, { borderColor: 'rgba(59, 130, 246, 0.3)' }]}>
                     <View style={styles.actionHeader}>
-                        <View style={[styles.iconBox, {backgroundColor: 'rgba(59, 130, 246, 0.15)'}]}>
+                        <View style={[styles.iconBox, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
                             <Icon name="document-text" size={32} color="#3b82f6" />
                         </View>
-                        <View style={{flex: 1}}>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.actionTitle}>Export Database</Text>
                             <Text style={styles.actionSub}>Download all your data as CSV file</Text>
                         </View>
@@ -312,34 +311,34 @@ export default function DatabaseExportScreen({ navigation }) {
                             <Text style={styles.previewLine}>💸 All Expenses</Text>
                             <Text style={styles.previewLine}>📋 All Purchases</Text>
                         </View>
-                        <TouchableOpacity 
-                            style={[styles.exportBtn, isExporting && styles.btnDisabled]} 
+                        <TouchableOpacity
+                            style={[styles.exportBtn, isExporting && styles.btnDisabled]}
                             onPress={handleExport}
                             disabled={isExporting}
                         >
-                            <Icon name="download" size={20} color="#fff" style={{marginRight: 8}}/>
+                            <Icon name="download" size={20} color="#fff" style={{ marginRight: 8 }} />
                             <Text style={styles.btnText}>{isExporting ? 'Exporting...' : 'Download CSV'}</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
 
                 {/* Archive Section */}
-                <View style={[styles.actionCard, {borderColor: 'rgba(245, 158, 11, 0.3)', backgroundColor: 'rgba(245, 158, 11, 0.05)'}]}>
+                <View style={[styles.actionCard, { borderColor: 'rgba(245, 158, 11, 0.3)', backgroundColor: 'rgba(245, 158, 11, 0.05)' }]}>
                     <View style={styles.actionHeader}>
-                        <View style={[styles.iconBox, {backgroundColor: 'rgba(245, 158, 11, 0.15)'}]}>
+                        <View style={[styles.iconBox, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
                             <Icon name="archive" size={32} color="#f59e0b" />
                         </View>
-                        <View style={{flex: 1}}>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.actionTitle}>Data Archive</Text>
                             <Text style={styles.actionSub}>Download and delete old records</Text>
                         </View>
                     </View>
                     <View style={styles.actionContent}>
-                        <Text style={[styles.previewHeading, {marginBottom: 8}]}>Select Timeframe to Archive:</Text>
+                        <Text style={[styles.previewHeading, { marginBottom: 8 }]}>Select Timeframe to Archive:</Text>
                         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
                             {TIMEFRAMES.map((tf) => (
-                                <TouchableOpacity 
-                                    key={tf.id} 
+                                <TouchableOpacity
+                                    key={tf.id}
                                     style={[styles.tfBtn, archiveTimeframe === tf.id && styles.tfBtnActive]}
                                     onPress={() => setArchiveTimeframe(tf.id)}
                                 >
@@ -350,28 +349,28 @@ export default function DatabaseExportScreen({ navigation }) {
 
                         <View style={styles.dataPreviewBox}>
                             <Text style={styles.previewHeading}>What gets archived/deleted:</Text>
-                            <Text style={styles.previewLine}>📦 <Text style={{color: '#10b981', fontFamily: FONTS.bold}}>NEVER </Text> Products</Text>
-                            <Text style={styles.previewLine}>👥 <Text style={{color: '#10b981', fontFamily: FONTS.bold}}>NEVER </Text> Udhaar Customers</Text>
+                            <Text style={styles.previewLine}>📦 <Text style={{ color: '#10b981', fontFamily: FONTS.bold }}>NEVER </Text> Products</Text>
+                            <Text style={styles.previewLine}>👥 <Text style={{ color: '#10b981', fontFamily: FONTS.bold }}>NEVER </Text> Udhaar Customers</Text>
                             <Text style={styles.previewLine}>🗑️ Only fully paid transactions & expenses</Text>
                         </View>
-                        
+
                         <View style={{ gap: 12 }}>
-                            <TouchableOpacity 
-                                style={[styles.exportBtn, {backgroundColor: '#f59e0b', marginBottom: 12}, isArchiving && styles.btnDisabled]} 
+                            <TouchableOpacity
+                                style={[styles.exportBtn, { backgroundColor: '#f59e0b', marginBottom: 12 }, isArchiving && styles.btnDisabled]}
                                 onPress={handleDownloadArchive}
                                 disabled={isArchiving}
                             >
-                                <Icon name="download" size={20} color="#fff" style={{marginRight: 8}}/>
+                                <Icon name="download" size={20} color="#fff" style={{ marginRight: 8 }} />
                                 <Text style={styles.btnText}>{isArchiving ? 'Generating JSON...' : 'Download JSON Archive'}</Text>
                             </TouchableOpacity>
 
                             {!showArchiveConfirm ? (
-                                <TouchableOpacity 
+                                <TouchableOpacity
                                     style={[styles.dangerBtn, isDeletingArchive && styles.btnDisabled]}
                                     onPress={() => setShowArchiveConfirm(true)}
                                     disabled={isDeletingArchive}
                                 >
-                                    <Icon name="trash" size={20} color="#fff" style={{marginRight: 8}}/>
+                                    <Icon name="trash" size={20} color="#fff" style={{ marginRight: 8 }} />
                                     <Text style={styles.btnText}>Delete Archived Data</Text>
                                 </TouchableOpacity>
                             ) : (
@@ -387,19 +386,19 @@ export default function DatabaseExportScreen({ navigation }) {
                                         editable={!isDeletingArchive}
                                     />
                                     <View style={styles.confirmBtnRow}>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={[styles.cancelBtn, isDeletingArchive && styles.btnDisabled]}
                                             onPress={() => { setShowArchiveConfirm(false); setArchiveConfirmCode(''); }}
                                             disabled={isDeletingArchive}
                                         >
                                             <Text style={styles.cancelBtnText}>Cancel</Text>
                                         </TouchableOpacity>
-                                        <TouchableOpacity 
+                                        <TouchableOpacity
                                             style={[styles.confirmDangerBtn, (isDeletingArchive || archiveConfirmCode !== 'DELETE_MY_DATA') && styles.btnDisabled]}
                                             onPress={handleDeleteArchive}
                                             disabled={isDeletingArchive || archiveConfirmCode !== 'DELETE_MY_DATA'}
                                         >
-                                            <Icon name="trash" size={18} color="#fff" style={{marginRight: 4}}/>
+                                            <Icon name="trash" size={18} color="#fff" style={{ marginRight: 4 }} />
                                             <Text style={styles.btnText}>{isDeletingArchive ? 'Deleting...' : 'Confirm'}</Text>
                                         </TouchableOpacity>
                                     </View>
@@ -412,30 +411,30 @@ export default function DatabaseExportScreen({ navigation }) {
                 {/* Clear Section */}
                 <View style={[styles.actionCard, styles.dangerCard]}>
                     <View style={styles.actionHeader}>
-                        <View style={[styles.iconBox, {backgroundColor: 'rgba(239, 68, 68, 0.15)'}]}>
+                        <View style={[styles.iconBox, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
                             <Icon name="warning" size={32} color="#ef4444" />
                         </View>
-                        <View style={{flex: 1}}>
+                        <View style={{ flex: 1 }}>
                             <Text style={styles.actionTitle}>Clear Database</Text>
                             <Text style={styles.actionSub}>Permanently delete all your data</Text>
                         </View>
                     </View>
                     <View style={styles.actionContent}>
                         <View style={styles.warningBox}>
-                            <Icon name="shield" size={22} color="#ef4444" style={{marginTop: 2, marginRight: 10}}/>
-                            <View style={{flex: 1}}>
+                            <Icon name="shield" size={22} color="#ef4444" style={{ marginTop: 2, marginRight: 10 }} />
+                            <View style={{ flex: 1 }}>
                                 <Text style={styles.warningHeading}>⚠️ WARNING: This action cannot be undone!</Text>
                                 <Text style={styles.warningLine}>All data will be permanently deleted including products, sales, history, and analytics.</Text>
                             </View>
                         </View>
 
                         {!showClearConfirm ? (
-                            <TouchableOpacity 
+                            <TouchableOpacity
                                 style={[styles.dangerBtn, isClearing && styles.btnDisabled]}
                                 onPress={() => setShowClearConfirm(true)}
                                 disabled={isClearing}
                             >
-                                <Icon name="trash" size={20} color="#fff" style={{marginRight: 8}}/>
+                                <Icon name="trash" size={20} color="#fff" style={{ marginRight: 8 }} />
                                 <Text style={styles.btnText}>Clear All Data</Text>
                             </TouchableOpacity>
                         ) : (
@@ -451,19 +450,19 @@ export default function DatabaseExportScreen({ navigation }) {
                                     editable={!isClearing}
                                 />
                                 <View style={styles.confirmBtnRow}>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={[styles.cancelBtn, isClearing && styles.btnDisabled]}
                                         onPress={() => { setShowClearConfirm(false); setConfirmCode(''); }}
                                         disabled={isClearing}
                                     >
                                         <Text style={styles.cancelBtnText}>Cancel</Text>
                                     </TouchableOpacity>
-                                    <TouchableOpacity 
+                                    <TouchableOpacity
                                         style={[styles.confirmDangerBtn, (isClearing || confirmCode !== 'DELETE_MY_DATA') && styles.btnDisabled]}
                                         onPress={handleClearData}
                                         disabled={isClearing || confirmCode !== 'DELETE_MY_DATA'}
                                     >
-                                        <Icon name="trash" size={18} color="#fff" style={{marginRight: 4}}/>
+                                        <Icon name="trash" size={18} color="#fff" style={{ marginRight: 4 }} />
                                         <Text style={styles.btnText}>{isClearing ? 'Deleting...' : 'Delete Everything'}</Text>
                                     </TouchableOpacity>
                                 </View>
@@ -471,14 +470,14 @@ export default function DatabaseExportScreen({ navigation }) {
                         )}
                     </View>
                 </View>
-                
-                <View style={{height: 60}} />
+
+                <View style={{ height: 60 }} />
             </ScrollView>
 
             {/* Countdown Badge overlay */}
             <View style={[styles.countdownBadge, timeLeft <= 30000 ? styles.countdownWarning : null]}>
                 <Icon name="time" size={16} color={timeLeft <= 30000 ? "#f87171" : colors.accent.primary} />
-                <Text style={[styles.countdownText, timeLeft <= 30000 && {color: '#f87171'}]}>
+                <Text style={[styles.countdownText, timeLeft <= 30000 && { color: '#f87171' }]}>
                     Auto-lock: {formatTime(timeLeft)}
                 </Text>
                 <TouchableOpacity onPress={lockPage} style={styles.lockNowBtn}>
