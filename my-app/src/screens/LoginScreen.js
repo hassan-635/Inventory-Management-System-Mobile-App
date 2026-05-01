@@ -11,6 +11,7 @@ export default function LoginScreen() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [loginType, setLoginType] = useState('salesman'); // 'salesman' or 'developer'
     const setAuth = useAuthStore((state) => state.setAuth);
 
     const handleLogin = async () => {
@@ -21,7 +22,7 @@ export default function LoginScreen() {
 
         try {
             setLoading(true);
-            const data = await authService.login(email, password);
+            const data = await authService.login(email, password, loginType);
             // Save token securely (encrypted) instead of plain-text AsyncStorage
             await tokenStorage.setItemAsync('token', data.token);
             primeAuthToken(data.token);
@@ -47,6 +48,21 @@ export default function LoginScreen() {
                         <Text style={styles.title}>Inventory Pro</Text>
                     </View>
                     <Text style={styles.subtitle}>Welcome back, login to your account</Text>
+
+                    <View style={styles.roleSelector}>
+                        <TouchableOpacity 
+                            style={[styles.roleTab, loginType === 'salesman' && styles.activeRoleTab]} 
+                            onPress={() => setLoginType('salesman')}
+                        >
+                            <Text style={[styles.roleTabText, loginType === 'salesman' && styles.activeRoleTabText]}>Salesman</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.roleTab, loginType === 'developer' && styles.activeRoleTab]} 
+                            onPress={() => setLoginType('developer')}
+                        >
+                            <Text style={[styles.roleTabText, loginType === 'developer' && styles.activeRoleTabText]}>Developer</Text>
+                        </TouchableOpacity>
+                    </View>
 
                     <View style={styles.inputGroup}>
                         <Text style={styles.label}>Email Address</Text>
@@ -77,7 +93,7 @@ export default function LoginScreen() {
                         {loading ? (
                             <ActivityIndicator color="#fff" />
                         ) : (
-                            <Text style={styles.loginButtonText}>Sign In</Text>
+                            <Text style={styles.loginButtonText}>Sign In as {loginType === 'developer' ? 'Developer' : 'Salesman'}</Text>
                         )}
                     </TouchableOpacity>
                 </View>
@@ -133,8 +149,33 @@ const styles = StyleSheet.create({
     subtitle: {
         color: COLORS.text.secondary,
         fontSize: 14,
-        marginBottom: 32,
+        marginBottom: 20,
         textAlign: 'center',
+    },
+    roleSelector: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 12,
+        marginBottom: 20,
+        padding: 4,
+    },
+    roleTab: {
+        flex: 1,
+        paddingVertical: 10,
+        alignItems: 'center',
+        borderRadius: 8,
+    },
+    activeRoleTab: {
+        backgroundColor: COLORS.accent.primary,
+    },
+    roleTabText: {
+        color: COLORS.text.secondary,
+        fontFamily: FONTS.medium,
+        fontSize: 14,
+    },
+    activeRoleTabText: {
+        color: '#fff',
+        fontFamily: FONTS.bold,
     },
     inputGroup: {
         marginBottom: 20,
