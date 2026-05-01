@@ -176,7 +176,7 @@ export default function DeveloperDashboardScreen() {
 
     return (
         <SafeAreaView style={styles.container}>
-            <LinearGradient colors={['#3f36c0ff', '#6b6a8fff', COLORS.background.primary]} style={StyleSheet.absoluteFillObject} />
+            <LinearGradient colors={['#e0e7ff', '#c7d2fe', '#f3f4f6']} style={StyleSheet.absoluteFillObject} />
             
             <View style={styles.header}>
                 <View style={styles.headerLeft}>
@@ -202,15 +202,15 @@ export default function DeveloperDashboardScreen() {
 
             <View style={styles.tabContainer}>
                 <TouchableOpacity style={[styles.tab, activeTab === 'create' && styles.activeTab]} onPress={() => setActiveTab('create')}>
-                    <Icon name="person-add" size={18} color={activeTab === 'create' ? '#fff' : COLORS.text.secondary} />
+                    <Icon name="person-add" size={18} color={activeTab === 'create' ? '#fff' : '#6b7280'} />
                     <Text style={[styles.tabText, activeTab === 'create' && styles.activeTabText]}>Create</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, activeTab === 'my-creds' && styles.activeTab]} onPress={() => setActiveTab('my-creds')}>
-                    <Icon name="shield-checkmark" size={18} color={activeTab === 'my-creds' ? '#fff' : COLORS.text.secondary} />
+                    <Icon name="shield-checkmark" size={18} color={activeTab === 'my-creds' ? '#fff' : '#6b7280'} />
                     <Text style={[styles.tabText, activeTab === 'my-creds' && styles.activeTabText]}>My Creds</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.tab, activeTab === 'salesman' && styles.activeTab]} onPress={() => setActiveTab('salesman')}>
-                    <Icon name="people" size={18} color={activeTab === 'salesman' ? '#fff' : COLORS.text.secondary} />
+                    <Icon name="people" size={18} color={activeTab === 'salesman' ? '#fff' : '#6b7280'} />
                     <Text style={[styles.tabText, activeTab === 'salesman' && styles.activeTabText]}>Salesmen</Text>
                 </TouchableOpacity>
             </View>
@@ -225,16 +225,16 @@ export default function DeveloperDashboardScreen() {
                             <Text style={styles.cardSubtitle}>Fill in details to create a new salesman account.</Text>
 
                             <Text style={styles.label}>Full Name</Text>
-                            <TextInput style={styles.input} placeholder="Ali Khan" placeholderTextColor={COLORS.text.muted} value={csName} onChangeText={setCsName} />
+                            <TextInput style={styles.input} placeholder="Ali Khan" placeholderTextColor="#9ca3af" value={csName} onChangeText={setCsName} />
 
                             <Text style={styles.label}>Email Address</Text>
-                            <TextInput style={styles.input} placeholder="alikhan@inventorypro.com" placeholderTextColor={COLORS.text.muted} value={csEmail} onChangeText={setCsEmail} autoCapitalize="none" keyboardType="email-address" />
+                            <TextInput style={styles.input} placeholder="alikhan@inventorypro.com" placeholderTextColor="#9ca3af" value={csEmail} onChangeText={setCsEmail} autoCapitalize="none" keyboardType="email-address" />
 
                             <Text style={styles.label}>Password</Text>
                             <View style={styles.pwdWrapper}>
-                                <TextInput style={styles.pwdInput} placeholder="••••••••" placeholderTextColor={COLORS.text.muted} value={csPassword} onChangeText={setCsPassword} secureTextEntry={!csShowPwd} />
+                                <TextInput style={styles.pwdInput} placeholder="••••••••" placeholderTextColor="#9ca3af" value={csPassword} onChangeText={setCsPassword} secureTextEntry={!csShowPwd} />
                                 <TouchableOpacity onPress={() => setCsShowPwd(!csShowPwd)} style={styles.pwdToggle}>
-                                    <Icon name={csShowPwd ? 'eye-off' : 'eye'} size={20} color={COLORS.text.muted} />
+                                    <Icon name={csShowPwd ? 'eye-off' : 'eye'} size={20} color="#9ca3af" />
                                 </TouchableOpacity>
                             </View>
 
@@ -251,16 +251,16 @@ export default function DeveloperDashboardScreen() {
                             <Text style={styles.cardSubtitle}>Update your name, email or password.</Text>
 
                             <Text style={styles.label}>Name</Text>
-                            <TextInput style={styles.input} placeholder="Your name" placeholderTextColor={COLORS.text.muted} value={myName} onChangeText={setMyName} />
+                            <TextInput style={styles.input} placeholder="Your name" placeholderTextColor="#9ca3af" value={myName} onChangeText={setMyName} />
 
                             <Text style={styles.label}>Email</Text>
-                            <TextInput style={styles.input} placeholder="Your email" placeholderTextColor={COLORS.text.muted} value={myEmail} onChangeText={setMyEmail} autoCapitalize="none" keyboardType="email-address" />
+                            <TextInput style={styles.input} placeholder="Your email" placeholderTextColor="#9ca3af" value={myEmail} onChangeText={setMyEmail} autoCapitalize="none" keyboardType="email-address" />
 
                             <Text style={styles.label}>New Password (Optional)</Text>
                             <View style={styles.pwdWrapper}>
-                                <TextInput style={styles.pwdInput} placeholder="Leave blank to keep current" placeholderTextColor={COLORS.text.muted} value={myPassword} onChangeText={setMyPassword} secureTextEntry={!myShowPwd} />
+                                <TextInput style={styles.pwdInput} placeholder="Leave blank to keep current" placeholderTextColor="#9ca3af" value={myPassword} onChangeText={setMyPassword} secureTextEntry={!myShowPwd} />
                                 <TouchableOpacity onPress={() => setMyShowPwd(!myShowPwd)} style={styles.pwdToggle}>
-                                    <Icon name={myShowPwd ? 'eye-off' : 'eye'} size={20} color={COLORS.text.muted} />
+                                    <Icon name={myShowPwd ? 'eye-off' : 'eye'} size={20} color="#9ca3af" />
                                 </TouchableOpacity>
                             </View>
 
@@ -298,16 +298,16 @@ export default function DeveloperDashboardScreen() {
                             {selectedSalesmanId ? (
                                 <View>
                                     <Text style={styles.label}>Name</Text>
-                                    <TextInput style={styles.input} value={smName} onChangeText={setSmName} placeholderTextColor={COLORS.text.muted} />
+                                    <TextInput style={styles.input} value={smName} onChangeText={setSmName} placeholderTextColor="#9ca3af" />
 
                                     <Text style={styles.label}>Email</Text>
-                                    <TextInput style={styles.input} value={smEmail} onChangeText={setSmEmail} autoCapitalize="none" keyboardType="email-address" placeholderTextColor={COLORS.text.muted} />
+                                    <TextInput style={styles.input} value={smEmail} onChangeText={setSmEmail} autoCapitalize="none" keyboardType="email-address" placeholderTextColor="#9ca3af" />
 
                                     <Text style={styles.label}>New Password (Optional)</Text>
                                     <View style={styles.pwdWrapper}>
-                                        <TextInput style={styles.pwdInput} placeholder="Leave blank to keep current" placeholderTextColor={COLORS.text.muted} value={smPassword} onChangeText={setSmPassword} secureTextEntry={!smShowPwd} />
+                                        <TextInput style={styles.pwdInput} placeholder="Leave blank to keep current" placeholderTextColor="#9ca3af" value={smPassword} onChangeText={setSmPassword} secureTextEntry={!smShowPwd} />
                                         <TouchableOpacity onPress={() => setSmShowPwd(!smShowPwd)} style={styles.pwdToggle}>
-                                            <Icon name={smShowPwd ? 'eye-off' : 'eye'} size={20} color={COLORS.text.muted} />
+                                            <Icon name={smShowPwd ? 'eye-off' : 'eye'} size={20} color="#9ca3af" />
                                         </TouchableOpacity>
                                     </View>
 
@@ -316,7 +316,7 @@ export default function DeveloperDashboardScreen() {
                                     </TouchableOpacity>
                                 </View>
                             ) : (
-                                <Text style={{ color: COLORS.text.secondary, textAlign: 'center' }}>Select a salesman from above to edit.</Text>
+                                <Text style={{ color: '#6b7280', textAlign: 'center' }}>Select a salesman from above to edit.</Text>
                             )}
                         </View>
                     )}
@@ -330,7 +330,7 @@ export default function DeveloperDashboardScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.background.primary,
+        backgroundColor: '#f3f4f6',
     },
     header: {
         flexDirection: 'row',
@@ -348,25 +348,25 @@ const styles = StyleSheet.create({
         width: 50,
         height: 50,
         borderRadius: 16,
-        backgroundColor: 'rgba(99, 102, 241, 0.15)',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
         alignItems: 'center',
         justifyContent: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(58, 60, 150, 0.3)',
+        borderColor: 'rgba(99, 102, 241, 0.2)',
         shadowColor: COLORS.accent.primary,
-        shadowOffset: { width: 0, height: 0 },
-        shadowOpacity: 0.5,
-        shadowRadius: 10,
-        elevation: 5,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 3,
     },
     headerTitle: {
-        color: '#fff',
+        color: '#1f2937',
         fontSize: 22,
         fontFamily: FONTS.bold,
         letterSpacing: 0.5,
     },
     headerSubtitle: {
-        color: COLORS.text.secondary,
+        color: '#6b7280',
         fontSize: 13,
         fontFamily: FONTS.medium,
         marginTop: 2,
@@ -376,8 +376,8 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         shadowColor: '#ef4444',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
+        shadowOpacity: 0.2,
+        shadowRadius: 6,
         elevation: 4,
     },
     logoutGradient: {
@@ -386,17 +386,17 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     timerBanner: {
-        backgroundColor: 'rgba(16, 185, 129, 0.15)',
+        backgroundColor: '#ecfdf5',
         paddingVertical: 10,
         flexDirection: 'row',
         justifyContent: 'center',
         alignItems: 'center',
         borderTopWidth: 1,
         borderBottomWidth: 1,
-        borderColor: 'rgba(16, 185, 129, 0.3)',
+        borderColor: '#a7f3d0',
     },
     timerText: {
-        color: '#10b981',
+        color: '#059669',
         fontSize: 13,
         fontFamily: FONTS.bold,
         marginLeft: 8,
@@ -406,11 +406,11 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         marginHorizontal: 16,
         marginTop: 20,
-        backgroundColor: 'rgba(255,255,255,0.06)',
+        backgroundColor: '#e5e7eb',
         borderRadius: 16,
         padding: 6,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: '#d1d5db',
     },
     tab: {
         flex: 1,
@@ -424,12 +424,12 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.accent.primary,
         shadowColor: COLORS.accent.primary,
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 6,
     },
     tabText: {
-        color: COLORS.text.secondary,
+        color: '#4b5563',
         fontFamily: FONTS.medium,
         fontSize: 13,
         marginLeft: 8,
@@ -443,31 +443,31 @@ const styles = StyleSheet.create({
         paddingBottom: 40,
     },
     card: {
-        backgroundColor: 'rgba(17, 24, 39, 0.7)',
+        backgroundColor: 'rgba(255, 255, 255, 0.95)',
         borderRadius: 24,
         padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.08)',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
+        borderColor: '#e5e7eb',
+        shadowColor: '#a78bfa',
+        shadowOffset: { width: 0, height: 8 },
+        shadowOpacity: 0.15,
         shadowRadius: 20,
         elevation: 10,
     },
     cardTitle: {
-        color: '#fff',
+        color: '#1f2937',
         fontSize: 20,
         fontFamily: FONTS.bold,
         marginBottom: 6,
     },
     cardSubtitle: {
-        color: COLORS.text.secondary,
+        color: '#6b7280',
         fontSize: 14,
         fontFamily: FONTS.regular,
         marginBottom: 24,
     },
     label: {
-        color: COLORS.text.secondary,
+        color: '#4b5563',
         fontSize: 13,
         marginBottom: 8,
         fontFamily: FONTS.medium,
@@ -475,21 +475,21 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     input: {
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        backgroundColor: '#f9fafb',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: '#d1d5db',
         borderRadius: 14,
         padding: 16,
-        color: '#fff',
+        color: '#1f2937',
         marginBottom: 20,
         fontSize: 16,
         fontFamily: FONTS.regular,
     },
     pwdWrapper: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(0,0,0,0.2)',
+        backgroundColor: '#f9fafb',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: '#d1d5db',
         borderRadius: 14,
         marginBottom: 24,
         alignItems: 'center',
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     pwdInput: {
         flex: 1,
         padding: 16,
-        color: '#fff',
+        color: '#1f2937',
         fontSize: 16,
         fontFamily: FONTS.regular,
     },
@@ -512,7 +512,7 @@ const styles = StyleSheet.create({
         marginTop: 10,
         shadowColor: COLORS.accent.primary,
         shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
+        shadowOpacity: 0.3,
         shadowRadius: 12,
         elevation: 8,
     },
@@ -525,11 +525,11 @@ const styles = StyleSheet.create({
     smChip: {
         paddingHorizontal: 18,
         paddingVertical: 10,
-        backgroundColor: 'rgba(255,255,255,0.05)',
+        backgroundColor: '#f3f4f6',
         borderRadius: 24,
         marginRight: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+        borderColor: '#d1d5db',
     },
     smChipSelected: {
         backgroundColor: '#10b981',
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
         elevation: 5,
     },
     smChipText: {
-        color: COLORS.text.secondary,
+        color: '#374151',
         fontFamily: FONTS.medium,
         fontSize: 14,
     }
