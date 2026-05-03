@@ -1,21 +1,43 @@
 import axios from 'axios';
 import { tokenStorage } from '../utils/tokenStorage';
 
-// Fetching URL securely from Environment variables
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+const SERVER_MAP = {
+    UZAIR: process.env.EXPO_PUBLIC_API_URL_UZAIR,
+    BURHAN: process.env.EXPO_PUBLIC_API_URL_BURHAN,
+};
 
-if (!API_URL) {
-    console.warn("⚠️ EXPO_PUBLIC_API_URL is missing in .env file! App network requests will fail.");
-}
+const SOCKET_MAP = {
+    UZAIR: process.env.EXPO_PUBLIC_SOCKET_URL_UZAIR,
+    BURHAN: process.env.EXPO_PUBLIC_SOCKET_URL_BURHAN,
+};
+
+// Initial base URL defaults to UZAIR for backward compatibility with already logged-in users
+let currentBaseURL = SERVER_MAP.UZAIR;
+let currentSocketURL = SOCKET_MAP.UZAIR;
 
 const api = axios.create({
-    baseURL: API_URL,
+    baseURL: currentBaseURL,
     headers: {
         'Content-Type': 'application/json',
         'X-Content-Type-Options': 'nosniff',
         'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
     },
 });
+
+export function setApiBaseUrl(workspace) {
+    if (SERVER_MAP[workspace]) {
+        currentBaseURL = SERVER_MAP[workspace];
+        currentSocketURL = SOCKET_MAP[workspace];
+        api.defaults.baseURL = currentBaseURL;
+        console.log(`[API] Switched to workspace: ${workspace} (${currentBaseURL})`);
+    } else {
+        console.warn(`[API] Invalid workspace selected: ${workspace}`);
+    }
+}
+
+export function getSocketUrl() {
+    return currentSocketURL;
+}
 
 /** undefined = not loaded yet; avoids AsyncStorage on every request after first read */
 let authTokenCache = undefined;
