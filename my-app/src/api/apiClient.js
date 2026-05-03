@@ -4,11 +4,13 @@ import { tokenStorage } from '../utils/tokenStorage';
 const SERVER_MAP = {
     UZAIR: process.env.EXPO_PUBLIC_API_URL_UZAIR,
     BURHAN: process.env.EXPO_PUBLIC_API_URL_BURHAN,
+    MYRA: process.env.EXPO_PUBLIC_API_URL_MYRA,
 };
 
 const SOCKET_MAP = {
     UZAIR: process.env.EXPO_PUBLIC_SOCKET_URL_UZAIR,
     BURHAN: process.env.EXPO_PUBLIC_SOCKET_URL_BURHAN,
+    MYRA: process.env.EXPO_PUBLIC_SOCKET_URL_MYRA,
 };
 
 // Initial base URL defaults to UZAIR for backward compatibility with already logged-in users
