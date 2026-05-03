@@ -133,12 +133,26 @@ export const useSocketNotifications = () => {
                 const isCredit = data.bill_type === 'CREDIT';
                 const notifTitle = isCredit ? '🧾 New Credit Bill!' : '🧾 New Paid Bill!';
 
-                const total = data.total_amount != null ? Number(data.total_amount).toLocaleString() : '0';
-                const paid = data.paid_amount != null ? Number(data.paid_amount).toLocaleString() : total;
+                const total = Number(data.total_amount || 0);
+                const paid = data.paid_amount != null ? Number(data.paid_amount) : total;
                 const method = data.payment_method || 'Cash';
+                const cashAmt = Number(data.cash_amount || 0);
+                const onlineAmt = Number(data.online_amount || 0);
 
-                notifBody += `\n---\nTotal: Rs. ${total}`;
-                notifBody += `\nPaid: Rs. ${paid} (${method})`;
+                notifBody += `\n---\nTotal: Rs. ${total.toLocaleString()}`;
+
+                if (method === 'Split') {
+                    notifBody += `\nPaid: Rs. ${paid.toLocaleString()} (Cash: ${cashAmt.toLocaleString()}, Online: ${onlineAmt.toLocaleString()})`;
+                } else {
+                    notifBody += `\nPaid: Rs. ${paid.toLocaleString()} (${method})`;
+                }
+
+                if (isCredit) {
+                    const remaining = total - paid;
+                    if (remaining > 0) {
+                        notifBody += `\nRemaining: Rs. ${remaining.toLocaleString()}`;
+                    }
+                }
 
                 await Notifications.scheduleNotificationAsync({
                     content: {
