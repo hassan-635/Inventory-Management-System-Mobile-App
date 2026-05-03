@@ -29,10 +29,14 @@ export function setApiBaseUrl(workspace) {
         currentBaseURL = SERVER_MAP[workspace];
         currentSocketURL = SOCKET_MAP[workspace];
         api.defaults.baseURL = currentBaseURL;
-        console.log(`[API] Switched to workspace: ${workspace} (${currentBaseURL})`);
+        console.log(`[API] Switched to workspace: ${workspace} → ${currentBaseURL}`);
     } else {
-        console.warn(`[API] Invalid workspace selected: ${workspace}`);
+        console.warn(`[API] Invalid workspace "${workspace}". Available: ${Object.keys(SERVER_MAP).join(', ')}. Env UZAIR=${SERVER_MAP.UZAIR} BURHAN=${SERVER_MAP.BURHAN}`);
     }
+}
+
+export function getActiveBaseUrl() {
+    return api.defaults.baseURL;
 }
 
 export function getSocketUrl() {
