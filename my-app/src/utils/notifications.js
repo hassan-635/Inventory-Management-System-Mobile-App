@@ -111,10 +111,17 @@ export const useSocketNotifications = () => {
                 console.log('[Notifications] New sale received:', data);
                 useDataRefreshStore.getState().bumpInventory();
 
+                const sale = data.sale || {};
+                const productName  = sale.product_name || 'Unknown Item';
+                const qty          = sale.quantity ?? 1;
+                const totalAmount  = sale.total_amount != null
+                    ? `Rs. ${Number(sale.total_amount).toLocaleString()}`
+                    : 'N/A';
+
                 await Notifications.scheduleNotificationAsync({
                     content: {
-                        title: "🧾 New Sale Alert!",
-                        body: `${data.sale?.quantity || 1}x ${data.sale?.product_name || 'Item'} sold for Rs. ${data.sale?.total_amount}`,
+                        title: '🧾 New Sale!',
+                        body: `${qty}x ${productName} — ${totalAmount}`,
                         data: { data },
                         sound: 'default',
                         ...(Platform.OS === 'android' && { channelId: 'sales-alerts' }),
