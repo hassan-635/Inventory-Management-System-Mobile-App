@@ -5,7 +5,7 @@ import { useAuthStore } from '../store/authStore';
 import { authService } from '../api/auth';
 import { tokenStorage } from '../utils/tokenStorage';
 import { workspaceStorage } from '../utils/workspaceStorage';
-import { primeAuthToken, setApiBaseUrl } from '../api/apiClient';
+import { primeAuthToken, setApiBaseUrl, getActiveBaseUrl } from '../api/apiClient';
 import { COLORS, FONTS } from '../theme/theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -40,7 +40,7 @@ export default function LoginScreen() {
             // Set and save the base URL before attempting login
             await workspaceStorage.setWorkspace(workspace);
             setApiBaseUrl(workspace);
-
+            console.log('[Login] Attempting login to:', getActiveBaseUrl());
             const data = await authService.login(email, password, loginType);
             // Save token securely (encrypted) instead of plain-text AsyncStorage
             await tokenStorage.setItemAsync('token', data.token);
@@ -49,7 +49,22 @@ export default function LoginScreen() {
             const user = { id: data._id, name: data.name, email: data.email, role: data.role };
             setAuth(user, data.token);
         } catch (error) {
-            const msg = error.response?.data?.error || error.response?.data?.message || 'Login failed. Please check credentials.';
+            // Log full error so developer can inspect in Metro console
+            console.error('[Login Error]', JSON.stringify({
+                message: error.message,
+                code: error.code,
+                status: error.response?.status,
+                data: error.response?.data,
+            }, null, 2));
+
+            let msg;
+            if (!error.response) {
+                // No response = network failure (wrong IP, server down, phone not on same WiFi)
+                msg = `Cannot reach server.\n\nCheck that:\n• Your phone & PC are on the same WiFi\n• Backend is running (npm run dev)\n• IP in .env is correct\n\n(Code: ${error.code || 'NETWORK_ERROR'})`;
+            } else {
+                // Server responded with an error (wrong credentials, rate-limited, etc.)
+                msg = error.response.data?.error || error.response.data?.message || `Server error (${error.response.status})`;
+            }
             Alert.alert('Login Failed', msg);
         } finally {
             setLoading(false);
