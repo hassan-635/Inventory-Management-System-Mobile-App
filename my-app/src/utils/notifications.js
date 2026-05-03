@@ -111,17 +111,29 @@ export const useSocketNotifications = () => {
                 console.log('[Notifications] New sale received:', data);
                 useDataRefreshStore.getState().bumpInventory();
 
-                const sale = data.sale || {};
-                const productName  = sale.product_name || 'Unknown Item';
-                const qty          = sale.quantity ?? 1;
-                const totalAmount  = sale.total_amount != null
-                    ? `Rs. ${Number(sale.total_amount).toLocaleString()}`
-                    : 'N/A';
+                let notifBody;
+                const cartItems = data.cart_items; // only present from billing.controller
+
+                if (cartItems && cartItems.length > 0) {
+                    // Multi-item bill: one line per product
+                    notifBody = cartItems
+                        .map(item => `${item.quantity}x ${item.product_name} — Rs. ${Number(item.total_amount).toLocaleString()}`)
+                        .join('\n');
+                } else {
+                    // Single sale from sales.controller
+                    const sale = data.sale || {};
+                    const name   = sale.product_name || 'Unknown Item';
+                    const qty    = sale.quantity ?? 1;
+                    const amount = sale.total_amount != null
+                        ? `Rs. ${Number(sale.total_amount).toLocaleString()}`
+                        : 'N/A';
+                    notifBody = `${qty}x ${name} — ${amount}`;
+                }
 
                 await Notifications.scheduleNotificationAsync({
                     content: {
                         title: '🧾 New Sale!',
-                        body: `${qty}x ${productName} — ${totalAmount}`,
+                        body: notifBody,
                         data: { data },
                         sound: 'default',
                         ...(Platform.OS === 'android' && { channelId: 'sales-alerts' }),
