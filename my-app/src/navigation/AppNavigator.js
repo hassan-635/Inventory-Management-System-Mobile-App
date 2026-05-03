@@ -4,7 +4,8 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from '@react-navigation/drawer';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { tokenStorage } from '../utils/tokenStorage';
-import { primeAuthToken, clearAuthTokenCache } from '../api/apiClient';
+import { workspaceStorage } from '../utils/workspaceStorage';
+import { primeAuthToken, clearAuthTokenCache, setApiBaseUrl } from '../api/apiClient';
 import { ActivityIndicator, View, Text, Dimensions, TouchableOpacity, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -289,6 +290,11 @@ export default function AppNavigator() {
     useEffect(() => {
         const checkToken = async () => {
             try {
+                const savedWorkspace = await workspaceStorage.getWorkspace();
+                if (savedWorkspace) {
+                    setApiBaseUrl(savedWorkspace);
+                }
+
                 const storedToken = await tokenStorage.getItemAsync('token');
                 if (storedToken) {
                     primeAuthToken(storedToken);
