@@ -113,6 +113,12 @@ export default function LoginScreen() {
                         >
                             <Text style={[styles.roleTabText, workspace === 'BURHAN' && styles.activeRoleTabText]}>Burhan</Text>
                         </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.roleTab, workspace === 'MYRA' && styles.activeMyraTab]} 
+                            onPress={() => setWorkspace('MYRA')}
+                        >
+                            <Text style={[styles.roleTabText, workspace === 'MYRA' && styles.activeRoleTabText]}>Myra</Text>
+                        </TouchableOpacity>
                     </View>
 
                     <View style={styles.inputGroup}>
@@ -227,8 +233,16 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     activeWorkspaceTab: {
-        backgroundColor: '#10b981', // green shade for workspace to distinguish
+        backgroundColor: '#10b981',
         shadowColor: '#10b981',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    activeMyraTab: {
+        backgroundColor: '#f97316', // orange for Myra (local)
+        shadowColor: '#f97316',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
