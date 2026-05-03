@@ -177,44 +177,54 @@ export default function MonthlyReportScreen() {
             >
                 {viewMode === 'overview' && (
                 <>
-                {/* Key Metrics */}
+                {/* Key Metrics — 2x2 grid */}
                 <View style={styles.statsGrid}>
                     {/* Net Real Profit */}
                     <View style={[styles.statCard, { borderLeftColor: (summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444', borderLeftWidth: 4 }]}>
-                        <Icon name={(summary.net_real_profit || 0) >= 0 ? 'trending-up' : 'trending-down'} size={22} color={(summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444'} style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Net Real Profit</Text>
-                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Product Margin:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(summary.product_profit || 0).toLocaleString()}</Text></View>
-                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Less Expenses:</Text><Text style={[styles.ledgerAmt, { color: '#ef4444' }]}>- Rs. {summary.total_expenses.toLocaleString()}</Text></View>
-                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Less Returns:</Text><Text style={[styles.ledgerAmt, { color: '#ef4444' }]}>- Rs. {(summary.total_returns_this_month || 0).toLocaleString()}</Text></View>
-                        <Text style={[styles.statValue, { color: (summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444', marginTop: 8 }]}>
+                        <View style={styles.statCardHeader}>
+                            <Icon name={(summary.net_real_profit || 0) >= 0 ? 'trending-up' : 'trending-down'} size={18} color={(summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444'} />
+                            <Text style={styles.statTitle}>Net Real Profit</Text>
+                        </View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Margin:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(summary.product_profit || 0).toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Expenses:</Text><Text style={[styles.ledgerAmt, { color: '#ef4444' }]}>- Rs. {summary.total_expenses.toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Returns:</Text><Text style={[styles.ledgerAmt, { color: '#ef4444' }]}>- Rs. {(summary.total_returns_this_month || 0).toLocaleString()}</Text></View>
+                        <Text style={[styles.statValue, { color: (summary.net_real_profit || 0) >= 0 ? '#22c55e' : '#ef4444' }]}>
                             Rs. {(summary.net_real_profit || 0).toLocaleString()}
                         </Text>
                     </View>
 
-                    {/* Payment Method Split */}
+                    {/* Payment Split */}
                     <View style={[styles.statCard, { borderLeftColor: '#38bdf8', borderLeftWidth: 4 }]}>
-                        <Icon name="card-outline" size={22} color="#38bdf8" style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Payment Received By Method</Text>
+                        <View style={styles.statCardHeader}>
+                            <Icon name="card-outline" size={18} color="#38bdf8" />
+                            <Text style={styles.statTitle}>Payments</Text>
+                        </View>
                         <View style={styles.ledgerRow}><Text style={styles.ledgerText}>💵 Cash:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {(paymentSplit.cash || 0).toLocaleString()}</Text></View>
                         <View style={styles.ledgerRow}><Text style={styles.ledgerText}>📱 Online:</Text><Text style={[styles.ledgerAmt, { color: '#38bdf8' }]}>Rs. {(paymentSplit.online || 0).toLocaleString()}</Text></View>
-                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Split Txns:</Text><Text style={styles.ledgerAmt}>{paymentSplit.split_count || 0}</Text></View>
-                        <Text style={[styles.statValue, { color: '#38bdf8', marginTop: 8 }]}>
-                            Total: Rs. {((paymentSplit.cash || 0) + (paymentSplit.online || 0)).toLocaleString()}
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Splits:</Text><Text style={styles.ledgerAmt}>{paymentSplit.split_count || 0}</Text></View>
+                        <Text style={[styles.statValue, { color: '#38bdf8' }]}>
+                            Rs. {((paymentSplit.cash || 0) + (paymentSplit.online || 0)).toLocaleString()}
                         </Text>
                     </View>
 
+                    {/* Expenses */}
                     <View style={[styles.statCard, { borderLeftColor: '#f97316', borderLeftWidth: 4 }]}>
-                        <Icon name="wallet" size={22} color="#f97316" style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Total Expenses</Text>
-                        <Text style={[styles.statValue, { color: '#f97316' }]}>Rs. {summary.total_expenses.toLocaleString()}</Text>
+                        <View style={styles.statCardHeader}>
+                            <Icon name="wallet" size={18} color="#f97316" />
+                            <Text style={styles.statTitle}>Total Expenses</Text>
+                        </View>
+                        <Text style={[styles.statValue, { color: '#f97316', marginTop: 8 }]}>Rs. {summary.total_expenses.toLocaleString()}</Text>
                     </View>
 
+                    {/* Purchases */}
                     <View style={[styles.statCard, { borderLeftColor: '#a855f7', borderLeftWidth: 4 }]}>
-                        <Icon name="cube-outline" size={22} color="#a855f7" style={styles.statIcon} />
-                        <Text style={styles.statTitle}>Stock Purchased</Text>
-                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Total Bills:</Text><Text style={styles.ledgerAmt}>Rs. {summary.total_purchases_created_value.toLocaleString()}</Text></View>
-                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Cash Paid:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {summary.total_purchases_paid_this_month.toLocaleString()}</Text></View>
-                        <Text style={[styles.statValue, { color: '#a855f7', marginTop: 8 }]}>Cr: Rs. {summary.total_credit_taken_this_month.toLocaleString()}</Text>
+                        <View style={styles.statCardHeader}>
+                            <Icon name="cube-outline" size={18} color="#a855f7" />
+                            <Text style={styles.statTitle}>Stock Bought</Text>
+                        </View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Bills:</Text><Text style={styles.ledgerAmt}>Rs. {summary.total_purchases_created_value.toLocaleString()}</Text></View>
+                        <View style={styles.ledgerRow}><Text style={styles.ledgerText}>Paid:</Text><Text style={[styles.ledgerAmt, { color: '#22c55e' }]}>Rs. {summary.total_purchases_paid_this_month.toLocaleString()}</Text></View>
+                        <Text style={[styles.statValue, { color: '#a855f7' }]}>Cr: Rs. {summary.total_credit_taken_this_month.toLocaleString()}</Text>
                     </View>
                 </View>
 
@@ -663,17 +673,17 @@ const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
 
     scrollContainer: { paddingHorizontal: 16, ...(isTablet && { paddingHorizontal: 32 }) },
 
-    statsGrid: { flexDirection: 'row', gap: 15, marginBottom: 20 },
+    statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 20 },
     statCard: { 
-        flex: 1, 
+        width: '48%',
         backgroundColor: colors.background.secondary, 
-        padding: 18, 
-        borderRadius: 16,
-        shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 6, elevation: 3 
+        padding: 14, 
+        borderRadius: 14,
+        shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 2,
     },
-    statIcon: { marginBottom: 12 },
-    statTitle: { color: colors.text.secondary, fontSize: 13, fontFamily: FONTS.medium, marginBottom: 5 },
-    statValue: { fontSize: 18, fontFamily: FONTS.bold },
+    statCardHeader: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 },
+    statTitle: { color: colors.text.secondary, fontSize: 12, fontFamily: FONTS.medium, flex: 1 },
+    statValue: { fontSize: 15, fontFamily: FONTS.bold, marginTop: 6 },
 
     ledgerSection: { gap: 15, marginBottom: 20 },
     ledgerCard: { 
@@ -682,10 +692,10 @@ const getStyles = (colors, FONTS, isTablet) => StyleSheet.create({
     },
     ledgerHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 15, gap: 8 },
     ledgerTitle: { fontSize: 16, fontFamily: FONTS.bold },
-    ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+    ledgerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
     ledgerRowBorder: { marginTop: 4, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.border.color || 'rgba(255,255,255,0.1)' },
-    ledgerText: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 14 },
-    ledgerAmt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 14 },
+    ledgerText: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 12, flexShrink: 1, marginRight: 4 },
+    ledgerAmt: { color: colors.text.primary, fontFamily: FONTS.medium, fontSize: 12 },
 
     alertPanel: { 
         flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(234, 179, 8, 0.1)', 
