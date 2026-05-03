@@ -18,6 +18,30 @@ Notifications.setNotificationHandler({
     }),
 });
 
+// Android requires a notification channel — without this, ALL notifications are silently dropped
+async function setupAndroidChannel() {
+    if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('sales-alerts', {
+            name: 'Sales Alerts',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            sound: 'default',
+            enableLights: true,
+            lightColor: '#8b5cf6',
+        });
+        await Notifications.setNotificationChannelAsync('stock-alerts', {
+            name: 'Stock Alerts',
+            importance: Notifications.AndroidImportance.HIGH,
+            vibrationPattern: [0, 250, 250, 250],
+            sound: 'default',
+        });
+        console.log('[Notifications] Android channels registered');
+    }
+}
+
+// Run once at module load
+setupAndroidChannel();
+
 // Register notification categories
 Notifications.setNotificationCategoryAsync('LOW_STOCK_ZERO', [
     {
@@ -92,6 +116,8 @@ export const useSocketNotifications = () => {
                         title: "🧾 New Sale Alert!",
                         body: `${data.sale?.quantity || 1}x ${data.sale?.product_name || 'Item'} sold for Rs. ${data.sale?.total_amount}`,
                         data: { data },
+                        sound: 'default',
+                        ...(Platform.OS === 'android' && { channelId: 'sales-alerts' }),
                     },
                     trigger: null,
                 });
@@ -172,10 +198,11 @@ export const scheduleAllLowStockNotifications = async (timesArray = null) => {
                     content: {
                         title: isZero ? "❌ Out of Stock Alert" : "⚠️ Low Stock Alert",
                         body: `${item.name}: ${qty} remaining.`,
-                        sound: true,
+                        sound: 'default',
                         priority: Notifications.AndroidNotificationPriority.HIGH,
                         categoryIdentifier: isZero ? 'LOW_STOCK_ZERO' : null,
                         data: { product_id: item.id },
+                        ...(Platform.OS === 'android' && { channelId: 'stock-alerts' }),
                     },
                     trigger: {
                         type: Notifications.SchedulableTriggerInputTypes.DAILY,
