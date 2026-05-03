@@ -298,11 +298,32 @@ export default function AppNavigator() {
                 const storedToken = await tokenStorage.getItemAsync('token');
                 if (storedToken) {
                     primeAuthToken(storedToken);
-                    setAuth(null, storedToken);
+                    // Decode JWT payload to restore user role without a network call
+                    // JWT format: header.payload.signature — payload is base64-encoded JSON
+                    try {
+                        const payloadBase64 = storedToken.split('.')[1];
+                        const payloadJson = atob(payloadBase64.replace(/-/g, '+').replace(/_/g, '/'));
+                        const payload = JSON.parse(payloadJson);
+                        // Check token hasn't expired
+                        if (payload.exp && payload.exp * 1000 < Date.now()) {
+                            // Token expired — force logout
+                            await tokenStorage.deleteItemAsync('token');
+                            setLoading(false);
+                            return;
+                        }
+                        // Restore minimal user object from JWT claims
+                        const restoredUser = { id: payload.id, role: payload.role };
+                        setAuth(restoredUser, storedToken);
+                    } catch {
+                        // Malformed token — treat as logged out
+                        await tokenStorage.deleteItemAsync('token');
+                        setLoading(false);
+                    }
                 } else {
                     setLoading(false);
                 }
             } catch (error) {
+                console.warn('[AppNavigator] Session restore error:', error);
                 setLoading(false);
             }
         };
