@@ -4,7 +4,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../store/authStore';
 import { authService } from '../api/auth';
 import { tokenStorage } from '../utils/tokenStorage';
-import { primeAuthToken } from '../api/apiClient';
+import { workspaceStorage } from '../utils/workspaceStorage';
+import { primeAuthToken, setApiBaseUrl } from '../api/apiClient';
 import { COLORS, FONTS } from '../theme/theme';
 import Icon from 'react-native-vector-icons/Ionicons';
 
@@ -13,16 +14,33 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [loginType, setLoginType] = useState('salesman'); // 'salesman' or 'developer'
+    const [workspace, setWorkspace] = useState('UZAIR'); // Default to UZAIR
     const setAuth = useAuthStore((state) => state.setAuth);
 
+    React.useEffect(() => {
+        const loadWorkspace = async () => {
+            const savedWorkspace = await workspaceStorage.getWorkspace();
+            if (savedWorkspace) {
+                setWorkspace(savedWorkspace);
+                setApiBaseUrl(savedWorkspace);
+            }
+        };
+        loadWorkspace();
+    }, []);
+
     const handleLogin = async () => {
-        if (!email || !password) {
-            Alert.alert('Error', 'Please fill in all fields');
+        if (!email || !password || !workspace) {
+            Alert.alert('Error', 'Please fill in all fields and select a workspace');
             return;
         }
 
         try {
             setLoading(true);
+            
+            // Set and save the base URL before attempting login
+            await workspaceStorage.setWorkspace(workspace);
+            setApiBaseUrl(workspace);
+
             const data = await authService.login(email, password, loginType);
             // Save token securely (encrypted) instead of plain-text AsyncStorage
             await tokenStorage.setItemAsync('token', data.token);
@@ -63,6 +81,22 @@ export default function LoginScreen() {
                             onPress={() => setLoginType('developer')}
                         >
                             <Text style={[styles.roleTabText, loginType === 'developer' && styles.activeRoleTabText]}>Developer</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <Text style={styles.label}>Select Workspace</Text>
+                    <View style={styles.roleSelector}>
+                        <TouchableOpacity 
+                            style={[styles.roleTab, workspace === 'UZAIR' && styles.activeWorkspaceTab]} 
+                            onPress={() => setWorkspace('UZAIR')}
+                        >
+                            <Text style={[styles.roleTabText, workspace === 'UZAIR' && styles.activeRoleTabText]}>Uzair</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.roleTab, workspace === 'BURHAN' && styles.activeWorkspaceTab]} 
+                            onPress={() => setWorkspace('BURHAN')}
+                        >
+                            <Text style={[styles.roleTabText, workspace === 'BURHAN' && styles.activeRoleTabText]}>Burhan</Text>
                         </TouchableOpacity>
                     </View>
 
@@ -172,6 +206,14 @@ const styles = StyleSheet.create({
     activeRoleTab: {
         backgroundColor: COLORS.accent.primary,
         shadowColor: COLORS.accent.primary,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 2,
+    },
+    activeWorkspaceTab: {
+        backgroundColor: '#10b981', // green shade for workspace to distinguish
+        shadowColor: '#10b981',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
