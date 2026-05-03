@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react';
 import {
     View, Text, StyleSheet, FlatList, ActivityIndicator,
     RefreshControl, TextInput, TouchableOpacity, Modal,
-    Alert, ScrollView, Platform, useWindowDimensions
+    Alert, ScrollView, Platform, useWindowDimensions, Dimensions
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { buyersService } from '../api/buyers';
@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import GenericSideList from '../components/GenericSideList';
+import { fuzzySearch } from '../utils/fuzzySearch';
 
 const SORT_OPTIONS = [
     { key: 'date_desc', label: 'Newest First' },
@@ -91,12 +92,7 @@ export default function BuyersScreen() {
     const computePaid = useCallback((txns = []) => txns.reduce((s, t) => s + Number(t.paid_amount || 0), 0), []);
 
     const filtered = useMemo(() => {
-        let list = buyers.filter(b =>
-            (b.name || '').toLowerCase().includes(search.toLowerCase()) ||
-            (b.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
-            (b.phone || '').includes(search) ||
-            String(b.id).includes(search)
-        );
+        let list = buyers.filter(b => fuzzySearch(search, b, ['name', 'company_name', 'phone', 'id']));
 
         if (filterOption === 'pending') {
             list = list.filter(b => computeDue(b.buyer_transactions) > 0);

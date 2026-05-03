@@ -7,6 +7,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import GenericSideList from '../components/GenericSideList';
+import { fuzzySearch } from '../utils/fuzzySearch';
 import { useAuthStore } from '../store/authStore';
 
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
@@ -256,14 +257,7 @@ export default function ExpensesScreen() {
         }
 
         if (search) {
-            const q = search.toLowerCase();
-            list = list.filter(e => 
-                (e.category || '').toLowerCase().includes(q) ||
-                (e.description || '').toLowerCase().includes(q) ||
-                (String(e.amount)).includes(q) ||
-                (e.date || '').includes(q) ||
-                (String(e.id)).includes(q)
-            );
+            list = list.filter(e => fuzzySearch(search, e, ['category', 'description', 'amount', 'date', 'id']));
         }
 
         return list.sort((a,b) => {

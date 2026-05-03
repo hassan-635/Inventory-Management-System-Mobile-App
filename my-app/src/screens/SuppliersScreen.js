@@ -10,6 +10,7 @@ import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import GenericSideList from '../components/GenericSideList';
+import { fuzzySearch } from '../utils/fuzzySearch';
 
 const SORT_OPTIONS = [
     { key: 'balanceDesc', label: 'Highest Payable' },
@@ -461,15 +462,7 @@ export default function SuppliersScreen() {
         (txns || []).reduce((acc, t) => acc + Number(t.paid_amount || 0), 0), []);
 
     const filteredSuppliers = useMemo(() => {
-        let list = suppliers.filter(s => {
-            const q = search.toLowerCase();
-            return (
-                (s.name || '').toLowerCase().includes(q) ||
-                (s.company_name || '').toLowerCase().includes(q) ||
-                (s.phone || '').includes(search) ||
-                String(s.id).includes(search)
-            );
-        });
+        let list = suppliers.filter(s => fuzzySearch(search, s, ['name', 'company_name', 'phone', 'id']));
 
         if (filterOption === 'pending') {
             list = list.filter(b => computeDue(b.supplier_transactions) > 0);

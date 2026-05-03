@@ -10,6 +10,7 @@ import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
+import { fuzzySearch } from '../utils/fuzzySearch';
 
 const SORT_OPTIONS = [
     { key: 'balanceDesc', label: 'Highest Payable (Receivable)' },
@@ -63,11 +64,7 @@ export default function CompaniesScreen() {
     const onRefresh = () => { setRefreshing(true); fetchCompanies(); };
 
     const filtered = useMemo(() => {
-        let list = companies.filter(c =>
-            (c.company_name || '').toLowerCase().includes(search.toLowerCase()) ||
-            (c.buyers || []).some(b => (b.name || '').toLowerCase().includes(search.toLowerCase())) ||
-            (c.buyers || []).some(b => (b.phone || '').includes(search))
-        );
+        let list = companies.filter(c => fuzzySearch(search, c, ['company_name', 'buyers.name', 'buyers.phone']));
 
         if (filterOption === 'pending') {
             list = list.filter(c => (c.total_remaining || 0) > 0);

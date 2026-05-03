@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, RefreshControl, To
 import { salesService } from '../api/sales';
 import { useAppTheme } from '../theme/useAppTheme';
 import { useToastStore } from '../store/toastStore';
+import { fuzzySearch } from '../utils/fuzzySearch';
 import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { generateSalesAnalyticsPdf } from '../utils/pdfGenerator';
@@ -173,10 +174,7 @@ export default function SalesScreen() {
         let list = sales.filter(s => {
             const saleDate = new Date(s.purchase_date);
             const withinDate = saleDate >= threshold;
-            const matchSearch =
-                (s.products?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-                (s.buyers?.name || '').toLowerCase().includes(search.toLowerCase()) ||
-                (s.product_id && String(s.product_id).toLowerCase().includes(search.toLowerCase()));
+            const matchSearch = fuzzySearch(search, s, ['products.name', 'buyers.name', 'product_id']);
             return withinDate && matchSearch;
         });
 
