@@ -111,7 +111,7 @@ export const useSocketNotifications = () => {
                 console.log('[Notifications] New sale received:', data);
                 useDataRefreshStore.getState().bumpInventory();
 
-                let notifBody;
+                let notifBody = '';
                 const cartItems = data.cart_items; // only present from billing.controller
 
                 if (cartItems && cartItems.length > 0) {
@@ -130,9 +130,19 @@ export const useSocketNotifications = () => {
                     notifBody = `${qty}x ${name} — ${amount}`;
                 }
 
+                const isCredit = data.bill_type === 'CREDIT';
+                const notifTitle = isCredit ? '🧾 New Credit Bill!' : '🧾 New Paid Bill!';
+
+                const total = data.total_amount != null ? Number(data.total_amount).toLocaleString() : '0';
+                const paid = data.paid_amount != null ? Number(data.paid_amount).toLocaleString() : total;
+                const method = data.payment_method || 'Cash';
+
+                notifBody += `\n---\nTotal: Rs. ${total}`;
+                notifBody += `\nPaid: Rs. ${paid} (${method})`;
+
                 await Notifications.scheduleNotificationAsync({
                     content: {
-                        title: '🧾 New Sale!',
+                        title: notifTitle,
                         body: notifBody,
                         data: { data },
                         sound: 'default',
