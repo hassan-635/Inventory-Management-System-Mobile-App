@@ -7,8 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { productsService } from '../api/products';
 import { useDataRefreshStore } from '../store/dataRefreshStore';
 
-// Load Socket server address from environment variable
-const SOCKET_URL = process.env.EXPO_PUBLIC_SOCKET_URL;
+import { getSocketUrl } from '../api/apiClient';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -71,7 +70,7 @@ export const useSocketNotifications = () => {
         if (!token) return;
 
         // Connect to Socket
-        const socket = io(SOCKET_URL);
+        const socket = io(getSocketUrl());
 
         socket.on('connect', () => {
             console.log('Connected to socket server');
