@@ -7,7 +7,7 @@ import { useAuthStore } from '../store/authStore';
 import { productsService } from '../api/products';
 import { useDataRefreshStore } from '../store/dataRefreshStore';
 
-import { getSocketUrl } from '../api/apiClient';
+import { getSocketUrl, subscribeSocketUrl } from '../api/apiClient';
 
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
@@ -58,7 +58,6 @@ export const useSocketNotifications = () => {
                 console.log("Delete action triggered for product:", data.product_id);
                 try {
                     await productsService.delete(data.product_id);
-                    // Dismiss the notification since we handled it
                     await Notifications.dismissNotificationAsync(response.notification.request.identifier);
                     console.log(`Product ${data.product_id} deleted successfully from notification`);
                 } catch (err) {
@@ -69,31 +68,51 @@ export const useSocketNotifications = () => {
 
         if (!token) return;
 
-        // Connect to Socket
-        const socket = io(getSocketUrl());
+        // --- Socket connection helper --- //
+        // Returns the socket instance so we can disconnect it later
+        const connectSocket = (socketUrl) => {
+            console.log('[Notifications] Connecting socket to:', socketUrl);
+            const socket = io(socketUrl);
 
-        socket.on('connect', () => {
-            console.log('Connected to socket server');
-        });
-
-        // Listen for new sales
-        socket.on('new_sale', async (data) => {
-            console.log('New sale received via socket:', data);
-            useDataRefreshStore.getState().bumpInventory();
-
-            // Trigger local notification
-            await Notifications.scheduleNotificationAsync({
-                content: {
-                    title: "🧾 New Sale Alert!",
-                    body: `${data.sale?.quantity || 1}x ${data.sale?.product_name || 'Item'} sold for Rs. ${data.sale?.total_amount}`,
-                    data: { data },
-                },
-                trigger: null, // trigger immediately
+            socket.on('connect', () => {
+                console.log('[Notifications] Socket connected:', socketUrl);
             });
+
+            socket.on('disconnect', () => {
+                console.log('[Notifications] Socket disconnected from:', socketUrl);
+            });
+
+            // Listen for new sales from THIS workspace's server only
+            socket.on('new_sale', async (data) => {
+                console.log('[Notifications] New sale received:', data);
+                useDataRefreshStore.getState().bumpInventory();
+
+                await Notifications.scheduleNotificationAsync({
+                    content: {
+                        title: "🧾 New Sale Alert!",
+                        body: `${data.sale?.quantity || 1}x ${data.sale?.product_name || 'Item'} sold for Rs. ${data.sale?.total_amount}`,
+                        data: { data },
+                    },
+                    trigger: null,
+                });
+            });
+
+            return socket;
+        };
+
+        // Initial connection to current workspace
+        let activeSocket = connectSocket(getSocketUrl());
+
+        // Subscribe to workspace switches — disconnect old, connect new
+        const unsubscribe = subscribeSocketUrl((newSocketUrl) => {
+            console.log('[Notifications] Workspace changed, reconnecting socket...');
+            activeSocket.disconnect();
+            activeSocket = connectSocket(newSocketUrl);
         });
 
         return () => {
-            socket.disconnect();
+            activeSocket.disconnect();
+            unsubscribe();
             if (responseListener) {
                 responseListener.remove();
             }

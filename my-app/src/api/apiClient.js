@@ -15,6 +15,14 @@ const SOCKET_MAP = {
 let currentBaseURL = SERVER_MAP.UZAIR;
 let currentSocketURL = SOCKET_MAP.UZAIR;
 
+// Subscribers notified when the socket URL changes (workspace switch)
+const socketUrlListeners = new Set();
+
+export function subscribeSocketUrl(listener) {
+    socketUrlListeners.add(listener);
+    return () => socketUrlListeners.delete(listener); // returns unsubscribe fn
+}
+
 const api = axios.create({
     baseURL: currentBaseURL,
     headers: {
@@ -27,9 +35,16 @@ const api = axios.create({
 export function setApiBaseUrl(workspace) {
     if (SERVER_MAP[workspace]) {
         currentBaseURL = SERVER_MAP[workspace];
-        currentSocketURL = SOCKET_MAP[workspace];
+        const newSocketURL = SOCKET_MAP[workspace];
         api.defaults.baseURL = currentBaseURL;
         console.log(`[API] Switched to workspace: ${workspace} → ${currentBaseURL}`);
+        // Notify socket subscribers only if the URL actually changed
+        if (newSocketURL !== currentSocketURL) {
+            currentSocketURL = newSocketURL;
+            socketUrlListeners.forEach(fn => fn(currentSocketURL));
+        } else {
+            currentSocketURL = newSocketURL;
+        }
     } else {
         console.warn(`[API] Invalid workspace "${workspace}". Available: ${Object.keys(SERVER_MAP).join(', ')}. Env UZAIR=${SERVER_MAP.UZAIR} BURHAN=${SERVER_MAP.BURHAN}`);
     }
