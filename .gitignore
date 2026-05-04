@@ -2,8 +2,6 @@
 node_modules/
 
 # npm
-package-lock.json
-package.json
 
 # Expo
 .expo/
