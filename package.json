@@ -1,0 +1,6 @@
+{
+  "devDependencies": {
+    "eas-cli": "^18.4.0",
+    "expo-module-scripts": "^55.0.2"
+  }
+}
