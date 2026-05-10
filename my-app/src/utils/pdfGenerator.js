@@ -2,6 +2,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatProductId } from './formatProductId';
+import { formatDate, formatDateShort } from './formatDate';
 
 async function getShopSettings() {
     try {
@@ -160,7 +161,7 @@ export const generateDailyReportPdf = async (reportDate, salesToday, returnsToda
         <body>
             <h1>${shopSettings.name}</h1>
             <p style="text-align:center; font-size:16px; margin:0 0 5px 0; font-weight:bold; color:#1e3a8a;">Daily Report</p>
-            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Date: <strong>${new Date(reportDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</strong></p>
+            <p style="text-align:center; font-size:14px; margin-top:0px; color:#475569;">Date: <strong>${formatDate(reportDate)}</strong></p>
 
             <div class="report-hero-stats">
                 <div class="stat-card-premium blue">
@@ -494,7 +495,7 @@ export const generateInvoicePdf = async (transactionInfo, cartItems, customerNam
                 <div class="receipt-meta">
                     <div class="meta-row">
                         <span>Date:</span>
-                        <span>${new Date().toLocaleDateString()}</span>
+                        <span>${formatDate(new Date())}</span>
                     </div>
                     <div class="meta-row">
                         <span>Customer:</span>
@@ -769,7 +770,7 @@ export const generateMonthlyReportPdf = async (reportData, filterMonth, filterYe
                     <tbody>
                         ${daily_breakdown?.map(day => `
                             <tr>
-                                <td><strong>${new Date(day.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</strong></td>
+                                <td><strong>${formatDateShort(day.date)}</strong></td>
                                 <td style="text-align:right;">${day.num_new_sales || '-'}</td>
                                 <td style="text-align:right; color:#0ea5e9;">${day.total_sales ? 'Rs. ' + day.total_sales.toLocaleString() : '-'}</td>
                                 <td style="text-align:right;" class="text-success">${(day.cash_received || 0) > 0 ? 'Rs. ' + day.cash_received.toLocaleString() : '-'}</td>
@@ -979,7 +980,7 @@ function salesAnalyticsInnerHtml(sales, analytics, periodLabel) {
             return `<tr>
                 <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">${idx + 1}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">#${sale.id}</td>
-                <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">${sale.purchase_date ? escapeHtmlSales(new Date(sale.purchase_date).toLocaleDateString('en-GB')) : '—'}</td>
+                <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">${sale.purchase_date ? formatDate(sale.purchase_date) : '—'}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">${escapeHtmlSales(sale.products?.name || '—')}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;">${escapeHtmlSales(sale.buyers?.name || 'Walk-in')}</td>
                 <td style="padding:6px 8px;border-bottom:1px solid #f1f5f9;text-align:right;">${qty}</td>
