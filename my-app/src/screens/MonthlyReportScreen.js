@@ -8,10 +8,11 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useAuthStore } from '../store/authStore';
 import { useAppTheme } from '../theme/useAppTheme';
 import { generateMonthlyReportPdf } from '../utils/pdfGenerator';
+import { formatDateShort } from '../utils/formatDate';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
 
-const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function MonthlyReportScreen() {
     const { colors, FONTS } = useAppTheme();
@@ -526,7 +527,7 @@ export default function MonthlyReportScreen() {
                                     {reportData.daily_breakdown.map((day, idx) => (
                                         <View key={idx} style={styles.tableRow}>
                                             <Text style={[styles.tableCell, styles.dailyColDate, { fontFamily: FONTS.medium }]}>
-                                                {new Date(day.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                                                {formatDateShort(day.date)}
                                             </Text>
                                             <Text style={[styles.tableCell, styles.dailyColNum, { textAlign: 'right', color: colors.text.secondary }]}>
                                                 {day.num_new_sales > 0 ? day.num_new_sales : '-'}
