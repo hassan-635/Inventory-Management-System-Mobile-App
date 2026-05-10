@@ -11,6 +11,7 @@ import ProductSideList from '../components/ProductSideList';
 import Icon from 'react-native-vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { formatProductId } from '../utils/formatProductId';
+import { formatDate } from '../utils/formatDate';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import { useDataRefreshStore } from '../store/dataRefreshStore';
@@ -804,8 +805,8 @@ export default function ProductsScreen() {
                                 'Total Qty': String(item.total_quantity),
                                 'Remaining Qty': `${remaining}${isZero ? ' (Out of Stock)' : isLow ? ' (Low)' : ''}`,
                                 'Alert Limit': String(threshold),
-                                'Purchase Date': item.purchase_date ? new Date(item.purchase_date).toLocaleDateString() : '-',
-                                'Added': new Date(item.created_at).toLocaleDateString()
+                                'Purchase Date': item.purchase_date ? formatDate(item.purchase_date) : '-',
+                                'Added': formatDate(item.created_at)
                             }}
                             renderActions={() => (
                                 <>
@@ -1004,7 +1005,7 @@ export default function ProductsScreen() {
                                         <Text style={styles.inputLabel}>Batch date</Text>
                                         <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowRestockDatePicker(true)}>
                                             <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>
-                                                {(formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date()).toLocaleDateString()}
+                                                {formatDate(formItem.restock_purchase_date instanceof Date ? formItem.restock_purchase_date : new Date())}
                                             </Text>
                                             <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
                                         </TouchableOpacity>
