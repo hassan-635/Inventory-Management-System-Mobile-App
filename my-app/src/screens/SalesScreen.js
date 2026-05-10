@@ -8,6 +8,7 @@ import ExpandableItem from '../components/ExpandableItem';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { generateSalesAnalyticsPdf } from '../utils/pdfGenerator';
 import { formatProductId } from '../utils/formatProductId';
+import { formatDate } from '../utils/formatDate';
 import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import { useDataRefreshStore } from '../store/dataRefreshStore';
@@ -441,7 +442,7 @@ export default function SalesScreen() {
                             iconName="receipt-outline"
                             containerStyle={hasBalance ? { borderColor: 'rgba(239,68,68,0.3)' } : undefined}
                             detailsData={{
-                                'Date': new Date(item.date).toLocaleDateString(),
+                                'Date': formatDate(item.date),
                                 'Items Count': `${item.items.length} Product(s)`,
                                 'Method': groupMethod === 'Split' ? `Split (C: ${groupCash} | O: ${groupOnline})` : groupMethod,
                                 'Salesman': item.salesman
