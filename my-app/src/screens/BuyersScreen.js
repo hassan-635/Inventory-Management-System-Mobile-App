@@ -13,6 +13,7 @@ import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import GenericSideList from '../components/GenericSideList';
 import { fuzzySearch } from '../utils/fuzzySearch';
+import { formatDate } from '../utils/formatDate';
 
 const SORT_OPTIONS = [
     { key: 'date_desc', label: 'Newest First' },
@@ -488,7 +489,7 @@ export default function BuyersScreen() {
                                 </TouchableOpacity>
                             )}
                             {item.address && <View style={styles.detailRow}><Icon name="location-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>{item.address}</Text></View>}
-                            <View style={styles.detailRow}><Icon name="calendar-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>Since {new Date(item.created_at).toLocaleDateString()}</Text></View>
+                            <View style={styles.detailRow}><Icon name="calendar-outline" size={14} color={colors.text.secondary} /><Text style={styles.detailText}>Since {formatDate(item.created_at)}</Text></View>
                             <View style={styles.detailRow}>
                                 <Icon name="card-outline" size={14} color={colors.text.secondary} />
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -779,7 +780,7 @@ export default function BuyersScreen() {
 
                                     <Text style={styles.inputLabel}>Payment Date</Text>
                                     <TouchableOpacity style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} onPress={() => setShowDatePicker(true)}>
-                                        <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>{formItem.payment_date.toLocaleDateString()}</Text>
+                                        <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>{formatDate(formItem.payment_date)}</Text>
                                         <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
                                     </TouchableOpacity>
                                     {showDatePicker && (
