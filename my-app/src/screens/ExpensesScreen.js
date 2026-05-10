@@ -8,6 +8,7 @@ import { flatListPerformanceProps } from '../utils/listPerf';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 import GenericSideList from '../components/GenericSideList';
 import { fuzzySearch } from '../utils/fuzzySearch';
+import { formatDate } from '../utils/formatDate';
 import { useAuthStore } from '../store/authStore';
 
 const CATEGORIES = ['Petrol', 'Electric Bill', 'Food', 'Rent', 'Maintenance', 'Other'];
@@ -309,7 +310,7 @@ export default function ExpensesScreen() {
                         <Text style={styles.cardDesc} numberOfLines={1}>
                             {item.description || 'No description'}
                         </Text>
-                        <Text style={styles.cardDate}>{new Date(item.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</Text>
+                        <Text style={styles.cardDate}>{formatDate(item.date)}</Text>
                     </View>
                 </View>
                 <View style={styles.cardRight}>
