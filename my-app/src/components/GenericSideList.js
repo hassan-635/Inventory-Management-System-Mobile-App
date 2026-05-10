@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { formatDate } from '../utils/formatDate';
 import { 
     View, 
     Text, 
@@ -25,10 +26,7 @@ const GenericSideList = ({
     const addCount = pendingItems.filter(item => item.action === 'add').length;
     const deleteCount = pendingItems.filter(item => item.action === 'delete').length;
 
-    const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString();
-    };
+
 
     const formatCurrency = (amount) => {
         if (!amount) return 'N/A';
