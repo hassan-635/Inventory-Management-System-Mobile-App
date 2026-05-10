@@ -7,6 +7,7 @@ import api from '../api/apiClient';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useAppTheme } from '../theme/useAppTheme';
 import { generateDailyReportPdf } from '../utils/pdfGenerator';
+import { formatDate } from '../utils/formatDate';
 import { useRefetchOnFocus } from '../hooks/useRefetchOnFocus';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -163,7 +164,7 @@ export default function DailyReportScreen() {
         return sum + (profitPerUnit * quantity);
     }, 0);
 
-    const displayDate = new Date(reportDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const displayDate = formatDate(reportDate);
     const isToday = reportDate === new Date().toISOString().split('T')[0];
 
     return (
