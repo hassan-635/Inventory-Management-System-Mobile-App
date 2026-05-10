@@ -11,6 +11,7 @@ import { useToastStore } from '../store/toastStore';
 import Icon from 'react-native-vector-icons/Ionicons';
 import GenericSideList from '../components/GenericSideList';
 import { fuzzySearch } from '../utils/fuzzySearch';
+import { formatDate } from '../utils/formatDate';
 
 const SORT_OPTIONS = [
     { key: 'balanceDesc', label: 'Highest Payable' },
@@ -864,7 +865,7 @@ export default function SuppliersScreen() {
                                         onPress={() => setShowDatePicker(true)}
                                     >
                                         <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>
-                                            {formItem.payment_date.toLocaleDateString()}
+                                            {formatDate(formItem.payment_date)}
                                         </Text>
                                         <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
                                     </TouchableOpacity>
@@ -992,7 +993,7 @@ export default function SuppliersScreen() {
                                         style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]}
                                         onPress={() => setShowPurchaseDatePicker(true)}
                                     >
-                                        <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>{formItem.purchase_date.toLocaleDateString()}</Text>
+                                        <Text style={{ color: colors.text.primary, fontFamily: FONTS.regular }}>{formatDate(formItem.purchase_date)}</Text>
                                         <Icon name="calendar-outline" size={18} color={colors.text.secondary} />
                                     </TouchableOpacity>
                                     {showPurchaseDatePicker && (
