@@ -268,9 +268,22 @@ export default function BillingScreen() {
     };
 
     const updateCartItemDiscount = (itemId, value) => {
-        setCart(prev => prev.map(item =>
-            item.id === itemId ? { ...item, discounted_price: value } : item
-        ));
+        // Allow empty (clears discount)
+        if (value === '' || value === null) {
+            setCart(prev => prev.map(item =>
+                item.id === itemId ? { ...item, discounted_price: '' } : item
+            ));
+            return;
+        }
+        const num = Number(value);
+        // Reject negative numbers
+        if (isNaN(num) || num < 0) return;
+        // Clamp: can't exceed original price (bill can reach 0, not below)
+        setCart(prev => prev.map(item => {
+            if (item.id !== itemId) return item;
+            const clamped = Math.min(num, item.price);
+            return { ...item, discounted_price: String(clamped) };
+        }));
     };
 
     // Derived Values
