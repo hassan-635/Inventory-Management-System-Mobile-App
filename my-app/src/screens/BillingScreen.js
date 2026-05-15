@@ -259,8 +259,22 @@ export default function BillingScreen() {
     const isNewCompany = companyName.trim().length > 0 &&
         !companyOptions.some(c => c.toLowerCase() === companyName.trim().toLowerCase());
 
+    // Helper: get effective price (discounted if set, else original)
+    const getEffectivePrice = (item) => {
+        if (item.discounted_price !== '' && item.discounted_price != null && !isNaN(Number(item.discounted_price))) {
+            return Number(item.discounted_price);
+        }
+        return item.price;
+    };
+
+    const updateCartItemDiscount = (itemId, value) => {
+        setCart(prev => prev.map(item =>
+            item.id === itemId ? { ...item, discounted_price: value } : item
+        ));
+    };
+
     // Derived Values
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (getEffectivePrice(item) * item.quantity), 0);
     const totalAmount = subtotal;
     const remaining = Math.max(0, totalAmount - Number(paidAmount || 0));
 
@@ -295,12 +309,11 @@ export default function BillingScreen() {
                 return;
             }
             
-            
             newCart[existingItemIndex].quantity = newTotalQty;
             newCart[existingItemIndex].cart_unit = selectedUnit;
             setCart(newCart);
         } else {
-            setCart([...cart, { ...selectedProduct, quantity: qtyToAdd, cart_unit: selectedUnit }]);
+            setCart([...cart, { ...selectedProduct, quantity: qtyToAdd, cart_unit: selectedUnit, discounted_price: '' }]);
         }
 
         setSelectedProduct(null);
@@ -401,14 +414,15 @@ export default function BillingScreen() {
             const bName = buyerSearch.trim() || 'Walk-in Customer';
 
             const computedCart = cart.map((item, i) => {
-                const itemTotal = item.price * item.quantity;
+                const effectivePrice = getEffectivePrice(item);
+                const itemTotal = effectivePrice * item.quantity;
                 const isLastItem = i === cart.length - 1;
 
                 let itemPaidAmount;
                 if (isCreditBill) {
                     const ratio = totalAmount > 0 ? (itemTotal / totalAmount) : 0;
                     itemPaidAmount = isLastItem
-                        ? (activePaymentAmt - cart.slice(0, i).reduce((s, it) => s + Math.round((it.price * it.quantity / totalAmount) * activePaymentAmt), 0))
+                        ? (activePaymentAmt - cart.slice(0, i).reduce((s, it) => s + Math.round((getEffectivePrice(it) * it.quantity / totalAmount) * activePaymentAmt), 0))
                         : Math.round(ratio * activePaymentAmt);
                 } else {
                     itemPaidAmount = itemTotal;
@@ -432,7 +446,8 @@ export default function BillingScreen() {
                     product_id: item.id,
                     product_name: item.name,
                     quantity: item.quantity,
-                    price: item.price,
+                    price: effectivePrice,
+                    original_price: item.price,
                     cart_unit: item.cart_unit || 'Per Piece',
                     itemPaidAmount,
                     thisCash,
@@ -859,22 +874,59 @@ export default function BillingScreen() {
                         <Text style={styles.emptyCartTxt}>No items added yet</Text>
                     </View>
                 ) : (
-                    cart.map((item, index) => (
-                        <View key={`${item.id}-${index}`} style={styles.cartItem}>
-                            <View style={styles.cartItemDetails}>
-                                <Text style={styles.cartItemName}>{item.name}</Text>
-                                <Text style={styles.cartItemSub}>
-                                    <Text style={{color: colors.accent.primary}}>{formatProductId(item.id)}</Text> | Rs. {item.price} x {item.quantity} {item.cart_unit ? `(${stripPer(item.cart_unit)})` : ''}
-                                </Text>
+                    cart.map((item, index) => {
+                        const effPrice = getEffectivePrice(item);
+                        const hasDiscount = item.discounted_price !== '' && item.discounted_price != null && !isNaN(Number(item.discounted_price));
+                        return (
+                            <View key={`${item.id}-${index}`} style={styles.cartItem}>
+                                <View style={styles.cartItemDetails}>
+                                    <Text style={styles.cartItemName}>{item.name}</Text>
+                                    <Text style={styles.cartItemSub}>
+                                        <Text style={{color: colors.accent.primary}}>{formatProductId(item.id)}</Text>
+                                        {hasDiscount ? (
+                                            <Text>
+                                                {' | '}
+                                                <Text style={{ textDecorationLine: 'line-through', color: colors.text.muted }}>Rs. {item.price}</Text>
+                                                {'  '}
+                                                <Text style={{ color: '#22c55e', fontFamily: FONTS.bold }}>Rs. {effPrice}</Text>
+                                                {` x ${item.quantity} ${item.cart_unit ? `(${stripPer(item.cart_unit)})` : ''}`}
+                                            </Text>
+                                        ) : (
+                                            ` | Rs. ${item.price} x ${item.quantity} ${item.cart_unit ? `(${stripPer(item.cart_unit)})` : ''}`
+                                        )}
+                                    </Text>
+                                    {hasDiscount && (
+                                        <Text style={{ fontSize: 11, color: '#22c55e', fontFamily: FONTS.semibold, marginTop: 2 }}>
+                                            ✓ Saving Rs. {((item.price - effPrice) * item.quantity).toLocaleString()}
+                                        </Text>
+                                    )}
+                                    {/* Discount Price Input */}
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 8 }}>
+                                        <Text style={{ fontSize: 11, color: colors.text.muted }}>Disc. Price (optional):</Text>
+                                        <TextInput
+                                            style={[
+                                                styles.discountInput,
+                                                hasDiscount && { borderColor: '#22c55e', color: '#22c55e' }
+                                            ]}
+                                            keyboardType="numeric"
+                                            placeholder={`${item.price}`}
+                                            placeholderTextColor={colors.text.muted}
+                                            value={item.discounted_price ?? ''}
+                                            onChangeText={(val) => updateCartItemDiscount(item.id, val)}
+                                        />
+                                    </View>
+                                </View>
+                                <View style={styles.cartItemRight}>
+                                    <Text style={[styles.cartItemTotal, hasDiscount && { color: '#22c55e' }]}>
+                                        Rs. {(effPrice * item.quantity).toLocaleString()}
+                                    </Text>
+                                    <TouchableOpacity style={styles.removeBtn} onPress={() => removeFromCart(item.id)}>
+                                        <Icon name="trash-outline" size={18} color={colors.status.danger} />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
-                            <View style={styles.cartItemRight}>
-                                <Text style={styles.cartItemTotal}>Rs. {(item.price * item.quantity).toLocaleString()}</Text>
-                                <TouchableOpacity style={styles.removeBtn} onPress={() => removeFromCart(item.id)}>
-                                    <Icon name="trash-outline" size={18} color={colors.status.danger} />
-                                </TouchableOpacity>
-                            </View>
-                        </View>
-                    ))
+                        );
+                    })
                 )}
             </View>
 
@@ -1129,15 +1181,27 @@ const getStyles = (colors, FONTS) => StyleSheet.create({
     emptyCart: { alignItems: 'center', padding: 20 },
     emptyCartTxt: { color: colors.text.muted, fontFamily: FONTS.regular, marginTop: 8 },
     cartItem: {
-        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
         paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: colors.border.color,
     },
     cartItemDetails: { flex: 1 },
     cartItemName: { color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 15 },
     cartItemSub: { color: colors.text.secondary, fontFamily: FONTS.regular, fontSize: 13, marginTop: 2 },
-    cartItemRight: { flexDirection: 'row', alignItems: 'center' },
+    cartItemRight: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', paddingTop: 4 },
     cartItemTotal: { color: colors.text.primary, fontFamily: FONTS.semibold, fontSize: 15, marginRight: 12 },
     removeBtn: { padding: 6, backgroundColor: 'rgba(239,68,68,0.1)', borderRadius: 6 },
+    discountInput: {
+        backgroundColor: colors.background.tertiary,
+        borderRadius: 8,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        fontSize: 13,
+        color: colors.text.primary,
+        borderWidth: 1,
+        borderColor: colors.border.color,
+        minWidth: 90,
+        fontFamily: FONTS.regular,
+    },
     
     // Totals
     totalCard: {
