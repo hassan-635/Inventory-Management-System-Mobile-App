@@ -895,6 +895,24 @@ export default function BillingScreen() {
                                             ` | Rs. ${item.price} x ${item.quantity} ${item.cart_unit ? `(${stripPer(item.cart_unit)})` : ''}`
                                         )}
                                     </Text>
+                                    {/* Category & Color tags */}
+                                    {(item.category || item.color) && (
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', marginTop: 3, gap: 6 }}>
+                                            {item.category && (
+                                                <Text style={{ fontSize: 11, color: colors.text.muted }}>📦 {item.category}</Text>
+                                            )}
+                                            {item.color && (
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                                    <View style={{
+                                                        width: 10, height: 10, borderRadius: 5,
+                                                        backgroundColor: item.color,
+                                                        borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)'
+                                                    }} />
+                                                    <Text style={{ fontSize: 11, color: colors.text.muted }}>{item.color}</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                    )}
                                     {hasDiscount && (
                                         <Text style={{ fontSize: 11, color: '#22c55e', fontFamily: FONTS.semibold, marginTop: 2 }}>
                                             ✓ Saving Rs. {((item.price - effPrice) * item.quantity).toLocaleString()}
