@@ -570,7 +570,7 @@ export default function BillingScreen() {
     const canProceed = useMemo(() => {
         // Basic validation
         if (cart.length === 0) {
-            console.log('Cart is empty');
+            // Empty cart log removed
             return false;
         }
         
