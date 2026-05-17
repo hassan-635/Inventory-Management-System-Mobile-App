@@ -35,7 +35,7 @@ async function setupAndroidChannel() {
             vibrationPattern: [0, 250, 250, 250],
             sound: 'default',
         });
-        console.log('[Notifications] Android channels registered');
+        // Removed logs
     }
 }
 
@@ -64,7 +64,7 @@ export const useSocketNotifications = () => {
                 finalStatus = status;
             }
             if (finalStatus !== 'granted') {
-                console.log('Failed to get push token for push notification!');
+                // Removed logs
                 return;
             }
         };
@@ -79,13 +79,13 @@ export const useSocketNotifications = () => {
             const data = response.notification.request.content.data;
             
             if (actionIdentifier === 'DELETE_ITEM' && data?.product_id) {
-                console.log("Delete action triggered for product:", data.product_id);
+                // Removed logs
                 try {
                     await productsService.delete(data.product_id);
                     await Notifications.dismissNotificationAsync(response.notification.request.identifier);
-                    console.log(`Product ${data.product_id} deleted successfully from notification`);
+                    // Removed logs
                 } catch (err) {
-                    console.error("Failed to delete product from notification", err);
+                    // Removed logs
                 }
             }
         });
@@ -95,20 +95,20 @@ export const useSocketNotifications = () => {
         // --- Socket connection helper --- //
         // Returns the socket instance so we can disconnect it later
         const connectSocket = (socketUrl) => {
-            console.log('[Notifications] Connecting socket to:', socketUrl);
+            // Removed logs
             const socket = io(socketUrl);
 
             socket.on('connect', () => {
-                console.log('[Notifications] Socket connected:', socketUrl);
+                // Removed logs
             });
 
             socket.on('disconnect', () => {
-                console.log('[Notifications] Socket disconnected from:', socketUrl);
+                // Removed logs
             });
 
             // Listen for new sales from THIS workspace's server only
             socket.on('new_sale', async (data) => {
-                console.log('[Notifications] New sale received:', data);
+                // Removed logs
                 useDataRefreshStore.getState().bumpInventory();
 
                 let notifBody = '';
@@ -174,7 +174,7 @@ export const useSocketNotifications = () => {
 
         // Subscribe to workspace switches — disconnect old, connect new
         const unsubscribe = subscribeSocketUrl((newSocketUrl) => {
-            console.log('[Notifications] Workspace changed, reconnecting socket...');
+            // Removed logs
             activeSocket.disconnect();
             activeSocket = connectSocket(newSocketUrl);
         });
@@ -210,7 +210,7 @@ export const scheduleAllLowStockNotifications = async (timesArray = null) => {
         try {
             products = await productsService.getAll();
         } catch (e) {
-            console.log("Could not fetch products for notification scheduling", e);
+            // Removed logs
             return;
         }
         
@@ -254,10 +254,10 @@ export const scheduleAllLowStockNotifications = async (timesArray = null) => {
                     },
                 });
             }
-            console.log(`Scheduled ${lowStockItems.length} individual daily stock alerts for ${hours}:${minutes}`);
+            // Removed logs
         }
 
     } catch (err) {
-        console.error("Failed to schedule notifications:", err);
+        // Removed logs
     }
 };
