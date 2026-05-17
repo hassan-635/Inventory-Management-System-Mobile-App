@@ -39,7 +39,7 @@ export function setApiBaseUrl(workspace) {
         currentBaseURL = SERVER_MAP[workspace];
         const newSocketURL = SOCKET_MAP[workspace];
         api.defaults.baseURL = currentBaseURL;
-        console.log(`[API] Switched to workspace: ${workspace} → ${currentBaseURL}`);
+        // Removed API switch log
         // Notify socket subscribers only if the URL actually changed
         if (newSocketURL !== currentSocketURL) {
             currentSocketURL = newSocketURL;
@@ -48,7 +48,8 @@ export function setApiBaseUrl(workspace) {
             currentSocketURL = newSocketURL;
         }
     } else {
-        console.warn(`[API] Invalid workspace "${workspace}". Available: ${Object.keys(SERVER_MAP).join(', ')}. Env UZAIR=${SERVER_MAP.UZAIR} BURHAN=${SERVER_MAP.BURHAN}`);
+        console.error('error');
+        // Removed warning
     }
 }
 
@@ -97,7 +98,7 @@ api.interceptors.response.use(
         const isVerifyEndpoint = error.config && error.config.url && error.config.url.includes('/auth/verify-password');
 
         if (error.response && error.response.status === 401 && !isVerifyEndpoint) {
-            console.warn("Unauthorized request detected (401). Forcing logout.");
+            // Removed unauthorized log
             authTokenCache = null;
             await tokenStorage.deleteItemAsync('token');
             useAuthStore.getState().logout();
