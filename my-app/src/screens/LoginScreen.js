@@ -49,7 +49,7 @@ export default function LoginScreen() {
             setLoading(true);
             await workspaceStorage.setWorkspace(workspace);
             setApiBaseUrl(workspace);
-            console.log('[Login] Attempting login to:', getActiveBaseUrl());
+            // Removed login attempt log for security
 
             const data = await authService.login(email.trim(), password, loginType);
             await tokenStorage.setItemAsync('token', data.token);
@@ -57,12 +57,7 @@ export default function LoginScreen() {
             const user = { id: data._id, name: data.name, email: data.email, role: data.role };
             setAuth(user, data.token);
         } catch (error) {
-            console.error('[Login Error]', JSON.stringify({
-                message: error.message,
-                code: error.code,
-                status: error.response?.status,
-                data: error.response?.data,
-            }, null, 2));
+            // Removed error log for security
 
             let msg;
             if (!error.response) {
