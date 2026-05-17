@@ -51,7 +51,7 @@ export default function LoginScreen() {
             setApiBaseUrl(workspace);
             console.log('[Login] Attempting login to:', getActiveBaseUrl());
 
-            const data = await authService.login(email, password, loginType);
+            const data = await authService.login(email.trim(), password, loginType);
             await tokenStorage.setItemAsync('token', data.token);
             primeAuthToken(data.token);
             const user = { id: data._id, name: data.name, email: data.email, role: data.role };
