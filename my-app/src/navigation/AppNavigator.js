@@ -16,6 +16,7 @@ import { useAppTheme } from '../theme/useAppTheme';
 import DashboardScreen from '../screens/DashboardScreen';
 import LoginScreen from '../screens/LoginScreen';
 import ProductsScreen from '../screens/ProductsScreen';
+import ProductMergeScreen from '../screens/ProductMergeScreen';
 import BuyersScreen from '../screens/BuyersScreen';
 import SuppliersScreen from '../screens/SuppliersScreen';
 import SalesScreen from '../screens/SalesScreen';
@@ -41,6 +42,7 @@ const ICON_MAP = {
     Dashboard: { focused: 'analytics', outline: 'analytics-outline' },
     Billing: { focused: 'document-text', outline: 'document-text-outline' },
     Products: { focused: 'cube', outline: 'cube-outline' },
+    'AI Merge': { focused: 'git-merge', outline: 'git-merge-outline' },
     Customers: { focused: 'people', outline: 'people-outline' },
     Suppliers: { focused: 'business', outline: 'business-outline' },
     Sales: { focused: 'receipt', outline: 'receipt-outline' },
@@ -191,6 +193,7 @@ const DrawerNavigator = () => {
             <Drawer.Screen name="Dashboard" component={DashboardScreen} />
             <Drawer.Screen name="Billing" component={BillingScreen} />
             <Drawer.Screen name="Products" component={ProductsScreen} />
+            <Drawer.Screen name="AI Merge" component={ProductMergeScreen} />
             <Drawer.Screen name="Customers" component={BuyersScreen} />
             <Drawer.Screen name="Suppliers" component={SuppliersScreen} />
             <Drawer.Screen name="Sales" component={SalesScreen} />
