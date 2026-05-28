@@ -16,5 +16,17 @@ export const productsService = {
     delete: async (id) => {
         const response = await api.delete(`/products/${id}`);
         return response.data;
+    },
+    analyzeMergeCandidates: async (payload = {}) => {
+        const response = await api.post('/products/merge-analyze', payload);
+        return response.data;
+    },
+    previewMerge: async (payload) => {
+        const response = await api.post('/products/merge-preview', payload);
+        return response.data;
+    },
+    executeMerge: async (payload) => {
+        const response = await api.post('/products/merge-execute', payload);
+        return response.data;
     }
 };
